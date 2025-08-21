@@ -35,3 +35,9 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# temporary and debug files
+debug-*.js
+test-*.js
+/tmp/
+*.tmp
