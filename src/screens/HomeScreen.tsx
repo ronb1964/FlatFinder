@@ -1,6 +1,7 @@
 import React from 'react'
 import { YStack, XStack, Text, Card, H1, H2 } from 'tamagui'
-import { RectangleHorizontal, Car, Target } from '@tamagui/lucide-icons'
+import { Car, Target } from '@tamagui/lucide-icons'
+import { TrailerIcon } from '../components/icons/TrailerIcon'
 
 interface HomeScreenProps {
   onNavigate: (screen: 'trailer' | 'van') => void
@@ -78,7 +79,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 borderWidth={1}
                 borderColor="rgba(59, 130, 246, 0.3)"
               >
-                <RectangleHorizontal size={32} color="#3b82f6" />
+                <TrailerIcon size={32} color="#3b82f6" />
               </YStack>
               
               <YStack flex={1} space="$2">

@@ -4,6 +4,7 @@ import { Target, Settings, CheckCircle, RotateCw } from '@tamagui/lucide-icons';
 import { CalibrationWizard } from '../components/CalibrationWizard';
 import { useAppStore } from '../state/appStore';
 import { createCalibration } from '../lib/calibration';
+import { StandardBlockSets } from '../lib/rvLevelingMath';
 
 interface CalibrationScreenProps {
   onNavigateBack: () => void;
@@ -35,7 +36,8 @@ export function CalibrationScreen({ onNavigateBack }: CalibrationScreenProps) {
         type: 'trailer',
         wheelbaseInches: 144,
         trackWidthInches: 72,
-        hitchOffset: 0,
+        hitchOffsetInches: 0,
+        blockInventory: StandardBlockSets.professional(),
         calibration: calibrationOffsets
       });
       

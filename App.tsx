@@ -5,6 +5,7 @@ import { HomeScreen } from './src/screens/HomeScreen'
 import { TrailerModeScreen } from './src/screens/TrailerModeScreen'
 import { CalibrationScreen } from './src/screens/CalibrationScreen'
 import { useAppStore } from './src/state/appStore'
+import { StandardBlockSets } from './src/lib/rvLevelingMath'
 
 type Screen = 'home' | 'trailer' | 'van' | 'calibration'
 
@@ -28,7 +29,8 @@ export default function App() {
             type: 'trailer',
             wheelbaseInches: 144, // 12 feet
             trackWidthInches: 72,  // 6 feet
-            hitchOffset: 0,
+            hitchOffsetInches: 84, // 7 feet
+            blockInventory: StandardBlockSets.professional(),
             calibration: { pitch: 0, roll: 0 }
           })
           

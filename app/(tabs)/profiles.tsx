@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Check, Car, Truck, Home } from '@tamagui/lucide-icons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
+import { StandardBlockSets } from '../../src/lib/rvLevelingMath';
 
 export default function ProfilesScreen() {
   const theme = useTheme();
@@ -46,6 +47,8 @@ export default function ProfilesScreen() {
 
     addProfile({
       ...newProfile,
+      hitchOffsetInches: newProfile.hitchOffset,
+      blockInventory: StandardBlockSets.professional(),
       calibration: { pitch: 0, roll: 0 },
     });
 

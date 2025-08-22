@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { YStack, XStack, Text, Button, Card, H1, H2, View, ScrollView } from 'tamagui'
 import { 
   ArrowLeft, 
@@ -12,6 +12,7 @@ import {
 } from '@tamagui/lucide-icons'
 import { BubbleLevel } from '../components/BubbleLevel'
 import { StepCard } from '../components/StepCard'
+import { LevelingAssistant } from '../components/LevelingAssistant'
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude'
 import { useAppStore } from '../state/appStore'
 import { 
@@ -33,6 +34,8 @@ interface TrailerModeScreenProps {
 export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerModeScreenProps) {
   const [bypassSensors, setBypassSensors] = useState(false);
   const [nativeSensorData, setNativeSensorData] = useState({ pitch: 0, roll: 0, isReliable: false });
+  const [showLevelingAssistant, setShowLevelingAssistant] = useState(false);
+  const [safetyWarningDismissed, setSafetyWarningDismissed] = useState(false);
   
   // Get real sensor data
   const { pitchDeg, rollDeg, isAvailable, isReliable, permissionStatus, errorMessage } = useDeviceAttitude()
@@ -53,8 +56,11 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
     activeProfile?.calibration || { pitch: 0, roll: 0 }
   )
   
-  const pitch = calibratedValues.pitch
-  const roll = calibratedValues.roll
+  // CRITICAL FIX: Invert coordinates to match physical reality
+  // When sensor shows +pitch (nose up), display should show need to raise FRONT
+  // When sensor shows +roll (right up), display should show need to raise LEFT  
+  const pitch = -calibratedValues.pitch  // Invert pitch
+  const roll = -calibratedValues.roll    // Invert roll
   
   // Debug logging for calibration
   if (activeProfile?.calibration && (activeProfile.calibration.pitch !== 0 || activeProfile.calibration.roll !== 0)) {
@@ -88,6 +94,13 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
   
   // Safety check
   const isUnsafe = isSlopePossiblyUnsafe({ pitchDegrees: pitch, rollDegrees: roll })
+  
+  // Reset dismissed warning when slope becomes safe
+  useEffect(() => {
+    if (!isUnsafe) {
+      setSafetyWarningDismissed(false);
+    }
+  }, [isUnsafe]);
   
   // Get adjustment directions
   const sideToRaise = getSideToRaise(roll)
@@ -256,6 +269,11 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
     )
   }
 
+  // If showing leveling assistant, render it instead
+  if (showLevelingAssistant) {
+    return <LevelingAssistant onBack={() => setShowLevelingAssistant(false)} />;
+  }
+
   return (
     <YStack 
       flex={1} 
@@ -265,7 +283,7 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
       position="relative"
     >
       {/* Safety Warning - Floating overlay */}
-      {isUnsafe && (
+      {isUnsafe && !safetyWarningDismissed && (
         <View
           position="absolute"
           top="$16"
@@ -286,8 +304,7 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
             shadowRadius={8}
             pressStyle={{ scale: 0.98 }}
             onPress={() => {
-              // Dismiss the warning temporarily (for demonstration)
-              console.log('Safety warning tapped - you can dismiss this by finding a more level spot');
+              setSafetyWarningDismissed(true);
             }}
           >
             <XStack space="$3" alignItems="center">
@@ -320,29 +337,50 @@ export function TrailerModeScreen({ onBack, onNavigateToCalibration }: TrailerMo
               padding="$3"
               onPress={onBack}
               pressStyle={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+              alignSelf="flex-start"
             >
               <XStack space="$2" alignItems="center">
                 <ArrowLeft size={18} color="#ffffff" />
                 <Text color="#ffffff" fontWeight="600">Back</Text>
               </XStack>
             </Button>
-            
-            <H1 color="#ffffff" fontSize="$8" fontWeight="700">
+          </XStack>
+          
+          {/* Title and Action Buttons */}
+          <YStack space="$3" alignItems="center">
+            <H1 color="#ffffff" fontSize="$8" fontWeight="700" textAlign="center">
               Trailer Mode
             </H1>
             
-            <Button
-              backgroundColor="rgba(255, 255, 255, 0.05)"
-              borderColor="rgba(255, 255, 255, 0.1)"
-              borderWidth={1}
-              borderRadius="$5"
-              padding="$3"
-              onPress={handleCalibrate}
-              pressStyle={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-            >
-              <RotateCcw size={18} color="#ffffff" />
-            </Button>
-          </XStack>
+            <XStack space="$3">
+              <Button
+                size="$4"
+                backgroundColor="rgba(34, 197, 94, 0.1)"
+                borderColor="rgba(34, 197, 94, 0.3)"
+                borderWidth={1}
+                borderRadius="$3"
+                onPress={() => setShowLevelingAssistant(true)}
+                pressStyle={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}
+              >
+                <Text color="#22c55e" fontWeight="600" fontSize="$3">
+                  Level Guide
+                </Text>
+              </Button>
+              <Button
+                size="$4"
+                backgroundColor="rgba(59, 130, 246, 0.1)"
+                borderColor="rgba(59, 130, 246, 0.3)"
+                borderWidth={1}
+                borderRadius="$3"
+                onPress={handleCalibrate}
+                pressStyle={{ backgroundColor: "rgba(59, 130, 246, 0.2)" }}
+              >
+                <Text color="#3b82f6" fontWeight="600" fontSize="$3">
+                  Calibrate
+                </Text>
+              </Button>
+            </XStack>
+          </YStack>
           
           {/* Bypass Mode Indicator */}
           {bypassSensors && (

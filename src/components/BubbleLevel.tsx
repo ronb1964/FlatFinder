@@ -17,10 +17,7 @@ const Container = styled(View, {
   width: BUBBLE_SIZE,
   height: BUBBLE_SIZE,
   alignSelf: 'center',
-  backgroundColor: '#1a1a1a',
-  borderRadius: BUBBLE_SIZE / 2,
-  borderWidth: 3,
-  borderColor: '#333333',
+  backgroundColor: 'transparent',
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.4,
@@ -29,10 +26,10 @@ const Container = styled(View, {
 
 export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
   // Convert degrees to bubble position (-1 to 1 range)
-  // Note: bubble moves opposite to tilt direction (like a real bubble level)
+  // Bubble moves in same direction as tilt (when you tilt right, bubble moves right)
   const MAX_ANGLE = 5; // Maximum displayable angle
-  const bubbleX = Math.max(-1, Math.min(1, -roll / MAX_ANGLE)); // Inverted for realistic behavior
-  const bubbleY = Math.max(-1, Math.min(1, -pitch / MAX_ANGLE));
+  const bubbleX = Math.max(-1, Math.min(1, roll / MAX_ANGLE)); // Direct mapping for intuitive behavior
+  const bubbleY = Math.max(-1, Math.min(1, pitch / MAX_ANGLE)); // Direct mapping for intuitive behavior
 
   // Convert to actual pixel position
   const centerX = BUBBLE_SIZE / 2;
@@ -47,12 +44,25 @@ export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
 
   return (
     <Container>
-      <Svg width={BUBBLE_SIZE} height={BUBBLE_SIZE}>
-        {/* Background gradient fill */}
+      <Svg 
+        width={BUBBLE_SIZE} 
+        height={BUBBLE_SIZE}
+      >
+        {/* Outermost border ring */}
         <Circle
           cx={centerX}
           cy={centerY}
-          r={BUBBLE_SIZE * 0.47}
+          r={BUBBLE_SIZE * 0.49}
+          fill="#1a1a1a"
+          stroke="#333333"
+          strokeWidth={3}
+        />
+        
+        {/* Background fill */}
+        <Circle
+          cx={centerX}
+          cy={centerY}
+          r={BUBBLE_SIZE * 0.45}
           fill="#2a2a2a"
         />
         
@@ -62,8 +72,8 @@ export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
           cy={centerY}
           r={BUBBLE_SIZE * 0.47}
           fill="none"
-          stroke="#555555"
-          strokeWidth={4}
+          stroke="#666666"
+          strokeWidth={3}
         />
         
         {/* Main level area */}
@@ -72,34 +82,34 @@ export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
           cy={centerY}
           r={BUBBLE_SIZE * 0.42}
           fill="#1e1e1e"
-          stroke="#444444"
+          stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={2}
         />
         
-        {/* Precision rings */}
+        {/* Precision rings with more color */}
         <Circle
           cx={centerX}
           cy={centerY}
           r={BUBBLE_SIZE * 0.35}
           fill="none"
-          stroke="#666666"
-          strokeWidth={1}
+          stroke="rgba(168, 85, 247, 0.6)"
+          strokeWidth={1.5}
         />
         <Circle
           cx={centerX}
           cy={centerY}
           r={BUBBLE_SIZE * 0.28}
           fill="none"
-          stroke="#555555"
-          strokeWidth={1}
+          stroke="rgba(34, 197, 94, 0.5)"
+          strokeWidth={1.5}
         />
         <Circle
           cx={centerX}
           cy={centerY}
           r={BUBBLE_SIZE * 0.21}
           fill="none"
-          stroke="#777777"
-          strokeWidth={1}
+          stroke="rgba(234, 179, 8, 0.6)"
+          strokeWidth={1.5}
         />
         
         {/* Level target zone */}

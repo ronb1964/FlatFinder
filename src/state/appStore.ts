@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalibrationOffsets } from '../lib/calibration';
+import { BlockInventory } from '../lib/rvLevelingMath';
 
 export interface VehicleProfile {
   id: string;
@@ -8,7 +9,8 @@ export interface VehicleProfile {
   type: 'trailer' | 'motorhome' | 'van';
   wheelbaseInches: number;
   trackWidthInches: number;
-  hitchOffset?: number;
+  hitchOffsetInches?: number;
+  blockInventory: BlockInventory[];
   calibration: CalibrationOffsets;
   createdAt: Date;
   updatedAt: Date;

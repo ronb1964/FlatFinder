@@ -23,7 +23,19 @@
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "pwa": {
+        "name": "LevelMate",
+        "shortName": "LevelMate",
+        "description": "Professional RV & Trailer Leveling Solution",
+        "startUrl": "/",
+        "display": "standalone",
+        "backgroundColor": "#1a1a2e",
+        "themeColor": "#22c55e",
+        "orientation": "portrait"
+      }
     }
   }
 }

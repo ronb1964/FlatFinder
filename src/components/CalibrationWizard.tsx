@@ -33,8 +33,8 @@ const InstructionCard = styled(Card, {
 const CALIBRATION_STEPS = [
   {
     title: 'Position Your Device',
-    instruction: 'Place your phone flat on a stable surface inside your RV. A table or counter works well. Make sure the surface is steady.',
-    detailInstruction: 'The phone should lie completely flat with the screen facing up.',
+    instruction: 'Place your phone flat on a stable surface inside your RV. IMPORTANT: The TOP of your phone should be pointing toward the FRONT of your RV.',
+    detailInstruction: 'Screen up, phone flat, top edge facing forward. This orientation is critical for accurate measurements.',
     icon: Target,
   },
   {
@@ -259,6 +259,21 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             </Text>
           )}
           
+          {/* Phone orientation visual for step 1 */}
+          {currentStep === 0 && (
+            <YStack space="$3" alignItems="center" padding="$3" backgroundColor="rgba(59, 130, 246, 0.05)" borderRadius="$3">
+              <XStack space="$3" alignItems="center">
+                <Smartphone size={24} color="#3b82f6" />
+                <Text fontSize="$3" color="#3b82f6" fontWeight="600">
+                  Phone TOP → RV FRONT
+                </Text>
+              </XStack>
+              <Text fontSize="$2" color="#64748b" textAlign="center">
+                The top edge of your phone should point toward the front/nose of your RV
+              </Text>
+            </YStack>
+          )}
+          
           {currentStepData.rotationDirection && (
             <RotationIndicator direction={currentStepData.rotationDirection} />
           )}
@@ -392,24 +407,22 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             borderRadius="$4"
             onPress={handleStartCalibration}
             disabled={!isReliable}
+            backgroundColor={!isReliable ? "#6b7280" : "#22c55e"}
+            color="#ffffff"
+            borderWidth={0}
             pressStyle={{ 
-              backgroundColor: "rgba(34, 197, 94, 0.8)",
-              scale: 0.98 
+              backgroundColor: !isReliable ? "#6b7280" : "rgba(34, 197, 94, 0.8)",
+              scale: 0.98,
+              borderWidth: 0
             }}
-            theme={!isReliable ? "gray" : "green"}
-            chromeless={false}
             style={{
-              // Force mobile browsers to respect our styling
+              backgroundColor: !isReliable ? "#6b7280" : "#22c55e",
+              color: "#ffffff",
+              border: "none",
               WebkitAppearance: 'none' as any,
               WebkitTapHighlightColor: 'transparent',
-              background: !isReliable ? "#94a3b8" : "#22c55e",
-              color: "#ffffff",
-              // Additional iOS-specific overrides
               WebkitTextFillColor: "#ffffff",
-              fontWeight: "600",
-              textShadow: "none",
-              boxShadow: "none",
-              border: "none"
+              fontWeight: "600"
             }}
           >
             Start Calibration
@@ -421,24 +434,22 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             borderRadius="$4"
             onPress={takeReading}
             disabled={!isReliable || isCollecting}
+            backgroundColor={(!isReliable || isCollecting) ? "#6b7280" : "#3b82f6"}
+            color="#ffffff"
+            borderWidth={0}
             pressStyle={{ 
-              backgroundColor: "rgba(59, 130, 246, 0.8)",
-              scale: 0.98 
+              backgroundColor: (!isReliable || isCollecting) ? "#6b7280" : "rgba(59, 130, 246, 0.8)",
+              scale: 0.98,
+              borderWidth: 0
             }}
-            theme={(!isReliable || isCollecting) ? "gray" : "blue"}
-            chromeless={false}
             style={{
-              // Force mobile browsers to respect our styling
+              backgroundColor: (!isReliable || isCollecting) ? "#6b7280" : "#3b82f6",
+              color: "#ffffff",
+              border: "none",
               WebkitAppearance: 'none' as any,
               WebkitTapHighlightColor: 'transparent',
-              background: (!isReliable || isCollecting) ? "#6b7280" : "#3b82f6",
-              color: "#ffffff",
-              // Additional iOS-specific overrides
               WebkitTextFillColor: "#ffffff",
-              fontWeight: "600",
-              textShadow: "none",
-              boxShadow: "none",
-              border: (!isReliable || isCollecting) ? "1px solid #9ca3af" : "none"
+              fontWeight: "600"
             }}
           >
             {isCollecting ? 'Collecting...' : `Take Reading ${readings.length + 1}`}
