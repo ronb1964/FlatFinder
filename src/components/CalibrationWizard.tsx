@@ -11,8 +11,10 @@ import {
   assessCalibrationQuality 
 } from '../lib/calibration';
 
+import { Calibration } from '../lib/levelingMath';
+
 interface CalibrationWizardProps {
-  onComplete: (calibration: { pitch: number; roll: number }) => void;
+  onComplete: (calibration: Calibration) => void;
   onCancel: () => void;
   isVisible: boolean;
 }
@@ -157,10 +159,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           roll: calibration.rollOffsetDegrees 
         });
         
-        onComplete({ 
-          pitch: calibration.pitchOffsetDegrees, 
-          roll: calibration.rollOffsetDegrees 
-        });
+        onComplete(calibration);
       } else {
         // Move to next step
         setCurrentStep(prev => prev + 1);

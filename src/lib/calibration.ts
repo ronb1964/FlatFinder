@@ -5,12 +5,6 @@ import {
   type Calibration 
 } from './levelingMath'
 
-// Legacy interfaces for compatibility
-export interface CalibrationOffsets {
-  pitch: number;
-  roll: number;
-}
-
 export interface CalibratedValues {
   pitch: number;
   roll: number;
@@ -26,28 +20,9 @@ export { createCalibration }
  */
 export function applyCalibration(
   rawValues: { pitch: number; roll: number },
-  offsets: CalibrationOffsets | Calibration
+  calibration: Calibration
 ): CalibratedValues {
-  // Debug logging
-  console.log('=== APPLY CALIBRATION ===');
-  console.log('Raw values:', rawValues);
-  console.log('Offsets received:', offsets);
-  console.log('Offsets type check - has pitchOffsetDegrees:', 'pitchOffsetDegrees' in offsets);
-  
-  // Convert legacy format to modern format if needed
-  const calibration = 'pitchOffsetDegrees' in offsets 
-    ? offsets 
-    : createCalibration({
-        pitchOffsetDegrees: offsets.pitch,
-        rollOffsetDegrees: offsets.roll,
-      });
-  
-  console.log('Final calibration object:', calibration);
-  
-  const result = applyCalibratedValues(rawValues, calibration);
-  console.log('Calibrated result:', result);
-  
-  return result;
+  return applyCalibratedValues(rawValues, calibration);
 }
 
 /**

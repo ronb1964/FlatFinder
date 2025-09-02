@@ -84,6 +84,9 @@ export class RVLevelingCalculator {
     // When phone shows -roll (left side up): left side is already raised, right side needs blocks
     // The original geometric calculation + normalization handles this correctly!
     
+    // Determine vehicle type for appropriate naming
+    const isTrailer = hitchOffsetInches !== undefined;
+    
     // Front Left Wheel: affected by pitch and roll
     const frontLeftPitch = wheelbaseInches * Math.tan(pitchRad);
     const frontLeftRoll = -halfTrack * Math.tan(rollRad); // Left side: negative distance from center
@@ -92,7 +95,7 @@ export class RVLevelingCalculator {
     lifts.push({
       location: 'front_left',
       liftInches: frontLeftLift,
-      description: 'Front Left Wheel'
+      description: isTrailer ? 'Left Wheel' : 'Front Left Wheel'
     });
     
     // Front Right Wheel: affected by pitch and roll  
@@ -103,25 +106,26 @@ export class RVLevelingCalculator {
     lifts.push({
       location: 'front_right',
       liftInches: frontRightLift,
-      description: 'Front Right Wheel'
+      description: isTrailer ? 'Right Wheel' : 'Front Right Wheel'
     });
     
+    // Include rear wheels for all vehicle types
     // Rear Left Wheel: only affected by roll
     lifts.push({
       location: 'rear_left',
       liftInches: -halfTrack * Math.tan(rollRad),
-      description: 'Rear Left Wheel'
+      description: isTrailer ? 'Left Wheel' : 'Rear Left Wheel'
     });
     
     // Rear Right Wheel: only affected by roll
     lifts.push({
       location: 'rear_right', 
       liftInches: halfTrack * Math.tan(rollRad),
-      description: 'Rear Right Wheel'
+      description: isTrailer ? 'Right Wheel' : 'Rear Right Wheel'
     });
     
     // Hitch point (for trailers): behind rear axle, affected by pitch
-    if (hitchOffsetInches !== undefined) {
+    if (isTrailer && hitchOffsetInches !== undefined) {
       const hitchPitch = -hitchOffsetInches * Math.tan(pitchRad);
       lifts.push({
         location: 'hitch',
@@ -149,8 +153,10 @@ export class RVLevelingCalculator {
     inventory: BlockInventory[],
     maxTolerance: number = 0.125 // 1/8 inch tolerance
   ): BlockStack {
-    // Sort blocks by thickness (largest first for greedy algorithm)
-    const sortedBlocks = [...inventory].sort((a, b) => b.thickness - a.thickness);
+    // Filter out zero-thickness blocks and sort by thickness (largest first for greedy algorithm)
+    const sortedBlocks = [...inventory]
+      .filter(block => block.thickness > 0.001 && block.quantity > 0) // Must be at least 0.001 inches thick
+      .sort((a, b) => b.thickness - a.thickness);
     
     const result: BlockStack = {
       blocks: [],
@@ -185,9 +191,9 @@ export class RVLevelingCalculator {
     
     // Check if we're within tolerance
     if (remainingHeight > maxTolerance) {
-      // Try to get closer with smaller blocks
+      // Try to get closer with smaller blocks (excluding zero-thickness)
       for (const block of sortedBlocks) {
-        if (block.quantity > 0 && block.thickness <= remainingHeight + maxTolerance) {
+        if (block.quantity > 0 && block.thickness > 0 && block.thickness <= remainingHeight + maxTolerance) {
           result.blocks.push({
             thickness: block.thickness,
             count: 1

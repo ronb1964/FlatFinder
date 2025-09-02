@@ -4,32 +4,35 @@ import { Dimensions } from 'react-native';
 import Svg, { Circle, Line, G, Text as SvgText } from 'react-native-svg';
 
 const { width: screenWidth } = Dimensions.get('window');
-const BUBBLE_SIZE = Math.min(screenWidth * 0.8, 300);
 
 interface BubbleLevelProps {
   pitch: number; // degrees
   roll: number; // degrees
   isLevel: boolean;
   color: string;
+  size?: 'compact' | 'full';
 }
 
-const Container = styled(View, {
-  width: BUBBLE_SIZE,
-  height: BUBBLE_SIZE,
-  alignSelf: 'center',
-  backgroundColor: 'transparent',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.4,
-  shadowRadius: 8,
-});
+export function BubbleLevel({ pitch, roll, isLevel, color, size = 'full' }: BubbleLevelProps) {
+    const BUBBLE_SIZE = size === 'compact' 
+    ? Math.min(screenWidth * 0.35, 120)
+    : Math.min(screenWidth * 0.6, 240); // Slightly smaller for better mobile fit
 
-export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
+  const Container = styled(View, {
+    width: BUBBLE_SIZE,
+    height: BUBBLE_SIZE,
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: size === 'compact' ? 0.2 : 0.4,
+    shadowRadius: size === 'compact' ? 4 : 8,
+  });
   // Convert degrees to bubble position (-1 to 1 range)
-  // Bubble moves in same direction as tilt (when you tilt right, bubble moves right)
+  // Bubble moves opposite to tilt (like a real bubble level - when you tilt right, bubble moves left)
   const MAX_ANGLE = 5; // Maximum displayable angle
-  const bubbleX = Math.max(-1, Math.min(1, roll / MAX_ANGLE)); // Direct mapping for intuitive behavior
-  const bubbleY = Math.max(-1, Math.min(1, pitch / MAX_ANGLE)); // Direct mapping for intuitive behavior
+  const bubbleX = Math.max(-1, Math.min(1, -roll / MAX_ANGLE)); // Inverted for realistic bubble behavior
+  const bubbleY = Math.max(-1, Math.min(1, -pitch / MAX_ANGLE)); // Inverted for realistic bubble behavior
 
   // Convert to actual pixel position
   const centerX = BUBBLE_SIZE / 2;
@@ -196,8 +199,8 @@ export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
         <G>
           <SvgText
             x={centerX}
-            y={20}
-            fontSize="14"
+            y={size === 'compact' ? 15 : 20}
+            fontSize={size === 'compact' ? "10" : "14"}
             fill="rgba(255, 255, 255, 0.8)"
             textAnchor="middle"
             fontWeight="600"
@@ -206,8 +209,8 @@ export function BubbleLevel({ pitch, roll, isLevel, color }: BubbleLevelProps) {
           </SvgText>
           <SvgText
             x={centerX}
-            y={BUBBLE_SIZE - 10}
-            fontSize="14"
+            y={BUBBLE_SIZE - (size === 'compact' ? 5 : 10)}
+            fontSize={size === 'compact' ? "10" : "14"}
             fill="rgba(255, 255, 255, 0.8)"
             textAnchor="middle"
             fontWeight="600"

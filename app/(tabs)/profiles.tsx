@@ -14,9 +14,12 @@ import {
   useTheme,
 } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Trash2, Check, Car, Truck, Home } from '@tamagui/lucide-icons';
+import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from '@tamagui/lucide-icons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
-import { StandardBlockSets } from '../../src/lib/rvLevelingMath';
+import { StandardBlockSets, BlockInventory } from '../../src/lib/rvLevelingMath';
+import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
+
+import { createCalibration } from '../../src/lib/levelingMath';
 
 export default function ProfilesScreen() {
   const theme = useTheme();
@@ -29,37 +32,26 @@ export default function ProfilesScreen() {
     setActiveProfile,
   } = useAppStore();
 
-  const [showAddSheet, setShowAddSheet] = useState(false);
-  const [newProfile, setNewProfile] = useState({
-    name: '',
-    type: 'trailer' as 'trailer' | 'motorhome' | 'van',
-    wheelbaseInches: 240,
-    trackWidthInches: 96,
-    hitchOffset: 0,
-  });
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
 
   useEffect(() => {
     loadProfiles();
   }, []);
 
-  const handleAddProfile = () => {
-    if (!newProfile.name.trim()) return;
-
+  const handleAddProfile = (profileData: {
+    name: string;
+    type: 'trailer' | 'motorhome' | 'van';
+    wheelbaseInches: number;
+    trackWidthInches: number;
+    hitchOffsetInches?: number;
+    blockInventory: BlockInventory[];
+  }) => {
     addProfile({
-      ...newProfile,
-      hitchOffsetInches: newProfile.hitchOffset,
-      blockInventory: StandardBlockSets.professional(),
-      calibration: { pitch: 0, roll: 0 },
+      ...profileData,
+      calibration: createCalibration(),
     });
 
-    setNewProfile({
-      name: '',
-      type: 'trailer',
-      wheelbaseInches: 240,
-      trackWidthInches: 96,
-      hitchOffset: 0,
-    });
-    setShowAddSheet(false);
+    setShowSetupWizard(false);
   };
 
   const getVehicleIcon = (type: string) => {
@@ -77,30 +69,65 @@ export default function ProfilesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.val || '#000' }}>
-      <YStack flex={1} padding="$4" space="$4">
+      <YStack 
+        flex={1} 
+        padding="$4" 
+        space="$4"
+      >
         <XStack justifyContent="space-between" alignItems="center">
           <H2>Vehicle Profiles</H2>
           <Button
-            size="$4"
+            size="$5"
+            height="$5"
             backgroundColor="$blue9"
             icon={Plus}
-            onPress={() => setShowAddSheet(true)}
+            onPress={() => setShowSetupWizard(true)}
+            fontSize="$4"
           >
-            Add
+            Add Vehicle
           </Button>
         </XStack>
 
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack space="$3">
             {profiles.length === 0 ? (
-              <Card padding="$6" backgroundColor="$gray2">
-                <YStack alignItems="center" space="$3">
-                  <Car size={48} color={theme.gray10?.val || '#666'} />
-                  <Text color="$colorPress" textAlign="center">
-                    No profiles yet. Add your first vehicle profile to get started.
-                  </Text>
-                </YStack>
-              </Card>
+              <YStack space="$4">
+                <Card padding="$6" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
+                  <YStack alignItems="center" space="$4">
+                    <Car size={48} color="$blue9" />
+                    <YStack space="$2" alignItems="center">
+                      <Text color="$color" textAlign="center" fontSize="$5" fontWeight="bold">
+                        Welcome to LevelMate!
+                      </Text>
+                      <Text color="$colorPress" textAlign="center" fontSize="$4">
+                        To get started, you'll need to set up a profile for your RV, trailer, or van.
+                      </Text>
+                    </YStack>
+                    <Button
+                      size="$5"
+                      backgroundColor="$blue9"
+                      icon={Plus}
+                      onPress={() => setShowSetupWizard(true)}
+                    >
+                      Set Up My Vehicle
+                    </Button>
+                  </YStack>
+                </Card>
+                
+                <Card padding="$4" backgroundColor="$yellow2" borderColor="$yellow9" borderWidth={1}>
+                  <XStack space="$3" alignItems="flex-start">
+                    <HelpCircle size={20} color="$yellow11" />
+                    <YStack flex={1} space="$2">
+                      <Text color="$yellow11" fontSize="$4" fontWeight="bold">
+                        Need help?
+                      </Text>
+                      <Text color="$yellow11" fontSize="$3">
+                        Don't worry if you don't know your exact vehicle measurements. Our setup wizard will guide you through the process and provide typical values for your vehicle type.
+                      </Text>
+                    </YStack>
+                  </XStack>
+                </Card>
+              </YStack>
             ) : (
               profiles.map((profile) => (
                 <Card
@@ -149,136 +176,13 @@ export default function ProfilesScreen() {
         </ScrollView>
       </YStack>
 
-      {/* Add Profile Sheet */}
-      <Sheet
-        modal
-        open={showAddSheet}
-        onOpenChange={setShowAddSheet}
-        snapPoints={[60]}
-        dismissOnSnapToBottom
-      >
-        <Sheet.Overlay />
-        <Sheet.Frame padding="$4">
-          <Sheet.Handle />
-          <YStack space="$4">
-            <H2>New Vehicle Profile</H2>
+      {/* Vehicle Setup Wizard */}
+      <VehicleSetupWizard
+        isVisible={showSetupWizard}
+        onComplete={handleAddProfile}
+        onCancel={() => setShowSetupWizard(false)}
+      />
 
-            <YStack space="$2">
-              <Label htmlFor="name">Profile Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., My RV"
-                value={newProfile.name}
-                onChangeText={(text: string) =>
-                  setNewProfile({ ...newProfile, name: text })
-                }
-              />
-            </YStack>
-
-            <YStack space="$2">
-              <Label>Vehicle Type</Label>
-              <RadioGroup
-                value={newProfile.type}
-                onValueChange={(value: string) =>
-                  setNewProfile({
-                    ...newProfile,
-                    type: value as 'trailer' | 'motorhome' | 'van',
-                  })
-                }
-              >
-                <XStack space="$3">
-                  <XStack alignItems="center" space="$2">
-                    <RadioGroup.Item value="trailer" id="trailer">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Label htmlFor="trailer">Trailer</Label>
-                  </XStack>
-                  <XStack alignItems="center" space="$2">
-                    <RadioGroup.Item value="motorhome" id="motorhome">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Label htmlFor="motorhome">Motorhome</Label>
-                  </XStack>
-                  <XStack alignItems="center" space="$2">
-                    <RadioGroup.Item value="van" id="van">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Label htmlFor="van">Van</Label>
-                  </XStack>
-                </XStack>
-              </RadioGroup>
-            </YStack>
-
-            <XStack space="$3">
-              <YStack flex={1} space="$2">
-                <Label htmlFor="wheelbase">Wheelbase (inches)</Label>
-                <Input
-                  id="wheelbase"
-                  keyboardType="numeric"
-                  value={newProfile.wheelbaseInches.toString()}
-                  onChangeText={(text: string) =>
-                    setNewProfile({
-                      ...newProfile,
-                      wheelbaseInches: parseInt(text) || 0,
-                    })
-                  }
-                />
-              </YStack>
-              <YStack flex={1} space="$2">
-                <Label htmlFor="track">Track Width (inches)</Label>
-                <Input
-                  id="track"
-                  keyboardType="numeric"
-                  value={newProfile.trackWidthInches.toString()}
-                  onChangeText={(text: string) =>
-                    setNewProfile({
-                      ...newProfile,
-                      trackWidthInches: parseInt(text) || 0,
-                    })
-                  }
-                />
-              </YStack>
-            </XStack>
-
-            {newProfile.type === 'trailer' && (
-              <YStack space="$2">
-                <Label htmlFor="hitch">Hitch Offset (inches)</Label>
-                <Input
-                  id="hitch"
-                  keyboardType="numeric"
-                  value={newProfile.hitchOffset?.toString() || '0'}
-                  onChangeText={(text: string) =>
-                    setNewProfile({
-                      ...newProfile,
-                      hitchOffset: parseInt(text) || 0,
-                    })
-                  }
-                />
-              </YStack>
-            )}
-
-            <XStack space="$3">
-              <Button
-                flex={1}
-                size="$4"
-                backgroundColor="$gray5"
-                onPress={() => setShowAddSheet(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                flex={1}
-                size="$4"
-                backgroundColor="$blue9"
-                onPress={handleAddProfile}
-                disabled={!newProfile.name.trim()}
-              >
-                Add Profile
-              </Button>
-            </XStack>
-          </YStack>
-        </Sheet.Frame>
-      </Sheet>
     </SafeAreaView>
   );
 }

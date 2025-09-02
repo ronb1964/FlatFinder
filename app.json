@@ -1,41 +1,44 @@
 {
   "expo": {
-    "name": "LevelMate-Expo",
-    "slug": "LevelMate-Expo",
+    "name": "LevelMate",
+    "slug": "levelmate-rv-leveling",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "scheme": "levelmate",
+    "primaryColor": "#22c55e",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.levelmate.rvleveling",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMotionUsageDescription": "LevelMate uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
+        "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.levelmate.rvleveling",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "static",
-      "pwa": {
-        "name": "LevelMate",
-        "shortName": "LevelMate",
-        "description": "Professional RV & Trailer Leveling Solution",
-        "startUrl": "/",
-        "display": "standalone",
-        "backgroundColor": "#1a1a2e",
-        "themeColor": "#22c55e",
-        "orientation": "portrait"
-      }
+      "output": "static"
     }
   }
 }

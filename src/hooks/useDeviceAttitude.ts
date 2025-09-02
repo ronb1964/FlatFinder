@@ -1,6 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
+import { 
+  createDefaultAttitudeAdapter, 
+  type AttitudeReading, 
+  type AttitudeAdapter,
+  type AttitudeConfig 
+} from '../sensors/attitudeAdapter';
 
-interface AttitudeData {
+export interface DeviceAttitudeData {
   pitchDeg: number;
   rollDeg: number;
   raw: {
@@ -9,134 +15,137 @@ interface AttitudeData {
     yaw: number;
   };
   isReliable: boolean;
+  errorMessage?: string;
+  isAvailable: boolean | null;
+  permissionStatus: string;
 }
 
-const LOW_PASS_FILTER_ALPHA = 0.8; // Smoothing factor
+const DEFAULT_ATTITUDE: DeviceAttitudeData = {
+  pitchDeg: 0,
+  rollDeg: 0,
+  raw: { pitch: 0, roll: 0, yaw: 0 },
+  isReliable: false,
+  errorMessage: '',
+  isAvailable: null,
+  permissionStatus: 'unknown',
+};
 
-export function useDeviceAttitude() {
-  const [attitude, setAttitude] = useState<AttitudeData>({
-    pitchDeg: 0,
-    rollDeg: 0,
-    raw: { pitch: 0, roll: 0, yaw: 0 },
-    isReliable: false,
-  });
-
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<string>('unknown');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const prevValues = useRef<{ pitch: number; roll: number }>({ pitch: 0, roll: 0 });
-  const listenerActive = useRef<boolean>(false);
+export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): DeviceAttitudeData {
+  const [attitude, setAttitude] = useState<DeviceAttitudeData>(DEFAULT_ATTITUDE);
+  
+  const adapterRef = useRef<AttitudeAdapter | null>(null);
+  const configRef = useRef<AttitudeConfig | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const setupNativeSensors = async () => {
+    const initializeSensors = async () => {
       try {
-        console.log('Setting up native browser sensors...');
+        // Create adapter and config
+        const { adapter, config } = createDefaultAttitudeAdapter();
         
-        // Check if DeviceOrientationEvent is available
-        if (typeof (window as any).DeviceOrientationEvent === 'undefined') {
-          console.log('DeviceOrientationEvent not available');
-          setIsAvailable(false);
-          setErrorMessage('Device orientation sensors not supported in this browser');
+        // Apply custom config if provided
+        const finalConfig = customConfig ? { ...config, ...customConfig } : config;
+        
+        adapterRef.current = adapter;
+        configRef.current = finalConfig;
+
+        // Check availability
+        const isAvailable = await adapter.isAvailable();
+        
+        if (!mounted) return;
+
+        if (!isAvailable) {
+          setAttitude(prev => ({
+            ...prev,
+            isAvailable: false,
+            errorMessage: 'Device orientation sensors not available on this platform',
+            permissionStatus: 'not-required',
+          }));
           return;
         }
 
-        // Check if we're on iOS and need permission
-        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isHTTPS = window.location.protocol === 'https:';
-        
-        console.log('Device info:', { isIOSSafari, isHTTPS });
-        
-        if (isIOSSafari) {
-          // iOS requires permission request
-          if (typeof (window as any).DeviceOrientationEvent.requestPermission === 'function') {
-            try {
-              console.log('Requesting iOS DeviceOrientation permission...');
-              const permission = await (window as any).DeviceOrientationEvent.requestPermission();
-              console.log('iOS permission result:', permission);
-              setPermissionStatus(permission);
-              
-              if (permission !== 'granted') {
-                setIsAvailable(false);
-                setErrorMessage(`Device orientation permission ${permission}. Please grant permission to access motion sensors.`);
-                return;
-              }
-            } catch (error) {
-              console.log('iOS permission request failed:', error);
-              setIsAvailable(false);
-              setErrorMessage('Failed to request device orientation permission');
-              return;
-            }
-          }
+        setAttitude(prev => ({
+          ...prev,
+          isAvailable: true,
+        }));
+
+        // Check/request permissions
+        const initialPermissionStatus = adapter.getPermissionStatus();
+        let permissionStatus = initialPermissionStatus;
+
+        if (initialPermissionStatus === 'unknown') {
+          permissionStatus = await adapter.requestPermission();
         }
 
-        // Set up the orientation event listener
-        const handleOrientation = (event: DeviceOrientationEvent) => {
-          if (!mounted || listenerActive.current === false) return;
+        if (!mounted) return;
 
-          const alpha = event.alpha || 0; // compass heading (not used)
-          const beta = event.beta || 0;   // pitch (front/back tilt) -180 to 180
-          const gamma = event.gamma || 0; // roll (left/right tilt) -90 to 90
-          
-          // Apply low-pass filter for smoothing
-          const filteredPitch = LOW_PASS_FILTER_ALPHA * beta + 
-                               (1 - LOW_PASS_FILTER_ALPHA) * prevValues.current.pitch;
-          const filteredRoll = LOW_PASS_FILTER_ALPHA * gamma + 
-                              (1 - LOW_PASS_FILTER_ALPHA) * prevValues.current.roll;
+        setAttitude(prev => ({
+          ...prev,
+          permissionStatus,
+        }));
 
-          prevValues.current = { pitch: filteredPitch, roll: filteredRoll };
+        if (permissionStatus === 'denied') {
+          setAttitude(prev => ({
+            ...prev,
+            errorMessage: 'Permission denied for device orientation sensors',
+          }));
+          return;
+        }
 
-          setAttitude({
-            pitchDeg: filteredPitch,
-            rollDeg: filteredRoll,
-            raw: { pitch: beta, roll: gamma, yaw: alpha },
-            isReliable: true,
-          });
+        // Start listening for attitude updates
+        const handleAttitudeUpdate = (reading: AttitudeReading) => {
+          if (!mounted) return;
+
+          setAttitude(prev => ({
+            ...prev,
+            pitchDeg: reading.pitchDeg,
+            rollDeg: reading.rollDeg,
+            raw: {
+              pitch: reading.pitchDeg,
+              roll: reading.rollDeg,
+              yaw: reading.yawDeg,
+            },
+            isReliable: reading.isReliable,
+            errorMessage: '',
+          }));
         };
 
-        // Add the event listener
-        window.addEventListener('deviceorientation', handleOrientation);
-        listenerActive.current = true;
-        
-        console.log('Native orientation listener added');
-        setIsAvailable(true);
-        setErrorMessage('');
-        
-        // Test if we're getting events after a short delay
-        setTimeout(() => {
-          if (mounted && attitude.pitchDeg === 0 && attitude.rollDeg === 0) {
-            console.log('No orientation data received after 2 seconds');
-            setErrorMessage('Device orientation events not firing. Try moving your device.');
-          }
-        }, 2000);
+        await adapter.start(finalConfig, handleAttitudeUpdate);
+
+        if (!mounted) return;
+
+        setAttitude(prev => ({
+          ...prev,
+          errorMessage: '',
+        }));
 
       } catch (error) {
-        console.log('Error setting up native sensors:', error);
+        console.error('Failed to initialize device attitude sensors:', error);
+        
         if (mounted) {
-          setIsAvailable(false);
-          setErrorMessage(`Native sensor setup failed: ${error}`);
+          setAttitude(prev => ({
+            ...prev,
+            isAvailable: false,
+            isReliable: false,
+            errorMessage: `Sensor initialization failed: ${error}`,
+          }));
         }
       }
     };
 
-    setupNativeSensors();
+    initializeSensors();
 
+    // Cleanup function
     return () => {
       mounted = false;
-      listenerActive.current = false;
-      // Remove event listener
-      if (typeof window !== 'undefined') {
-        const handleOrientation = () => {}; // Dummy function for removal
-        window.removeEventListener('deviceorientation', handleOrientation);
+      if (adapterRef.current) {
+        adapterRef.current.stop();
+        adapterRef.current = null;
       }
     };
-  }, []);
+  }, [customConfig]);
 
-  return {
-    ...attitude,
-    isAvailable,
-    permissionStatus,
-    errorMessage,
-  };
+  // Return current attitude data
+  return attitude;
 }
