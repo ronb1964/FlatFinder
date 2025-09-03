@@ -65,6 +65,24 @@ levelmate-expo/
 └── tamagui.config.ts    # Tamagui theme config
 ```
 
+## 🌐 Production Deployment
+
+### Netlify Web App
+The LevelMate web app is deployed on Netlify for global access:
+
+- **Production URL**: https://levelmate-app-1755829802.netlify.app
+- **Admin Dashboard**: https://app.netlify.com/projects/levelmate-app-1755829802
+- **Project ID**: 9d064cb9-3f1e-4f44-9b73-04992d931cb8
+
+#### Deploying to Netlify
+```bash
+# Build the web app
+npx expo export --platform web
+
+# Deploy to production
+npx netlify deploy --prod --dir=dist
+```
+
 ## 🚀 Getting Started
 
 ### Prerequisites

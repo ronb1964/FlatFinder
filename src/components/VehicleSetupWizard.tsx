@@ -40,19 +40,19 @@ const VEHICLE_TYPES = [
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    icon: Car
+    icon: Truck
   },
   {
     id: 'motorhome',
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
-    icon: Truck
+    icon: Home
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
-    icon: Home
+    icon: Car
   }
 ];
 
@@ -61,19 +61,34 @@ const MEASUREMENT_INFO = {
     title: "Wheelbase Length",
     description: "Distance from front axle to rear axle",
     howToMeasure: "Measure from the center of your front wheel to the center of your rear wheel on the same side.",
-    typical: "Most travel trailers: 20-22 feet (240-264 inches)"
+    typical: "Most travel trailers: 20-22 feet (240-264 inches)",
+    tips: [
+      "Look for axle centerlines - usually marked on RV specs or owner's manual",
+      "If unsure, measure from wheel center to wheel center",
+      "This measurement affects front-to-back leveling calculations"
+    ]
   },
   track: {
     title: "Track Width", 
     description: "Distance between left and right wheels",
     howToMeasure: "Measure from the center of your left wheel to the center of your right wheel on the same axle.",
-    typical: "Most RVs: 6-8 feet (72-96 inches)"
+    typical: "Most RVs: 6-8 feet (72-96 inches)",
+    tips: [
+      "Measure across the same axle (front or rear - they're usually the same)",
+      "Use the center of each tire, not the outside edge",
+      "This measurement affects side-to-side leveling calculations"
+    ]
   },
   hitch: {
     title: "Hitch Offset",
     description: "Distance from rear axle to hitch ball",
     howToMeasure: "Measure from the center of your rear axle to the center of your hitch ball.",
-    typical: "Most travel trailers: 8-12 feet (96-144 inches)"
+    typical: "Most travel trailers: 8-12 feet (96-144 inches)",
+    tips: [
+      "Only needed for travel trailers (not motorhomes)",
+      "Affects weight distribution calculations",
+      "If you don't know, estimate based on your trailer length"
+    ]
   }
 };
 
@@ -117,19 +132,34 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
   };
 
   const handleComplete = () => {
-    // Build block inventory based on user selections
-    const blockInventory: BlockInventory[] = hasLevelingBlocks 
-      ? selectedBlockHeights.map(height => ({
-          heightInches: height,
-          quantity: 4 // Default to 4 blocks per height
-        }))
-      : [];
+    try {
+      console.log('VehicleSetupWizard - Starting completion...');
+      
+      // Build block inventory based on user selections
+      const blockInventory: BlockInventory[] = hasLevelingBlocks 
+        ? selectedBlockHeights.map(height => ({
+            heightInches: height,
+            quantity: 4 // Default to 4 blocks per height
+          }))
+        : [];
 
-    onComplete({
-      ...profile,
-      hitchOffsetInches: profile.type === 'trailer' ? profile.hitchOffsetInches : undefined,
-      blockInventory
-    });
+      console.log('VehicleSetupWizard - Block inventory:', blockInventory);
+      console.log('VehicleSetupWizard - Profile data:', profile);
+
+      const profileData = {
+        ...profile,
+        hitchOffsetInches: profile.type === 'trailer' ? profile.hitchOffsetInches : undefined,
+        blockInventory
+      };
+
+      console.log('VehicleSetupWizard - Final profile data:', profileData);
+      
+      onComplete(profileData);
+      
+      console.log('VehicleSetupWizard - onComplete called successfully');
+    } catch (error) {
+      console.error('VehicleSetupWizard - Error during completion:', error);
+    }
   };
 
   const renderVehicleTypeStep = () => (
@@ -194,79 +224,136 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
           value={profile.name}
           onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
         />
-        <Text color="$colorPress" fontSize="$3">
-          Examples: "Big Blue", "Family Trailer", "Weekend Warrior"
-        </Text>
+        <Card padding="$3" backgroundColor="$purple1" borderColor="$purple6" borderWidth={1}>
+          <Text color="$purple11" fontSize="$3" fontWeight="600" marginBottom="$2">💡 Naming Tips:</Text>
+          <Text color="$purple11" fontSize="$3" marginBottom="$1">
+            • Use something memorable and descriptive
+          </Text>
+          <Text color="$purple11" fontSize="$3" marginBottom="$1">
+            • Consider color, size, or brand (e.g., "Big Blue", "Little Winnebago")
+          </Text>
+          <Text color="$purple11" fontSize="$3">
+            • Helpful if you have multiple RVs or share the app
+          </Text>
+        </Card>
       </YStack>
     </YStack>
   );
 
   const renderMeasurementsStep = () => (
-    <ScrollView>
+    <ScrollView 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 20 }}
+    >
       <YStack space="$4">
         <YStack space="$2" alignItems="center">
           <H2 color="$color" textAlign="center">Vehicle Measurements</H2>
           <Text color="$colorPress" textAlign="center" fontSize="$4">
-            Accurate measurements help LevelMate provide better leveling guidance.
+            We need a few measurements to calculate leveling accurately.
           </Text>
         </YStack>
 
-        {/* Option to use typical measurements */}
-        <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-          <YStack space="$3">
-            <XStack space="$2" alignItems="center">
-              <RadioGroup
-                value={useTypicalMeasurements ? "typical" : "custom"}
-                onValueChange={(value) => setUseTypicalMeasurements(value === "typical")}
+        {/* Simplified radio button selection */}
+        <YStack space="$2">
+          <Card 
+            padding="$3" 
+            backgroundColor={useTypicalMeasurements ? "$blue2" : "$background"}
+            borderColor={useTypicalMeasurements ? "$blue9" : "$borderColor"}
+            borderWidth={1}
+            pressStyle={{ scale: 0.98 }}
+            onPress={() => setUseTypicalMeasurements(true)}
+          >
+            <XStack space="$3" alignItems="center">
+              <Card
+                width={20}
+                height={20}
+                borderRadius={10}
+                backgroundColor={useTypicalMeasurements ? "$blue9" : "$background"}
+                borderColor={useTypicalMeasurements ? "$blue9" : "$borderColor"}
+                borderWidth={2}
+                justifyContent="center"
+                alignItems="center"
               >
-                <XStack space="$4">
-                  <XStack space="$2" alignItems="center">
-                    <RadioGroup.Item value="typical" id="typical">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Label htmlFor="typical">Use typical measurements</Label>
-                  </XStack>
-                  <XStack space="$2" alignItems="center">
-                    <RadioGroup.Item value="custom" id="custom">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Label htmlFor="custom">Enter my exact measurements</Label>
-                  </XStack>
-                </XStack>
-              </RadioGroup>
+                {useTypicalMeasurements && (
+                  <Card
+                    width={8}
+                    height={8}
+                    borderRadius={4}
+                    backgroundColor="white"
+                  />
+                )}
+              </Card>
+              <YStack flex={1}>
+                <Text fontSize="$5" fontWeight="600">Use Typical Values</Text>
+                <Text fontSize="$3" color="$colorPress">Quick setup with standard measurements</Text>
+              </YStack>
             </XStack>
-            <Text color="$colorPress" fontSize="$3">
-              {useTypicalMeasurements 
-                ? "We'll use typical measurements for your vehicle type. You can adjust these later."
-                : "Enter your exact measurements for the most accurate leveling assistance."
-              }
-            </Text>
-          </YStack>
-        </Card>
+          </Card>
+          
+          <Card 
+            padding="$3" 
+            backgroundColor={!useTypicalMeasurements ? "$blue2" : "$background"}
+            borderColor={!useTypicalMeasurements ? "$blue9" : "$borderColor"}
+            borderWidth={1}
+            pressStyle={{ scale: 0.98 }}
+            onPress={() => setUseTypicalMeasurements(false)}
+          >
+            <XStack space="$3" alignItems="center">
+              <Card
+                width={20}
+                height={20}
+                borderRadius={10}
+                backgroundColor={!useTypicalMeasurements ? "$blue9" : "$background"}
+                borderColor={!useTypicalMeasurements ? "$blue9" : "$borderColor"}
+                borderWidth={2}
+                justifyContent="center"
+                alignItems="center"
+              >
+                {!useTypicalMeasurements && (
+                  <Card
+                    width={8}
+                    height={8}
+                    borderRadius={4}
+                    backgroundColor="white"
+                  />
+                )}
+              </Card>
+              <YStack flex={1}>
+                <Text fontSize="$5" fontWeight="600">Enter Custom Values</Text>
+                <Text fontSize="$3" color="$colorPress">Most accurate for your specific vehicle</Text>
+              </YStack>
+            </XStack>
+          </Card>
+        </YStack>
 
         {/* Measurements */}
         <YStack space="$4">
           {/* Wheelbase */}
           <YStack space="$2">
             <XStack space="$2" alignItems="center">
-              <Ruler size={16} color="$colorPress" />
-              <Text fontWeight="bold">{MEASUREMENT_INFO.wheelbase.title}</Text>
+              <Ruler size={20} color="$blue10" />
+              <Text fontSize="$5" fontWeight="600" color="$blue11">
+                Wheelbase Length ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+              </Text>
             </XStack>
-            <Text color="$colorPress" fontSize="$3">
-              {MEASUREMENT_INFO.wheelbase.description}
-            </Text>
             
             {useTypicalMeasurements ? (
               <Card padding="$3" backgroundColor="$gray2">
-                <Text>
-                  {formatMeasurement(profile.wheelbaseInches, settings.measurementUnits)} (typical for {selectedVehicleType?.name})
+                <Text fontSize="$4" fontWeight="500">
+                  {settings.measurementUnits === 'metric' 
+                    ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
+                    : `${profile.wheelbaseInches}"`
+                  }
+                </Text>
+                <Text fontSize="$3" color="$colorPress">
+                  Standard for {selectedVehicleType?.name}
                 </Text>
               </Card>
             ) : (
               <YStack space="$2">
                 <Input
-                  size="$4"
-                  placeholder={convertForDisplay(240, settings.measurementUnits).toString()}
+                  size="$5"
+                  placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)} ${settings.measurementUnits === 'metric' ? 'cm' : 'inches'}`}
                   value={convertForDisplay(profile.wheelbaseInches, settings.measurementUnits).toString()}
                   onChangeText={(text) => {
                     const num = parseFloat(text) || 0;
@@ -277,8 +364,8 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
                   }}
                   keyboardType="decimal-pad"
                 />
-                <Text color="$colorPress" fontSize="$2">
-                  {MEASUREMENT_INFO.wheelbase.howToMeasure} (in {settings.measurementUnits === 'metric' ? 'centimeters' : 'inches'})
+                <Text color="$colorPress" fontSize="$3">
+                  Measure center-to-center between front and rear wheels
                 </Text>
               </YStack>
             )}
@@ -287,24 +374,29 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
           {/* Track Width */}
           <YStack space="$2">
             <XStack space="$2" alignItems="center">
-              <Ruler size={16} color="$colorPress" />
-              <Text fontWeight="bold">{MEASUREMENT_INFO.track.title}</Text>
+              <Ruler size={20} color="$green10" />
+              <Text fontSize="$5" fontWeight="600" color="$green11">
+                Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+              </Text>
             </XStack>
-            <Text color="$colorPress" fontSize="$3">
-              {MEASUREMENT_INFO.track.description}
-            </Text>
             
             {useTypicalMeasurements ? (
               <Card padding="$3" backgroundColor="$gray2">
-                <Text>
-                  {formatMeasurement(profile.trackWidthInches, settings.measurementUnits)} (typical for {selectedVehicleType?.name})
+                <Text fontSize="$4" fontWeight="500">
+                  {settings.measurementUnits === 'metric' 
+                    ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
+                    : `${profile.trackWidthInches}"`
+                  }
+                </Text>
+                <Text fontSize="$3" color="$colorPress">
+                  Standard for {selectedVehicleType?.name}
                 </Text>
               </Card>
             ) : (
               <YStack space="$2">
                 <Input
-                  size="$4"
-                  placeholder={convertForDisplay(96, settings.measurementUnits).toString()}
+                  size="$5"
+                  placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)} ${settings.measurementUnits === 'metric' ? 'cm' : 'inches'}`}
                   value={convertForDisplay(profile.trackWidthInches, settings.measurementUnits).toString()}
                   onChangeText={(text) => {
                     const num = parseFloat(text) || 0;
@@ -315,8 +407,8 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
                   }}
                   keyboardType="decimal-pad"
                 />
-                <Text color="$colorPress" fontSize="$2">
-                  {MEASUREMENT_INFO.track.howToMeasure} (in {settings.measurementUnits === 'metric' ? 'centimeters' : 'inches'})
+                <Text color="$colorPress" fontSize="$3">
+                  Measure center-to-center between left and right wheels
                 </Text>
               </YStack>
             )}
@@ -326,24 +418,29 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
           {profile.type === 'trailer' && (
             <YStack space="$2">
               <XStack space="$2" alignItems="center">
-                <Ruler size={16} color="$colorPress" />
-                <Text fontWeight="bold">{MEASUREMENT_INFO.hitch.title}</Text>
+                <Ruler size={20} color="$orange10" />
+                <Text fontSize="$5" fontWeight="600" color="$orange11">
+                  Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+                </Text>
               </XStack>
-              <Text color="$colorPress" fontSize="$3">
-                {MEASUREMENT_INFO.hitch.description}
-              </Text>
               
               {useTypicalMeasurements ? (
                 <Card padding="$3" backgroundColor="$gray2">
-                  <Text>
-                    {formatMeasurement(profile.hitchOffsetInches, settings.measurementUnits)} (typical for travel trailers)
+                  <Text fontSize="$4" fontWeight="500">
+                    {settings.measurementUnits === 'metric' 
+                      ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
+                      : `${profile.hitchOffsetInches}"`
+                    }
+                  </Text>
+                  <Text fontSize="$3" color="$colorPress">
+                    Standard for travel trailers
                   </Text>
                 </Card>
               ) : (
                 <YStack space="$2">
                   <Input
-                    size="$4"
-                    placeholder={convertForDisplay(120, settings.measurementUnits).toString()}
+                    size="$5"
+                    placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)} ${settings.measurementUnits === 'metric' ? 'cm' : 'inches'}`}
                     value={convertForDisplay(profile.hitchOffsetInches, settings.measurementUnits).toString()}
                     onChangeText={(text) => {
                       const num = parseFloat(text) || 0;
@@ -354,8 +451,8 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
                     }}
                     keyboardType="decimal-pad"
                   />
-                  <Text color="$colorPress" fontSize="$2">
-                    {MEASUREMENT_INFO.hitch.howToMeasure} (in {settings.measurementUnits === 'metric' ? 'centimeters' : 'inches'})
+                  <Text color="$colorPress" fontSize="$3">
+                    Measure from rear axle center to hitch ball
                   </Text>
                 </YStack>
               )}
@@ -363,22 +460,31 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
           )}
         </YStack>
 
-        {!useTypicalMeasurements && (
-          <Card padding="$3" backgroundColor="$yellow2" borderColor="$yellow9" borderWidth={1}>
-            <XStack space="$2" alignItems="flex-start">
-              <Info size={16} color="$yellow11" />
-              <Text color="$yellow11" fontSize="$3" flex={1}>
-                Don't worry if you don't have exact measurements. You can always update these later in your profile settings.
+        {/* Single help section at the bottom */}
+        <Card padding="$3" backgroundColor="$blue1" borderColor="$blue6" borderWidth={1}>
+          <XStack space="$2" alignItems="flex-start">
+            <Info size={18} color="$blue11" marginTop="$1" />
+            <YStack flex={1} space="$1">
+              <Text color="$blue11" fontSize="$3" fontWeight="600">
+                {useTypicalMeasurements ? "Using Standard Values" : "Measurement Tips"}
               </Text>
-            </XStack>
-          </Card>
-        )}
+              <Text color="$blue11" fontSize="$3">
+                {useTypicalMeasurements 
+                  ? "These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed."
+                  : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
+              </Text>
+            </YStack>
+          </XStack>
+        </Card>
       </YStack>
     </ScrollView>
   );
 
   const renderBlocksStep = () => (
-    <ScrollView>
+    <ScrollView 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 20 }}
+    >
       <YStack space="$4">
         <YStack space="$2" alignItems="center">
           <H2 color="$color" textAlign="center">Leveling Blocks</H2>
@@ -419,9 +525,18 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
             <Text fontWeight="bold" textAlign="center">
               What block heights do you have?
             </Text>
-            <Text color="$colorPress" textAlign="center" fontSize="$3">
-              Select all the block heights in your inventory. The app will calculate how many blocks to use.
-            </Text>
+            <Card padding="$3" backgroundColor="$cyan1" borderColor="$cyan6" borderWidth={1}>
+              <Text color="$cyan11" fontSize="$3" fontWeight="600" marginBottom="$2">💡 Block Selection Tips:</Text>
+              <Text color="$cyan11" fontSize="$3" marginBottom="$1">
+                • Select all heights you own - the app will optimize which to use
+              </Text>
+              <Text color="$cyan11" fontSize="$3" marginBottom="$1">
+                • Common heights: 1", 2", 4" blocks work for most situations
+              </Text>
+              <Text color="$cyan11" fontSize="$3">
+                • Check your block packaging or measure with a ruler if unsure
+              </Text>
+            </Card>
             
             <YStack space="$3">
               {getCommonBlockHeights(settings.measurementUnits).map((block) => (
@@ -520,60 +635,73 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible }: VehicleS
     <Sheet
       modal
       open={isVisible}
-      onOpenChange={(open) => !open && onCancel()}
-      snapPointsMode="fit"
+      onOpenChange={(open) => {
+        console.log('VehicleSetupWizard - Sheet onOpenChange called with:', open);
+        if (!open) {
+          console.log('VehicleSetupWizard - Calling onCancel');
+          onCancel();
+        }
+      }}
+      snapPoints={[90]}
+      position={0}
+      dismissOnSnapToBottom
     >
       <Sheet.Overlay />
       <Sheet.Handle />
-      <Sheet.Frame padding="$4" space="$4">
-        {/* Progress */}
-        <XStack space="$2" justifyContent="center">
-          {STEPS.map((_, index) => (
-            <Card
-              key={index}
-              width={40}
-              height={4}
-              backgroundColor={index <= step ? '$blue9' : '$gray6'}
-              borderRadius="$2"
-            />
-          ))}
-        </XStack>
+      <Sheet.Frame>
+        <YStack flex={1} height="100%">
+          {/* Fixed header */}
+          <YStack padding="$4" paddingBottom="$2" space="$3">
+            {/* Progress */}
+            <XStack space="$2" justifyContent="center">
+              {STEPS.map((_, index) => (
+                <Card
+                  key={index}
+                  width={40}
+                  height={4}
+                  backgroundColor={index <= step ? '$blue9' : '$gray6'}
+                  borderRadius="$2"
+                />
+              ))}
+            </XStack>
 
-        {/* Step Title */}
-        <H3 color="$colorPress" textAlign="center">
-          Step {step + 1} of {STEPS.length}: {currentStepData.title}
-        </H3>
+            {/* Step Title */}
+            <H3 color="$colorPress" textAlign="center">
+              Step {step + 1} of {STEPS.length}: {currentStepData.title}
+            </H3>
+          </YStack>
 
-        {/* Step Content */}
-        <YStack flex={1} minHeight={400}>
-          {currentStepData.component()}
-        </YStack>
+          {/* Scrollable content */}
+          <YStack flex={1} paddingHorizontal="$4">
+            {currentStepData.component()}
+          </YStack>
 
-        {/* Navigation */}
-        <XStack space="$3">
-          {step > 0 && (
+          {/* Fixed navigation buttons */}
+          <XStack padding="$4" paddingTop="$2" space="$3" backgroundColor="$background">
+            {step > 0 && (
+              <Button
+                flex={1}
+                size="$5"
+                backgroundColor="$gray9"
+                onPress={handleBack}
+                icon={ArrowLeft}
+              >
+                Back
+              </Button>
+            )}
+            
             <Button
               flex={1}
               size="$5"
-              backgroundColor="$gray9"
-              onPress={handleBack}
-              icon={ArrowLeft}
+              backgroundColor="$blue9"
+              disabled={!canProceed}
+              onPress={step < STEPS.length - 1 ? handleNext : handleComplete}
+              iconAfter={step < STEPS.length - 1 ? ArrowRight : undefined}
             >
-              Back
+              {step < STEPS.length - 1 ? 'Next' : 'Create Profile'}
             </Button>
-          )}
-          
-          <Button
-            flex={1}
-            size="$5"
-            backgroundColor="$blue9"
-            disabled={!canProceed}
-            onPress={step < STEPS.length - 1 ? handleNext : handleComplete}
-            iconAfter={step < STEPS.length - 1 ? ArrowRight : undefined}
-          >
-            {step < STEPS.length - 1 ? 'Next' : 'Create Profile'}
-          </Button>
-        </XStack>
+          </XStack>
+        </YStack>
       </Sheet.Frame>
     </Sheet>
   );

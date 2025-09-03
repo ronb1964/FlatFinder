@@ -18,6 +18,8 @@ import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from '@tamagui/luci
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
 import { StandardBlockSets, BlockInventory } from '../../src/lib/rvLevelingMath';
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
+import { ProfileCreationTest } from '../../src/components/ProfileCreationTest';
+import { SimpleProfileWizard } from '../../src/components/SimpleProfileWizard';
 
 import { createCalibration } from '../../src/lib/levelingMath';
 
@@ -34,6 +36,27 @@ export default function ProfilesScreen() {
 
   const [showSetupWizard, setShowSetupWizard] = useState(false);
 
+  const handleDeleteProfile = (profileId: string, profileName: string) => {
+    try {
+      console.log('ProfilesScreen - Deleting profile:', profileId, profileName);
+      
+      // Simple confirmation using window.confirm for web
+      const confirmed = window.confirm(`Are you sure you want to delete "${profileName}"? This action cannot be undone.`);
+      
+      if (!confirmed) {
+        console.log('ProfilesScreen - Profile deletion cancelled by user');
+        return;
+      }
+      
+      console.log('ProfilesScreen - Proceeding with profile deletion');
+      deleteProfile(profileId);
+      console.log('ProfilesScreen - Profile deleted successfully');
+      
+    } catch (error) {
+      console.error('ProfilesScreen - Error deleting profile:', error);
+    }
+  };
+
   useEffect(() => {
     loadProfiles();
   }, []);
@@ -46,12 +69,31 @@ export default function ProfilesScreen() {
     hitchOffsetInches?: number;
     blockInventory: BlockInventory[];
   }) => {
-    addProfile({
-      ...profileData,
-      calibration: createCalibration(),
-    });
-
-    setShowSetupWizard(false);
+    try {
+      console.log('ProfilesScreen - Received profile data:', profileData);
+      
+      const calibration = createCalibration();
+      console.log('ProfilesScreen - Created calibration:', calibration);
+      
+      const finalProfileData = {
+        ...profileData,
+        calibration,
+      };
+      
+      console.log('ProfilesScreen - Final profile data before addProfile:', finalProfileData);
+      
+      addProfile(finalProfileData);
+      
+      console.log('ProfilesScreen - Profile added successfully');
+      
+      // Close the wizard after a short delay to allow state updates to complete
+      setTimeout(() => {
+        console.log('ProfilesScreen - Closing setup wizard');
+        setShowSetupWizard(false);
+      }, 100);
+    } catch (error) {
+      console.error('ProfilesScreen - Error adding profile:', error);
+    }
   };
 
   const getVehicleIcon = (type: string) => {
@@ -162,12 +204,13 @@ export default function ProfilesScreen() {
                       </YStack>
                     </XStack>
                     <Button
-                      size="$3"
+                      size="$4"
                       backgroundColor="transparent"
-                      icon={Trash2}
                       color="$red9"
-                      onPress={() => deleteProfile(profile.id)}
-                    />
+                      onPress={() => handleDeleteProfile(profile.id, profile.name)}
+                    >
+                      <Trash2 size={24} color="$red9" />
+                    </Button>
                   </XStack>
                 </Card>
               ))
