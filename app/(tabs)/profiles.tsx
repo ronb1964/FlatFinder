@@ -15,6 +15,8 @@ import {
 } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from '@tamagui/lucide-icons';
+// Temporarily removing Edit icon to fix undefined component error
+// import { Edit } from '@tamagui/lucide-icons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
 import { StandardBlockSets, BlockInventory } from '../../src/lib/rvLevelingMath';
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
@@ -30,11 +32,18 @@ export default function ProfilesScreen() {
     activeProfileId,
     loadProfiles,
     addProfile,
+    updateProfile,
     deleteProfile,
     setActiveProfile,
   } = useAppStore();
 
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<VehicleProfile | null>(null);
+
+  const handleEditProfile = (profile: VehicleProfile) => {
+    setEditingProfile(profile);
+    setShowSetupWizard(true);
+  };
 
   const handleDeleteProfile = (profileId: string, profileName: string) => {
     try {
@@ -75,21 +84,33 @@ export default function ProfilesScreen() {
       const calibration = createCalibration();
       console.log('ProfilesScreen - Created calibration:', calibration);
       
-      const finalProfileData = {
-        ...profileData,
-        calibration,
-      };
+      if (editingProfile) {
+        // Update existing profile
+        const updateData = {
+          ...profileData,
+          calibration: editingProfile.calibration || calibration, // Keep existing calibration
+        };
+        
+        console.log('ProfilesScreen - Updating existing profile:', editingProfile.id, updateData);
+        updateProfile(editingProfile.id, updateData);
+        console.log('ProfilesScreen - Profile updated successfully');
+      } else {
+        // Create new profile
+        const finalProfileData = {
+          ...profileData,
+          calibration,
+        };
+        
+        console.log('ProfilesScreen - Final profile data before addProfile:', finalProfileData);
+        addProfile(finalProfileData);
+        console.log('ProfilesScreen - Profile added successfully');
+      }
       
-      console.log('ProfilesScreen - Final profile data before addProfile:', finalProfileData);
-      
-      addProfile(finalProfileData);
-      
-      console.log('ProfilesScreen - Profile added successfully');
-      
-      // Close the wizard after a short delay to allow state updates to complete
+      // Close the wizard and clear editing state
       setTimeout(() => {
         console.log('ProfilesScreen - Closing setup wizard');
         setShowSetupWizard(false);
+        setEditingProfile(null);
       }, 100);
     } catch (error) {
       console.error('ProfilesScreen - Error adding profile:', error);
@@ -203,14 +224,24 @@ export default function ProfilesScreen() {
                         </Text>
                       </YStack>
                     </XStack>
-                    <Button
-                      size="$4"
-                      backgroundColor="transparent"
-                      color="$red9"
-                      onPress={() => handleDeleteProfile(profile.id, profile.name)}
-                    >
-                      <Trash2 size={24} color="$red9" />
-                    </Button>
+                    <XStack space="$2">
+                      <Button
+                        size="$4"
+                        backgroundColor="transparent"
+                        color="$blue9"
+                        onPress={() => handleEditProfile(profile)}
+                      >
+                        <Text color="$blue9" fontWeight="bold" fontSize="$4">Edit</Text>
+                      </Button>
+                      <Button
+                        size="$4"
+                        backgroundColor="transparent"
+                        color="$red9"
+                        onPress={() => handleDeleteProfile(profile.id, profile.name)}
+                      >
+                        <Trash2 size={20} color="$red9" />
+                      </Button>
+                    </XStack>
                   </XStack>
                 </Card>
               ))
@@ -223,7 +254,11 @@ export default function ProfilesScreen() {
       <VehicleSetupWizard
         isVisible={showSetupWizard}
         onComplete={handleAddProfile}
-        onCancel={() => setShowSetupWizard(false)}
+        onCancel={() => {
+          setShowSetupWizard(false);
+          setEditingProfile(null);
+        }}
+        editingProfile={editingProfile}
       />
 
     </SafeAreaView>
