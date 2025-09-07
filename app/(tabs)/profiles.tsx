@@ -14,7 +14,7 @@ import {
   useTheme,
 } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from '@tamagui/lucide-icons';
+import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle, Crosshair } from '@tamagui/lucide-icons';
 // Temporarily removing Edit icon to fix undefined component error
 // import { Edit } from '@tamagui/lucide-icons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
@@ -22,8 +22,9 @@ import { StandardBlockSets, BlockInventory } from '../../src/lib/rvLevelingMath'
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
 import { ProfileCreationTest } from '../../src/components/ProfileCreationTest';
 import { SimpleProfileWizard } from '../../src/components/SimpleProfileWizard';
+import { CalibrationWizard } from '../../src/components/CalibrationWizard';
 
-import { createCalibration } from '../../src/lib/levelingMath';
+import { createCalibration, type Calibration } from '../../src/lib/levelingMath';
 
 export default function ProfilesScreen() {
   const theme = useTheme();
@@ -39,10 +40,25 @@ export default function ProfilesScreen() {
 
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [editingProfile, setEditingProfile] = useState<VehicleProfile | null>(null);
+  const [showCalibrationWizard, setShowCalibrationWizard] = useState(false);
+  const [calibratingProfile, setCalibratingProfile] = useState<VehicleProfile | null>(null);
 
   const handleEditProfile = (profile: VehicleProfile) => {
     setEditingProfile(profile);
     setShowSetupWizard(true);
+  };
+
+  const handleCalibrateProfile = (profile: VehicleProfile) => {
+    setCalibratingProfile(profile);
+    setShowCalibrationWizard(true);
+  };
+
+  const handleCalibrationComplete = (calibration: Calibration) => {
+    if (calibratingProfile) {
+      updateProfile(calibratingProfile.id, { calibration });
+    }
+    setShowCalibrationWizard(false);
+    setCalibratingProfile(null);
   };
 
   const handleDeleteProfile = (profileId: string, profileName: string) => {
@@ -214,34 +230,71 @@ export default function ProfilesScreen() {
                           <Text fontSize="$5" fontWeight="bold">
                             {profile.name}
                           </Text>
+                          {/* Calibration Status Indicator */}
+                          <YStack
+                            width={8}
+                            height={8}
+                            borderRadius={4}
+                            backgroundColor={
+                              profile.calibration && 
+                              (profile.calibration.pitchOffsetDegrees !== 0 || 
+                               profile.calibration.rollOffsetDegrees !== 0) 
+                                ? '$green9' 
+                                : '$yellow9'
+                            }
+                          />
                           {activeProfileId === profile.id && (
                             <Check size={16} color={theme.green10?.val || '#0f0'} />
                           )}
                         </XStack>
-                        <Text color="$colorPress" fontSize="$2">
-                          {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} •
-                          Wheelbase: {profile.wheelbaseInches}" • Track: {profile.trackWidthInches}"
+                        <Text color="$colorPress" fontSize="$2" numberOfLines={1}>
+                          {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} • Wheelbase: {profile.wheelbaseInches}" • Track: {profile.trackWidthInches}"
                         </Text>
+                        {profile.calibration && (
+                          <Text color="$colorPress" fontSize="$1" marginTop="$1" numberOfLines={2}>
+                            {profile.calibration.pitchOffsetDegrees !== 0 || 
+                             profile.calibration.rollOffsetDegrees !== 0 
+                              ? `Calibrated: P:${profile.calibration.pitchOffsetDegrees.toFixed(1)}°, R:${profile.calibration.rollOffsetDegrees.toFixed(1)}°`
+                              : 'Not calibrated - tap Calibrate to set baseline'}
+                          </Text>
+                        )}
                       </YStack>
                     </XStack>
-                    <XStack space="$2">
-                      <Button
-                        size="$4"
-                        backgroundColor="transparent"
-                        color="$blue9"
-                        onPress={() => handleEditProfile(profile)}
-                      >
-                        <Text color="$blue9" fontWeight="bold" fontSize="$4">Edit</Text>
-                      </Button>
-                      <Button
-                        size="$4"
-                        backgroundColor="transparent"
-                        color="$red9"
-                        onPress={() => handleDeleteProfile(profile.id, profile.name)}
-                      >
-                        <Trash2 size={20} color="$red9" />
-                      </Button>
-                    </XStack>
+                    <YStack space="$2" minWidth={120}>
+                      {activeProfileId === profile.id && (
+                        <Button
+                          size="$3"
+                          backgroundColor="transparent"
+                          color="$green9"
+                          onPress={() => handleCalibrateProfile(profile)}
+                          paddingHorizontal="$2"
+                        >
+                          <XStack space="$1" alignItems="center">
+                            <Crosshair size={16} color="$green9" />
+                            <Text color="$green9" fontWeight="bold" fontSize="$3">Calibrate</Text>
+                          </XStack>
+                        </Button>
+                      )}
+                      <XStack space="$2">
+                        <Button
+                          size="$3"
+                          backgroundColor="transparent"
+                          color="$blue9"
+                          onPress={() => handleEditProfile(profile)}
+                          flex={1}
+                        >
+                          <Text color="$blue9" fontWeight="bold" fontSize="$3">Edit</Text>
+                        </Button>
+                        <Button
+                          size="$3"
+                          backgroundColor="transparent"
+                          color="$red9"
+                          onPress={() => handleDeleteProfile(profile.id, profile.name)}
+                        >
+                          <Trash2 size={18} color="$red9" />
+                        </Button>
+                      </XStack>
+                    </YStack>
                   </XStack>
                 </Card>
               ))
@@ -259,6 +312,16 @@ export default function ProfilesScreen() {
           setEditingProfile(null);
         }}
         editingProfile={editingProfile}
+      />
+
+      {/* Calibration Wizard */}
+      <CalibrationWizard
+        isVisible={showCalibrationWizard}
+        onComplete={handleCalibrationComplete}
+        onCancel={() => {
+          setShowCalibrationWizard(false);
+          setCalibratingProfile(null);
+        }}
       />
 
     </SafeAreaView>

@@ -46,7 +46,14 @@ export default function CalibrationScreen() {
     }
     
     setLastCalibration(calibration);
-    setShowWizard(false);
+    
+    // Navigate back to main leveling screen immediately
+    router.push('/');
+    
+    // Close wizard after navigation starts
+    setTimeout(() => {
+      setShowWizard(false);
+    }, 100);
   };
 
   const handleStartCalibration = () => {
@@ -73,80 +80,63 @@ export default function CalibrationScreen() {
         <XStack 
           padding="$4" 
           alignItems="center" 
-          space="$3"
+          justifyContent="space-between"
           borderBottomWidth={1} 
           borderBottomColor="rgba(255,255,255,0.1)"
         >
-          <Button
-            size="$3"
-            chromeless
-            onPress={handleNavigateBack}
-            icon={ArrowLeft}
-            color="#ffffff"
-          />
           <H1 color="#ffffff" fontSize="$7" fontWeight="600">
             Calibration
           </H1>
+          <Button
+            size="$4"
+            backgroundColor="$gray9"
+            onPress={handleNavigateBack}
+            color="#ffffff"
+            borderRadius="$3"
+          >
+            Cancel
+          </Button>
         </XStack>
 
         <ScrollView flex={1}>
-          <YStack padding="$6" space="$6">
+          <YStack padding="$4" space="$4">
             {/* Calibration Status */}
             <Card 
-              padding="$6" 
+              padding="$4" 
               backgroundColor="rgba(255,255,255,0.05)"
               borderColor="rgba(255,255,255,0.1)"
               borderRadius="$4"
             >
-              <YStack space="$4" alignItems="center">
+              <YStack space="$3" alignItems="center">
                 <YStack 
                   backgroundColor="rgba(59, 130, 246, 0.1)" 
-                  borderRadius="$10" 
-                  padding="$4"
+                  borderRadius="$8" 
+                  padding="$3"
                   borderWidth={1}
                   borderColor="rgba(59, 130, 246, 0.2)"
                 >
-                  <Target size={48} color="#3b82f6" />
+                  <Target size={40} color="#3b82f6" />
                 </YStack>
                 
-                <H3 color="#ffffff" textAlign="center" fontWeight="600">
+                <H3 color="#ffffff" textAlign="center" fontWeight="600" fontSize="$5">
                   Calibrate Your Level
                 </H3>
                 
                 <Text 
                   color="#94a3b8" 
                   textAlign="center" 
-                  fontSize="$4" 
-                  lineHeight="$5"
-                  maxWidth={300}
+                  fontSize="$3" 
+                  lineHeight="$4"
+                  maxWidth={280}
                 >
                   Calibration ensures accurate level readings by accounting for your device's mounting position and any built-in sensor bias.
                 </Text>
                 
-                {activeProfile?.calibration && (
-                                    lastCalibration?.pitchOffsetDegrees !== 0 || lastCalibration?.rollOffsetDegrees !== 0 ||
-                  activeProfile.calibration.pitchOffsetDegrees !== 0 || activeProfile.calibration.rollOffsetDegrees !== 0
-                ) && (
-                  <XStack 
-                    alignItems="center" 
-                    space="$2" 
-                    backgroundColor="rgba(34, 197, 94, 0.1)"
-                    borderRadius="$3"
-                    padding="$3"
-                    borderWidth={1}
-                    borderColor="rgba(34, 197, 94, 0.2)"
-                  >
-                    <CheckCircle size={20} color="#22c55e" />
-                    <Text color="#22c55e" fontSize="$3" fontWeight="500">
-                      Calibrated
-                    </Text>
-                  </XStack>
-                )}
               </YStack>
             </Card>
 
             {/* Calibration Actions */}
-            <YStack space="$4">
+            <YStack space="$3">
               <Button
                 size="$6"
                 onPress={handleStartCalibration}
@@ -159,7 +149,7 @@ export default function CalibrationScreen() {
                 }}
                 icon={<RotateCw size={20} />}
               >
-                Start Calibration Wizard
+                Start Calibration
               </Button>
               
               <Text 

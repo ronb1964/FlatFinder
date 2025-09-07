@@ -27,7 +27,7 @@ export default function LevelScreen() {
   const theme = useTheme();
   
   const { pitchDeg, rollDeg, isAvailable, isReliable, permissionStatus, errorMessage } = useDeviceAttitude();
-  const { activeProfile, settings, calibrateActiveProfile } = useAppStore();
+  const { activeProfile, settings, calibrateActiveProfile, loadProfiles, loadSettings } = useAppStore();
   
   const [calibratedValues, setCalibratedValues] = useState({ pitch: 0, roll: 0 });
   const [levelStatus, setLevelStatus] = useState(getLevelStatus({ pitch: 0, roll: 0 }));
@@ -51,6 +51,15 @@ export default function LevelScreen() {
       }
     }
   };
+
+  // Load settings and profiles on app startup
+  useEffect(() => {
+    const initializeApp = async () => {
+      await loadSettings();
+      await loadProfiles();
+    };
+    initializeApp();
+  }, [loadSettings, loadProfiles]);
 
   // Apply calibration and check safety
   useEffect(() => {
@@ -321,14 +330,24 @@ export default function LevelScreen() {
         </YStack>
 
         {/* Active Profile Indicator */}
-        {activeProfile && (
-          <Card padding="$3" backgroundColor="$gray2" marginHorizontal="$2">
+        {activeProfile ? (
+          <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1} marginHorizontal="$2" marginTop="$4">
             <XStack justifyContent="center" alignItems="center" space="$2">
-              <Text color="$colorPress" fontSize="$2">
-                Profile:
+              <YStack width={8} height={8} borderRadius={4} backgroundColor="$green9" />
+              <Text color="$green11" fontSize="$3" fontWeight="600">
+                Active Vehicle:
               </Text>
-              <Text fontWeight="bold" fontSize="$2">
+              <Text fontWeight="bold" fontSize="$3" color="$green11">
                 {activeProfile.name}
+              </Text>
+            </XStack>
+          </Card>
+        ) : (
+          <Card padding="$3" backgroundColor="$red2" borderColor="$red9" borderWidth={1} marginHorizontal="$2" marginTop="$4">
+            <XStack justifyContent="center" alignItems="center" space="$2">
+              <YStack width={8} height={8} borderRadius={4} backgroundColor="$red9" />
+              <Text color="$red11" fontSize="$3" fontWeight="600">
+                No Vehicle Selected - Go to Profiles
               </Text>
             </XStack>
           </Card>

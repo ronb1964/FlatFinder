@@ -31,7 +31,7 @@ import { useColorScheme } from 'react-native';
 export default function SettingsScreen() {
   const theme = useTheme();
   const colorScheme = useColorScheme();
-  const { settings, updateSettings, loadSettings, resetOnboarding } = useAppStore();
+  const { settings, updateSettings, loadSettings, resetOnboarding, activeProfile } = useAppStore();
 
   useEffect(() => {
     loadSettings();
@@ -107,6 +107,30 @@ export default function SettingsScreen() {
           space="$4"
         >
           <H2>Settings</H2>
+
+          {/* Active Profile Indicator */}
+          {activeProfile ? (
+            <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
+              <XStack justifyContent="center" alignItems="center" space="$2">
+                <YStack width={8} height={8} borderRadius={4} backgroundColor="$green9" />
+                <Text color="$green11" fontSize="$3" fontWeight="600">
+                  Active Vehicle:
+                </Text>
+                <Text fontWeight="bold" fontSize="$3" color="$green11">
+                  {activeProfile.name}
+                </Text>
+              </XStack>
+            </Card>
+          ) : (
+            <Card padding="$3" backgroundColor="$red2" borderColor="$red9" borderWidth={1}>
+              <XStack justifyContent="center" alignItems="center" space="$2">
+                <YStack width={8} height={8} borderRadius={4} backgroundColor="$red9" />
+                <Text color="$red11" fontSize="$3" fontWeight="600">
+                  No Vehicle Selected - Go to Profiles
+                </Text>
+              </XStack>
+            </Card>
+          )}
 
           {/* Feedback Settings */}
           <YStack space="$3">

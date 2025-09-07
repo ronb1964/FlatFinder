@@ -26,6 +26,7 @@ export interface AppSettings {
   keepAwake: boolean;
   hasCompletedOnboarding: boolean;
   onboardingStep: number;
+  lastUsedProfileId?: string;
 }
 
 interface AppState {
@@ -63,6 +64,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   keepAwake: true,
   hasCompletedOnboarding: false,
   onboardingStep: 0,
+  lastUsedProfileId: undefined,
 };
 
 const STORAGE_KEYS = {
@@ -105,12 +107,32 @@ export const useAppStore = create<AppState>((set, get) => ({
           return profile;
         });
         
-        const activeProfile = activeId ? profiles.find((p: VehicleProfile) => p.id === activeId) : null;
+        // Determine which profile to auto-select
+        let selectedProfileId = activeId;
+        let selectedProfile = activeId ? profiles.find((p: VehicleProfile) => p.id === activeId) : null;
+        
+        // Auto-select profile logic
+        if (!selectedProfile && profiles.length > 0) {
+          const { lastUsedProfileId } = get().settings;
+          
+          if (profiles.length === 1) {
+            // If only one profile, auto-select it
+            selectedProfile = profiles[0];
+            selectedProfileId = profiles[0].id;
+          } else if (lastUsedProfileId) {
+            // If multiple profiles, try to select the last used one
+            const lastUsedProfile = profiles.find((p: VehicleProfile) => p.id === lastUsedProfileId);
+            if (lastUsedProfile) {
+              selectedProfile = lastUsedProfile;
+              selectedProfileId = lastUsedProfile.id;
+            }
+          }
+        }
         
         set({
           profiles,
-          activeProfileId: activeId,
-          activeProfile,
+          activeProfileId: selectedProfileId,
+          activeProfile: selectedProfile,
         });
         
         // Save migrated profiles to storage
@@ -185,6 +207,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeProfile: profile || null,
     });
 
+    // Save the last used profile ID to settings
+    get().updateSettings({ lastUsedProfileId: id });
     get().saveProfiles();
   },
 
