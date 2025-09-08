@@ -605,7 +605,7 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
             <YStack space="$3">
               {(() => {
                 // Create list of all block heights (standard + any custom from current selection)
-                const standardHeights = [1, 1.5, 2, 2.5, 3, 4, 6];
+                const standardHeights = [0.75, 1, 1.5, 2];
                 const customHeights = selectedBlockHeights.filter(h => !standardHeights.includes(h));
                 const allHeights = [...standardHeights, ...customHeights].sort((a, b) => a - b);
                 

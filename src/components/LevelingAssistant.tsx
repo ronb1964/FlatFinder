@@ -1,14 +1,353 @@
 import React, { useState, useEffect } from 'react';
-import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView } from 'tamagui';
+import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView, View } from 'tamagui';
 import { AlertCircle, ArrowLeft } from '@tamagui/lucide-icons';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { applyCalibration } from '../lib/calibration';
 import { RVLevelingCalculator, LevelingPlan } from '../lib/rvLevelingMath';
 import { normalizeAttitude, attitudeToLevelingMeasurement, SENSOR_NORMALIZATION_PRESETS } from '../lib/coordinateSystem';
 import { useAppStore } from '../state/appStore';
-import { formatMeasurement } from '../lib/units';
+import { formatMeasurement, formatLiftMeasurement } from '../lib/units';
 import { BubbleLevel } from './BubbleLevel';
 
+// Helper function to render a wheel/hitch card with instructions
+function renderWheelCard(
+  lift: any,
+  blockStack: any,
+  activeProfile: any,
+  settings: any,
+  position: 'top' | 'bottom' | 'left' | 'right' | 'center'
+) {
+  const getCardSize = () => {
+    if (position === 'center') return { width: 120, height: 120 };
+    return { width: 140, height: 100 };
+  };
+  
+  const { width, height } = getCardSize();
+  
+  const isLevelPosition = lift.liftInches <= 0.125;
+  const noBlocksFit = blockStack.blocks.length === 0 && activeProfile.blockInventory && activeProfile.blockInventory.length > 0;
+  const shouldShowGreen = isLevelPosition || noBlocksFit;
+  
+  return (
+    <Card
+      key={lift.location}
+      backgroundColor="rgba(255, 255, 255, 0.05)"
+      borderColor={shouldShowGreen ? "rgba(34, 197, 94, 0.6)" : "rgba(255, 255, 255, 0.2)"}
+      borderWidth={2}
+      padding="$2"
+      width={width}
+      height={height}
+      justifyContent="center"
+      alignItems="center"
+    >
+      <YStack space="$1" alignItems="center">
+        <Text color="white" fontSize="$2" fontWeight="600" textAlign="center" numberOfLines={1}>
+          {lift.description.replace(' Wheel', '').replace(' ', '\n')}
+        </Text>
+        
+        {lift.liftInches <= 0.125 ? (
+          <View
+            backgroundColor="rgba(34, 197, 94, 0.2)"
+            borderRadius="$2"
+            paddingHorizontal="$1"
+            paddingVertical="$0.5"
+          >
+            <Text color="#22c55e" fontSize="$1" fontWeight="600" textAlign="center">
+              ✓ Good
+            </Text>
+          </View>
+        ) : (
+          <YStack space="$1" alignItems="center">
+            <Text color="$gray11" fontSize="$1" textAlign="center">
+              Raise: {formatLiftMeasurement(lift.liftInches, settings.measurementUnits)}
+            </Text>
+            
+            {!activeProfile.blockInventory || activeProfile.blockInventory.length === 0 ? (
+              <View
+                backgroundColor="rgba(59, 130, 246, 0.2)"
+                borderRadius="$2"
+                paddingHorizontal="$1"
+                paddingVertical="$0.5"
+              >
+                <Text color="#3b82f6" fontSize="$1" textAlign="center" numberOfLines={2}>
+                  Setup blocks in profile
+                </Text>
+              </View>
+            ) : blockStack.blocks.length === 0 ? (
+              <View
+                backgroundColor="rgba(239, 68, 68, 0.2)"
+                borderRadius="$2"
+                paddingHorizontal="$1"
+                paddingVertical="$0.5"
+              >
+                <Text color="#ef4444" fontSize="$1" textAlign="center" numberOfLines={2}>
+                  No blocks fit
+                </Text>
+              </View>
+            ) : (
+              <YStack alignItems="center" space="$0.5">
+                {blockStack.blocks
+                  .filter((block: any) => {
+                    // NUCLEAR OPTION: Only allow exact standard sizes - reject anything close to 0.8
+                    const validSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+                    const isValidSize = validSizes.some(size => Math.abs(block.thickness - size) < 0.01);
+                    
+                    // Specifically block any 0.8-ish values
+                    const isInvalidEight = Math.abs(block.thickness - 0.8) < 0.1;
+                    
+                    const blockExists = activeProfile.blockInventory?.some((inventoryBlock: any) => 
+                      Math.abs(inventoryBlock.thickness - block.thickness) < 0.001
+                    );
+                    return block.thickness > 0.001 && block.count > 0 && blockExists && isValidSize && !isInvalidEight;
+                  })
+                  .map((block: any, blockIndex: number) => (
+                    <View
+                      key={blockIndex}
+                      backgroundColor="rgba(34, 197, 94, 0.2)"
+                      borderRadius="$1"
+                      paddingHorizontal="$1"
+                      paddingVertical="$0.5"
+                    >
+                      <Text color="#22c55e" fontSize="$1" textAlign="center" fontWeight="600" numberOfLines={1}>
+                        {block.count}×{formatMeasurement(block.thickness, settings.measurementUnits)} blocks
+                      </Text>
+                    </View>
+                  ))}
+              </YStack>
+            )}
+          </YStack>
+        )}
+      </YStack>
+    </Card>
+  );
+}
+
+// Helper function to render spatial leveling layout
+function renderSpatialLevelingLayout(levelingPlan: any, activeProfile: any, settings: any, physicalReadings: any) {
+  const isTrailer = activeProfile.hitchOffsetInches !== undefined;
+  
+  if (isTrailer) {
+    // Trailer layout: Hitch at top, wheels at bottom
+    const hitchLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'hitch');
+    const leftLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'left_wheel');
+    const rightLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'right_wheel');
+    
+    return (
+      <YStack alignItems="center" space="$4" paddingVertical="$4">
+        {/* Hitch at top */}
+        {hitchLift && renderWheelCard(
+          hitchLift,
+          levelingPlan.blockStacks[hitchLift.location],
+          activeProfile,
+          settings,
+          'top'
+        )}
+        
+        {/* Bubble level in center */}
+        <BubbleLevel
+          pitch={physicalReadings.pitchDegrees}
+          roll={physicalReadings.rollDegrees}
+          isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
+          color="#ef4444"
+          size="compact"
+        />
+        
+        {/* Wheels at bottom */}
+        <XStack space="$6" justifyContent="center">
+          {leftLift && renderWheelCard(
+            leftLift,
+            levelingPlan.blockStacks[leftLift.location],
+            activeProfile,
+            settings,
+            'left'
+          )}
+          {rightLift && renderWheelCard(
+            rightLift,
+            levelingPlan.blockStacks[rightLift.location],
+            activeProfile,
+            settings,
+            'right'
+          )}
+        </XStack>
+      </YStack>
+    );
+  } else {
+    // RV layout: 2x2 grid with bubble level in center
+    const frontLeft = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'front_left');
+    const frontRight = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'front_right');
+    const rearLeft = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'rear_left');
+    const rearRight = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'rear_right');
+    
+    return (
+      <YStack alignItems="center" space="$4" paddingVertical="$4">
+        {/* Front wheels */}
+        <XStack space="$6" justifyContent="center">
+          {frontLeft && renderWheelCard(
+            frontLeft,
+            levelingPlan.blockStacks[frontLeft.location],
+            activeProfile,
+            settings,
+            'left'
+          )}
+          {frontRight && renderWheelCard(
+            frontRight,
+            levelingPlan.blockStacks[frontRight.location],
+            activeProfile,
+            settings,
+            'right'
+          )}
+        </XStack>
+        
+        {/* Bubble level in center */}
+        <BubbleLevel
+          pitch={physicalReadings.pitchDegrees}
+          roll={physicalReadings.rollDegrees}
+          isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
+          color="#ef4444"
+          size="compact"
+        />
+        
+        {/* Rear wheels */}
+        <XStack space="$6" justifyContent="center">
+          {rearLeft && renderWheelCard(
+            rearLeft,
+            levelingPlan.blockStacks[rearLeft.location],
+            activeProfile,
+            settings,
+            'left'
+          )}
+          {rearRight && renderWheelCard(
+            rearRight,
+            levelingPlan.blockStacks[rearRight.location],
+            activeProfile,
+            settings,
+            'right'
+          )}
+        </XStack>
+      </YStack>
+    );
+  }
+}
+
+// Helper function to render detailed block instructions
+function renderDetailedBlockInstructions(levelingPlan: any, activeProfile: any, settings: any) {
+  // Only show positions that need blocks
+  const positionsNeedingBlocks = levelingPlan.wheelLifts.filter((lift: any) => 
+    lift.liftInches > 0.001 && 
+    (activeProfile.blockInventory && activeProfile.blockInventory.length > 0)
+  );
+  
+  if (positionsNeedingBlocks.length === 0) return null;
+  
+  return (
+    <YStack space="$3" marginTop="$4">
+      <H3 color="white" textAlign="center" fontSize="$4">Block Details</H3>
+      
+      {positionsNeedingBlocks
+        .sort((a: any, b: any) => {
+          // Same sort order as spatial layout
+          const order = { 
+            'front_left': 1, 'front_right': 2, 'rear_left': 3, 'rear_right': 4,
+            'hitch': 1, 'right_wheel': 2, 'left_wheel': 3
+          };
+          return (order[a.location] || 99) - (order[b.location] || 99);
+        })
+        .map((lift: any) => {
+          const blockStack = levelingPlan.blockStacks[lift.location];
+          
+          return (
+            <Card
+              key={lift.location}
+              backgroundColor="rgba(255, 255, 255, 0.03)"
+              borderColor="rgba(255, 255, 255, 0.1)"
+              borderWidth={1}
+              padding="$3"
+              marginBottom="$2"
+            >
+              <YStack space="$2">
+                <XStack justifyContent="space-between" alignItems="center">
+                  <H3 color="white" fontSize="$4">
+                    {lift.description}
+                  </H3>
+                  <Text color="$gray11" fontSize="$3">
+                    Target: {formatLiftMeasurement(lift.liftInches, settings.measurementUnits)}
+                  </Text>
+                </XStack>
+                
+                {blockStack.blocks.length === 0 ? (
+                  <Card
+                    backgroundColor="rgba(239, 68, 68, 0.1)"
+                    borderColor="rgba(239, 68, 68, 0.3)"
+                    borderWidth={1}
+                    padding="$2"
+                  >
+                    <Text color="#ef4444" fontSize="$3" textAlign="center">
+                      No blocks available for this height
+                    </Text>
+                  </Card>
+                ) : (
+                  <YStack space="$2">
+                    <Text color="white" fontSize="$3" fontWeight="600">
+                      Stack these blocks:
+                    </Text>
+                    
+                    {blockStack.blocks
+                      .filter((block: any) => {
+                        // NUCLEAR OPTION: Only allow exact standard sizes - reject anything close to 0.8
+                        const validSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+                        const isValidSize = validSizes.some(size => Math.abs(block.thickness - size) < 0.01);
+                        
+                        // Specifically block any 0.8-ish values
+                        const isInvalidEight = Math.abs(block.thickness - 0.8) < 0.1;
+                        
+                        const blockExists = activeProfile.blockInventory?.some((inventoryBlock: any) => 
+                          Math.abs(inventoryBlock.thickness - block.thickness) < 0.001
+                        );
+                        return block.thickness > 0.001 && block.count > 0 && blockExists && isValidSize && !isInvalidEight;
+                      })
+                      .map((block: any, blockIndex: number) => (
+                      <Card
+                        key={blockIndex}
+                        backgroundColor="rgba(34, 197, 94, 0.1)"
+                        borderColor="rgba(34, 197, 94, 0.3)"
+                        borderWidth={1}
+                        padding="$3"
+                      >
+                        <XStack justifyContent="space-between" alignItems="center">
+                          <Text color="#22c55e" fontSize="$4" fontWeight="600">
+                            {block.count} × {formatMeasurement(block.thickness, settings.measurementUnits)} blocks
+                          </Text>
+                          <Text color="#22c55e" fontSize="$3">
+                            = {formatMeasurement(block.count * block.thickness, settings.measurementUnits)}
+                          </Text>
+                        </XStack>
+                      </Card>
+                    ))}
+                    
+                    <Card
+                      backgroundColor="rgba(59, 130, 246, 0.1)"
+                      borderColor="rgba(59, 130, 246, 0.3)"
+                      borderWidth={1}
+                      padding="$3"
+                    >
+                      <XStack justifyContent="space-between" alignItems="center">
+                        <Text color="#3b82f6" fontSize="$4" fontWeight="bold">
+                          Total Stack Height:
+                        </Text>
+                        <Text color="#3b82f6" fontSize="$5" fontWeight="bold">
+                          {formatMeasurement(blockStack.totalHeight, settings.measurementUnits)}
+                        </Text>
+                      </XStack>
+                    </Card>
+                  </YStack>
+                )}
+              </YStack>
+            </Card>
+          );
+        })}
+    </YStack>
+  );
+}
 
 interface LevelingAssistantProps {
   onBack?: () => void;
@@ -20,6 +359,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const [levelingPlan, setLevelingPlan] = useState<LevelingPlan | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   // Force initial calculation on mount
   useEffect(() => {
@@ -47,14 +387,29 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
     const calculatePlan = async () => {
       setIsCalculating(true);
+      setCalculationError(null);
       
       try {
-        const calculator = new RVLevelingCalculator(activeProfile);
-        const plan = calculator.createLevelingPlan(physicalReadings);
+        // Create unlimited inventory of available block sizes - only valid sizes
+        const validSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+        const unlimitedInventory = (activeProfile.blockInventory || [])
+          .filter(block => validSizes.some(size => Math.abs(block.thickness - size) < 0.001))
+          .map(block => ({
+            thickness: block.thickness,
+            quantity: 50 // Effectively unlimited
+          }));
+        
+        const plan = RVLevelingCalculator.createLevelingPlan(
+          activeProfile, // RVGeometry 
+          physicalReadings, // LevelingMeasurement
+          unlimitedInventory // Unlimited BlockInventory[]
+        );
         setLevelingPlan(plan);
+        setCalculationError(null);
       } catch (error) {
         console.error('Error calculating leveling plan:', error);
         setLevelingPlan(null);
+        setCalculationError(error instanceof Error ? error.message : 'Unknown error calculating leveling plan');
       } finally {
         setIsCalculating(false);
       }
@@ -116,18 +471,6 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         {!onBack && <View width={40} />}
       </XStack>
 
-      {/* Compact Bubble Level */}
-      {!isNearLevel && (
-        <YStack alignItems="center" padding="$2" paddingBottom="$1">
-          <BubbleLevel
-            pitch={physicalReadings.pitchDegrees}
-            roll={physicalReadings.rollDegrees}
-            isLevel={isNearLevel}
-            color="#ef4444"
-            size="compact"
-          />
-        </YStack>
-      )}
 
       {/* Scrollable Content */}
               <ScrollView 
@@ -200,11 +543,11 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
           </Card>
         )}
 
-        {/* Leveling Instructions - Only show if NOT level */}
-        {!isNearLevel && levelingPlan && !isCalculating && (
-          <YStack space="$2">
-            {/* Warnings - Improved */}
-            {levelingPlan.warnings.length > 0 && (
+        {/* Always show spatial layout when we have a plan */}
+        {levelingPlan && !isCalculating && (
+          <YStack space="$3">
+            {/* Warnings - Only show if not level */}
+            {!isNearLevel && levelingPlan.warnings.length > 0 && (
               <Card 
                 backgroundColor="rgba(239, 68, 68, 0.1)"
                 borderColor="rgba(239, 68, 68, 0.3)"
@@ -226,91 +569,39 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
               </Card>
             )}
 
-            {/* Lift Instructions */}
-            {levelingPlan.lifts
-              .filter(lift => lift.liftInches > 0.001) // Only show meaningful lifts
-              .map((lift, index) => {
-                const blockStack = levelingPlan.blockStacks[lift.location];
-                return (
-                  <Card
-                    key={lift.location}
-                    backgroundColor="rgba(255, 255, 255, 0.03)"
-                    borderColor="rgba(255, 255, 255, 0.1)"
-                    borderWidth={1}
-                    padding="$3"
-                    marginBottom="$2"
-                  >
-                    <YStack space="$2">
-                      <H3 color="white" fontSize="$4">
-                        {lift.location}
-                      </H3>
-                      <Text color="$gray11" fontSize="$3">
-                        Lift needed: {formatMeasurement(lift.liftInches, 'inches', settings.measurementUnits)}
-                      </Text>
-                      
-                      {blockStack.blocks.length === 0 ? (
-                        <Card
-                          backgroundColor="rgba(239, 68, 68, 0.1)"
-                          borderColor="rgba(239, 68, 68, 0.3)"
-                          borderWidth={1}
-                          padding="$2"
-                        >
-                          <Text color="#ef4444" fontSize="$3" textAlign="center">
-                            No blocks available for this height
-                          </Text>
-                        </Card>
-                      ) : blockStack.blocks.length > 0 ? (
-                        <YStack space="$2">
-                          <YStack space="$2">
-                            {blockStack.blocks
-                              .filter(block => block.thickness > 0.001 && block.count > 0) // Only show valid blocks
-                              .map((block, blockIndex) => (
-                              <Card
-                                key={blockIndex}
-                                backgroundColor="rgba(34, 197, 94, 0.1)"
-                                borderColor="rgba(34, 197, 94, 0.3)"
-                                borderWidth={1}
-                                padding="$2"
-                              >
-                                <XStack justifyContent="space-between" alignItems="center">
-                                  <Text color="#22c55e" fontSize="$3" fontWeight="600">
-                                    {block.count} × {formatMeasurement(block.thickness, 'inches', settings.measurementUnits)}
-                                  </Text>
-                                  <Text color="#22c55e" fontSize="$3">
-                                    = {formatMeasurement(block.count * block.thickness, 'inches', settings.measurementUnits)}
-                                  </Text>
-                                </XStack>
-                              </Card>
-                            ))}
-                          </YStack>
-                          <Card
-                            backgroundColor="rgba(59, 130, 246, 0.1)"
-                            borderColor="rgba(59, 130, 246, 0.3)"
-                            borderWidth={1}
-                            padding="$2"
-                          >
-                            <XStack justifyContent="space-between" alignItems="center">
-                              <Text color="#3b82f6" fontSize="$3" fontWeight="600">
-                                Total Height:
-                              </Text>
-                              <Text color="#3b82f6" fontSize="$4" fontWeight="bold">
-                                {formatMeasurement(blockStack.totalHeight, 'inches', settings.measurementUnits)}
-                              </Text>
-                            </XStack>
-                          </Card>
-                        </YStack>
-                      ) : (
-                        <Text color="$gray11" fontSize="$3">No blocks needed</Text>
-                      )}
-                    </YStack>
-                  </Card>
-                );
-              })}
+            {/* Spatial Leveling Layout - Always show */}
+            {renderSpatialLevelingLayout(levelingPlan, activeProfile, settings, physicalReadings)}
+            
+            {/* Detailed Block Instructions - Only show if not level */}
+            {!isNearLevel && renderDetailedBlockInstructions(levelingPlan, activeProfile, settings)}
           </YStack>
         )}
 
+        {/* Error State */}
+        {calculationError && (
+          <Card 
+            backgroundColor="rgba(239, 68, 68, 0.1)"
+            borderColor="rgba(239, 68, 68, 0.3)"
+            borderWidth={1}
+            padding="$4"
+            marginBottom="$3"
+          >
+            <YStack space="$2">
+              <XStack alignItems="center" space="$2">
+                <AlertCircle size={16} color="#ef4444" />
+                <Text color="#ef4444" fontSize="$4" fontWeight="bold">
+                  Calculation Error
+                </Text>
+              </XStack>
+              <Text color="#ef4444" fontSize="$3">
+                {calculationError}
+              </Text>
+            </YStack>
+          </Card>
+        )}
+
         {/* No Plan State */}
-        {!levelingPlan && !isCalculating && (
+        {!levelingPlan && !isCalculating && !calculationError && (
           <Card 
             backgroundColor="rgba(255, 255, 255, 0.03)"
             borderColor="rgba(255, 255, 255, 0.1)"

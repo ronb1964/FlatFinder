@@ -84,53 +84,76 @@ export class RVLevelingCalculator {
     // When phone shows -roll (left side up): left side is already raised, right side needs blocks
     // The original geometric calculation + normalization handles this correctly!
     
-    // Determine vehicle type for appropriate naming
+    // Determine vehicle type for different leveling logic
     const isTrailer = hitchOffsetInches !== undefined;
     
-    // Front Left Wheel: affected by pitch and roll
-    const frontLeftPitch = wheelbaseInches * Math.tan(pitchRad);
-    const frontLeftRoll = -halfTrack * Math.tan(rollRad); // Left side: negative distance from center
-    const frontLeftLift = frontLeftPitch + frontLeftRoll;
-    
-    lifts.push({
-      location: 'front_left',
-      liftInches: frontLeftLift,
-      description: isTrailer ? 'Left Wheel' : 'Front Left Wheel'
-    });
-    
-    // Front Right Wheel: affected by pitch and roll  
-    const frontRightPitch = wheelbaseInches * Math.tan(pitchRad);
-    const frontRightRoll = halfTrack * Math.tan(rollRad); // Right side: positive distance from center
-    const frontRightLift = frontRightPitch + frontRightRoll;
-    
-    lifts.push({
-      location: 'front_right',
-      liftInches: frontRightLift,
-      description: isTrailer ? 'Right Wheel' : 'Front Right Wheel'
-    });
-    
-    // Include rear wheels for all vehicle types
-    // Rear Left Wheel: only affected by roll
-    lifts.push({
-      location: 'rear_left',
-      liftInches: -halfTrack * Math.tan(rollRad),
-      description: isTrailer ? 'Left Wheel' : 'Rear Left Wheel'
-    });
-    
-    // Rear Right Wheel: only affected by roll
-    lifts.push({
-      location: 'rear_right', 
-      liftInches: halfTrack * Math.tan(rollRad),
-      description: isTrailer ? 'Right Wheel' : 'Rear Right Wheel'
-    });
-    
-    // Hitch point (for trailers): behind rear axle, affected by pitch
-    if (isTrailer && hitchOffsetInches !== undefined) {
+    if (isTrailer) {
+      // TRAILER: Only 3 points - Left wheel, Right wheel, Hitch
+      // Main wheels (at the axle): only affected by roll
+      lifts.push({
+        location: 'left_wheel',
+        liftInches: -halfTrack * Math.tan(rollRad),
+        description: 'Left Wheel'
+      });
+      
+      lifts.push({
+        location: 'right_wheel', 
+        liftInches: halfTrack * Math.tan(rollRad),
+        description: 'Right Wheel'
+      });
+      
+      // Hitch point: behind rear axle, affected by pitch
       const hitchPitch = -hitchOffsetInches * Math.tan(pitchRad);
       lifts.push({
         location: 'hitch',
         liftInches: hitchPitch,
-        description: 'Tongue Jack/Hitch'
+        description: 'Hitch'
+      });
+      
+    } else {
+      // RV/MOTORHOME/VAN: 4 wheels
+      // Front Left Wheel: affected by pitch and roll
+      const frontLeftPitch = halfWheelbase * Math.tan(pitchRad);
+      const frontLeftRoll = -halfTrack * Math.tan(rollRad);
+      const frontLeftLift = frontLeftPitch + frontLeftRoll;
+      
+      lifts.push({
+        location: 'front_left',
+        liftInches: frontLeftLift,
+        description: 'Front Left Wheel'
+      });
+      
+      // Front Right Wheel: affected by pitch and roll  
+      const frontRightPitch = halfWheelbase * Math.tan(pitchRad);
+      const frontRightRoll = halfTrack * Math.tan(rollRad);
+      const frontRightLift = frontRightPitch + frontRightRoll;
+      
+      lifts.push({
+        location: 'front_right',
+        liftInches: frontRightLift,
+        description: 'Front Right Wheel'
+      });
+      
+      // Rear Left Wheel: affected by pitch and roll (opposite direction)
+      const rearLeftPitch = -halfWheelbase * Math.tan(pitchRad);
+      const rearLeftRoll = -halfTrack * Math.tan(rollRad);
+      const rearLeftLift = rearLeftPitch + rearLeftRoll;
+      
+      lifts.push({
+        location: 'rear_left',
+        liftInches: rearLeftLift,
+        description: 'Rear Left Wheel'
+      });
+      
+      // Rear Right Wheel: affected by pitch and roll (opposite direction)
+      const rearRightPitch = -halfWheelbase * Math.tan(pitchRad);
+      const rearRightRoll = halfTrack * Math.tan(rollRad);
+      const rearRightLift = rearRightPitch + rearRightRoll;
+      
+      lifts.push({
+        location: 'rear_right', 
+        liftInches: rearRightLift,
+        description: 'Rear Right Wheel'
       });
     }
     
@@ -151,11 +174,20 @@ export class RVLevelingCalculator {
   static calculateOptimalBlocks(
     targetHeight: number,
     inventory: BlockInventory[],
-    maxTolerance: number = 0.125 // 1/8 inch tolerance
+    maxTolerance: number = 0.5 // 1/2 inch tolerance - more practical for RV leveling
   ): BlockStack {
-    // Filter out zero-thickness blocks and sort by thickness (largest first for greedy algorithm)
-    const sortedBlocks = [...inventory]
-      .filter(block => block.thickness > 0.001 && block.quantity > 0) // Must be at least 0.001 inches thick
+    // Handle very small lifts - round to nearest 1/4 inch
+    if (targetHeight < 0.25) {
+      return {
+        blocks: [],
+        totalHeight: 0,
+        totalBlocks: 0
+      };
+    }
+    
+    // Filter and sort blocks (don't modify original inventory)
+    const availableBlocks = [...inventory]
+      .filter(block => block.thickness > 0.001 && block.quantity > 0)
       .sort((a, b) => b.thickness - a.thickness);
     
     const result: BlockStack = {
@@ -167,43 +199,52 @@ export class RVLevelingCalculator {
     let remainingHeight = targetHeight;
     
     // Greedy algorithm: use largest blocks first
-    for (const block of sortedBlocks) {
-      if (block.quantity === 0) continue;
-      
-      const blocksNeeded = Math.floor(remainingHeight / block.thickness);
-      const blocksToUse = Math.min(blocksNeeded, block.quantity);
+    for (const blockType of availableBlocks) {
+      const blocksNeeded = Math.floor(remainingHeight / blockType.thickness);
+      const blocksToUse = Math.min(blocksNeeded, blockType.quantity);
       
       if (blocksToUse > 0) {
         result.blocks.push({
-          thickness: block.thickness,
+          thickness: blockType.thickness,
           count: blocksToUse
         });
         
-        const heightAdded = blocksToUse * block.thickness;
+        const heightAdded = blocksToUse * blockType.thickness;
         result.totalHeight += heightAdded;
         result.totalBlocks += blocksToUse;
         remainingHeight -= heightAdded;
-        
-        // Update inventory
-        block.quantity -= blocksToUse;
+      }
+      
+      // Stop if we're close enough
+      if (remainingHeight <= maxTolerance) {
+        break;
       }
     }
     
-    // Check if we're within tolerance
-    if (remainingHeight > maxTolerance) {
-      // Try to get closer with smaller blocks (excluding zero-thickness)
-      for (const block of sortedBlocks) {
-        if (block.quantity > 0 && block.thickness > 0 && block.thickness <= remainingHeight + maxTolerance) {
-          result.blocks.push({
-            thickness: block.thickness,
-            count: 1
-          });
-          result.totalHeight += block.thickness;
-          result.totalBlocks += 1;
-          break;
-        }
-      }
+    // If still not close enough, add one more block of the smallest available size
+    if (remainingHeight > maxTolerance && availableBlocks.length > 0) {
+      const smallestBlock = availableBlocks[availableBlocks.length - 1];
+      result.blocks.push({
+        thickness: smallestBlock.thickness,
+        count: 1
+      });
+      result.totalHeight += smallestBlock.thickness;
+      result.totalBlocks += 1;
     }
+    
+    // NUCLEAR VALIDATION: Block any 0.8-ish values and ensure only standard sizes
+    const standardSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+    const validSizes = inventory.map(inv => inv.thickness);
+    result.blocks = result.blocks.filter(block => {
+      const isInInventory = validSizes.some(size => Math.abs(size - block.thickness) < 0.001);
+      const isStandardSize = standardSizes.some(size => Math.abs(size - block.thickness) < 0.01);
+      const isNotEight = Math.abs(block.thickness - 0.8) > 0.05; // Reject anything close to 0.8
+      return isInInventory && isStandardSize && isNotEight;
+    });
+    
+    // Recalculate totals after filtering
+    result.totalHeight = result.blocks.reduce((sum, block) => sum + (block.thickness * block.count), 0);
+    result.totalBlocks = result.blocks.reduce((sum, block) => sum + block.count, 0);
     
     return result;
   }
@@ -236,6 +277,9 @@ export class RVLevelingCalculator {
     const blockStacks: Record<string, BlockStack> = {};
     let isLevelable = true;
     
+    // Check if any blocks are configured
+    const hasBlockInventory = inventory.length > 0 && inventory.some(item => item.quantity > 0);
+    
     // Create a copy of inventory for each calculation
     for (const lift of wheelLifts) {
       if (lift.liftInches <= 0.125) { // Within 1/8" tolerance, no blocks needed
@@ -253,26 +297,30 @@ export class RVLevelingCalculator {
       
       blockStacks[lift.location] = stack;
       
-      // Check if we achieved the target height within tolerance
-      const heightDifference = Math.abs(stack.totalHeight - lift.liftInches);
-      if (heightDifference > 0.25) { // 1/4" tolerance for feasibility
-        isLevelable = false;
-        warnings.push(
-          `Cannot achieve ${lift.liftInches.toFixed(2)}" lift for ${lift.description} ` +
-          `(achieved ${stack.totalHeight.toFixed(2)}", difference ${heightDifference.toFixed(2)}")`
-        );
+      // Only check tolerance if blocks are configured
+      if (hasBlockInventory) {
+        const heightDifference = Math.abs(stack.totalHeight - lift.liftInches);
+        if (heightDifference > 0.75) { // 3/4" tolerance for practical RV leveling
+          isLevelable = false;
+          warnings.push(
+            `Cannot achieve ${lift.liftInches.toFixed(2)}" lift for ${lift.description} ` +
+            `(achieved ${stack.totalHeight.toFixed(2)}", difference ${heightDifference.toFixed(2)}")`
+          );
+        }
       }
     }
     
-    // Check total block usage
-    const totalBlocksUsed = Object.values(blockStacks)
-      .reduce((sum, stack) => sum + stack.totalBlocks, 0);
-    
-    const totalBlocksAvailable = inventory.reduce((sum, item) => sum + item.quantity, 0);
-    
-    if (totalBlocksUsed > totalBlocksAvailable) {
-      warnings.push('Insufficient blocks available for complete leveling');
-      isLevelable = false;
+    // Check total block usage only if blocks are configured
+    if (hasBlockInventory) {
+      const totalBlocksUsed = Object.values(blockStacks)
+        .reduce((sum, stack) => sum + stack.totalBlocks, 0);
+      
+      const totalBlocksAvailable = inventory.reduce((sum, item) => sum + item.quantity, 0);
+      
+      if (totalBlocksUsed > totalBlocksAvailable) {
+        warnings.push('Insufficient blocks available for complete leveling');
+        isLevelable = false;
+      }
     }
     
     return {

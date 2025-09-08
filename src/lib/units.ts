@@ -30,13 +30,12 @@ export function cmToInches(cm: number): number {
 export function formatMeasurement(
   inches: number, 
   units: 'imperial' | 'metric',
-  precision: number = 1
+  precision: number = 1,
+  forceInches: boolean = false
 ): string {
   if (units === 'metric') {
     const cm = inchesToCm(inches);
-    if (cm >= 100) {
-      return `${(cm / 100).toFixed(precision)} m`;
-    }
+    // Always use cm for vehicle measurements - more consistent and precise
     return `${cm.toFixed(precision)} cm`;
   } else {
     // Helper: format inches to nearest 1/8" as a friendly fraction
@@ -70,7 +69,7 @@ export function formatMeasurement(
       return `${sign}${parts.join(' ')}"`;
     };
 
-    if (inches >= 12) {
+    if (inches >= 12 && !forceInches) {
       const feet = Math.floor(inches / 12);
       const remainingInches = inches % 12;
       if (remainingInches === 0) {
@@ -148,6 +147,31 @@ export function getTypicalMeasurements(units: 'imperial' | 'metric') {
 }
 
 /**
+ * Round lift measurements to practical increments for user readability
+ */
+export function roundLiftMeasurement(inches: number, units: 'imperial' | 'metric'): number {
+  if (units === 'metric') {
+    // Round to nearest centimeter
+    const cm = inchesToCm(inches);
+    return cmToInches(Math.round(cm));
+  } else {
+    // Round to nearest quarter inch (0.25")
+    return Math.round(inches * 4) / 4;
+  }
+}
+
+/**
+ * Format lift measurements with practical rounding
+ */
+export function formatLiftMeasurement(
+  inches: number, 
+  units: 'imperial' | 'metric'
+): string {
+  const rounded = roundLiftMeasurement(inches, units);
+  return formatMeasurement(rounded, units, 0); // Use 0 precision for clean fractions
+}
+
+/**
  * Get common leveling block heights in user's preferred units
  */
 export function getCommonBlockHeights(units: 'imperial' | 'metric'): Array<{
@@ -157,11 +181,10 @@ export function getCommonBlockHeights(units: 'imperial' | 'metric'): Array<{
   description: string;
 }> {
   const blocks = [
-    { inches: 1, description: 'Thin blocks/shims' },
-    { inches: 2, description: 'Standard blocks' },
-    { inches: 4, description: 'Thick blocks' },
-    { inches: 6, description: 'Extra thick blocks' },
-    { inches: 8, description: 'Heavy duty blocks' }
+    { inches: 0.75, description: 'Thin blocks/shims' },
+    { inches: 1, description: 'Standard thin blocks' },
+    { inches: 1.5, description: 'Medium blocks' },
+    { inches: 2, description: 'Standard blocks' }
   ];
 
   return blocks.map(block => ({
