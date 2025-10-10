@@ -169,7 +169,7 @@ export default function OnboardingScreen() {
         
         <YStack space="$2" alignItems="center">
           <H1 color="$color" textAlign="center" fontSize="$9">
-            Welcome to LevelMate!
+            Welcome to FlatFinder!
           </H1>
           <H2 color="$colorPress" textAlign="center" fontSize="$6">
             Your Professional RV Leveling Assistant
@@ -179,7 +179,7 @@ export default function OnboardingScreen() {
         <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
           <YStack space="$3">
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate transforms your phone into a precision leveling tool for RVs, trailers, and motorhomes.
+              FlatFinder transforms your phone into a precision leveling tool for RVs, trailers, and motorhomes.
             </Text>
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
               Whether you're a weekend warrior or full-time RVer, proper leveling is essential for:
@@ -222,7 +222,7 @@ export default function OnboardingScreen() {
               • ROLL: Side-to-side (left/right high)
             </Text>
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate measures both angles using your phone's built-in motion sensors.
+              FlatFinder measures both angles using your phone's built-in motion sensors.
             </Text>
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
               The goal is to get both pitch and roll as close to 0° as possible. Most RV appliances work fine within ±1° of level.
@@ -261,7 +261,7 @@ export default function OnboardingScreen() {
               • Never level on soft or unstable ground
             </Text>
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate will warn you if angles become unsafe during leveling.
+              FlatFinder will warn you if angles become unsafe during leveling.
             </Text>
           </YStack>
         </Card>
@@ -879,7 +879,7 @@ export default function OnboardingScreen() {
         <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
           <YStack space="$4">
             <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              Perfect! We've set up LevelMate with your preferences:
+              Perfect! We've set up FlatFinder with your preferences:
             </Text>
             
             <YStack space="$2">

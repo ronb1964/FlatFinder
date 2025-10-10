@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#1a1a2e" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
+
+    <!-- Glass effect gradient -->
+    <radialGradient id="glassGradient" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="rgba(100, 100, 120, 0.3)" stop-opacity="1" />
+      <stop offset="70%" stop-color="rgba(40, 40, 60, 0.4)" stop-opacity="1" />
+      <stop offset="100%" stop-color="rgba(20, 20, 30, 0.6)" stop-opacity="1" />
+    </radialGradient>
+
+    <!-- Bubble gradient (green) -->
+    <radialGradient id="bubbleGradient" cx="35%" cy="35%">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="1" />
+      <stop offset="50%" stop-color="#22c55e" stop-opacity="1" />
+      <stop offset="100%" stop-color="#16a34a" stop-opacity="1" />
+    </radialGradient>
+
+    <!-- Glow effect for bubble -->
+    <radialGradient id="bubbleGlow" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Inner shadow for depth -->
+    <radialGradient id="innerShadow" cx="50%" cy="50%">
+      <stop offset="80%" stop-color="rgba(0,0,0,0)" stop-opacity="0" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.4)" stop-opacity="1" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bgGradient)" rx="226" />
+
+  <!-- Outer glow when level -->
+  <circle cx="512" cy="512" r="380" fill="url(#bubbleGlow)" opacity="0.8" />
+
+  <!-- Main level body - outermost glass ring -->
+  <circle cx="512" cy="512" r="350" fill="url(#glassGradient)"
+          stroke="rgba(100, 116, 139, 0.5)" stroke-width="6" />
+
+  <!-- Inner level area - darker for contrast -->
+  <circle cx="512" cy="512" r="330" fill="rgba(15, 23, 42, 0.9)" />
+
+  <!-- Precision rings with gradient colors -->
+  <circle cx="512" cy="512" r="280" fill="none"
+          stroke="rgba(139, 92, 246, 0.35)" stroke-width="2" />
+  <circle cx="512" cy="512" r="220" fill="none"
+          stroke="rgba(59, 130, 246, 0.35)" stroke-width="2" />
+  <circle cx="512" cy="512" r="160" fill="none"
+          stroke="rgba(34, 197, 94, 0.35)" stroke-width="3" />
+
+  <!-- Target zone with glow -->
+  <circle cx="512" cy="512" r="105" fill="none"
+          stroke="rgba(34, 197, 94, 0.3)" stroke-width="12" opacity="1" />
+  <circle cx="512" cy="512" r="95"
+          fill="rgba(34, 197, 94, 0.15)"
+          stroke="#22c55e" stroke-width="3" />
+
+  <!-- Crosshair lines - horizontal -->
+  <line x1="180" y1="512" x2="480" y2="512"
+        stroke="rgba(148, 163, 184, 0.4)" stroke-width="3" stroke-dasharray="8,8" />
+  <line x1="544" y1="512" x2="844" y2="512"
+        stroke="rgba(148, 163, 184, 0.4)" stroke-width="3" stroke-dasharray="8,8" />
+
+  <!-- Crosshair lines - vertical -->
+  <line x1="512" y1="180" x2="512" y2="480"
+        stroke="rgba(148, 163, 184, 0.4)" stroke-width="3" stroke-dasharray="8,8" />
+  <line x1="512" y1="544" x2="512" y2="844"
+        stroke="rgba(148, 163, 184, 0.4)" stroke-width="3" stroke-dasharray="8,8" />
+
+  <!-- Crosshair center reticle -->
+  <circle cx="512" cy="512" r="25" fill="none"
+          stroke="rgba(148, 163, 184, 0.5)" stroke-width="2" />
+  <circle cx="512" cy="512" r="15" fill="none"
+          stroke="rgba(148, 163, 184, 0.3)" stroke-width="1.5" />
+
+  <!-- Center indicator dot -->
+  <circle cx="512" cy="512" r="8" fill="#22c55e" opacity="0.9" />
+  <circle cx="512" cy="512" r="4" fill="#ffffff" />
+
+  <!-- Bubble shadow - more pronounced -->
+  <circle cx="518" cy="518" r="60" fill="rgba(0, 0, 0, 0.35)" />
+
+  <!-- Main bubble with gradient -->
+  <circle cx="512" cy="512" r="60" fill="url(#bubbleGradient)" opacity="0.95" />
+
+  <!-- Bubble highlight - glass effect (top-left) -->
+  <circle cx="494" cy="494" r="28" fill="rgba(255, 255, 255, 0.7)" />
+
+  <!-- Bubble core highlight -->
+  <circle cx="488" cy="488" r="12" fill="rgba(255, 255, 255, 0.95)" />
+
+  <!-- Inner shadow for depth on main body -->
+  <circle cx="512" cy="512" r="330" fill="url(#innerShadow)" />
+</svg>

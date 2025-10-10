@@ -7,6 +7,9 @@ import { CalibrationWizard } from '../src/components/CalibrationWizard';
 import { useAppStore } from '../src/state/appStore';
 import { StandardBlockSets } from '../src/lib/rvLevelingMath';
 import { Calibration } from '../src/lib/levelingMath';
+import { GradientButton } from '../src/components/GradientButton';
+import { GlassCard } from '../src/components/GlassCard';
+import { SettingsScreenGradient } from '../src/components/GradientBackground';
 
 export default function CalibrationScreen() {
   const [showWizard, setShowWizard] = useState(false);
@@ -69,13 +72,9 @@ export default function CalibrationScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <YStack 
-        flex={1} 
-        style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f172a 100%)',
-        }}
-      >
+    <SettingsScreenGradient>
+      <SafeAreaView style={{ flex: 1 }}>
+      <YStack flex={1}>
         {/* Header */}
         <XStack 
           padding="$4" 
@@ -101,60 +100,56 @@ export default function CalibrationScreen() {
         <ScrollView flex={1}>
           <YStack padding="$4" space="$4">
             {/* Calibration Status */}
-            <Card 
-              padding="$4" 
+            <GlassCard
+              padding="$5"
               backgroundColor="rgba(255,255,255,0.05)"
-              borderColor="rgba(255,255,255,0.1)"
-              borderRadius="$4"
+              borderColor="rgba(255,255,255,0.2)"
+              borderWidth={2}
+              borderRadius="$6"
+              blurIntensity={12}
             >
               <YStack space="$3" alignItems="center">
-                <YStack 
-                  backgroundColor="rgba(59, 130, 246, 0.1)" 
-                  borderRadius="$8" 
+                <YStack
+                  backgroundColor="rgba(59, 130, 246, 0.1)"
+                  borderRadius="$8"
                   padding="$3"
                   borderWidth={1}
                   borderColor="rgba(59, 130, 246, 0.2)"
                 >
                   <Target size={40} color="#3b82f6" />
                 </YStack>
-                
+
                 <H3 color="#ffffff" textAlign="center" fontWeight="600" fontSize="$5">
                   Calibrate Your Level
                 </H3>
-                
-                <Text 
-                  color="#94a3b8" 
-                  textAlign="center" 
-                  fontSize="$3" 
+
+                <Text
+                  color="rgba(255, 255, 255, 0.8)"
+                  textAlign="center"
+                  fontSize="$3"
                   lineHeight="$4"
                   maxWidth={280}
                 >
                   Calibration ensures accurate level readings by accounting for your device's mounting position and any built-in sensor bias.
                 </Text>
-                
+
               </YStack>
-            </Card>
+            </GlassCard>
 
             {/* Calibration Actions */}
             <YStack space="$3">
-              <Button
-                size="$6"
+              <GradientButton
+                gradientType="primary"
                 onPress={handleStartCalibration}
-                backgroundColor="#3b82f6"
-                color="#ffffff"
-                fontWeight="600"
-                pressStyle={{
-                  backgroundColor: "#2563eb",
-                  transform: [{ scale: 0.98 }],
-                }}
-                icon={<RotateCw size={20} />}
+                icon={RotateCw}
+                size="$6"
               >
                 Start Calibration
-              </Button>
-              
-              <Text 
-                color="#6b7280" 
-                textAlign="center" 
+              </GradientButton>
+
+              <Text
+                color="rgba(255, 255, 255, 0.6)"
+                textAlign="center"
                 fontSize="$3"
                 paddingHorizontal="$4"
               >
@@ -164,11 +159,13 @@ export default function CalibrationScreen() {
 
             {/* Calibration Details */}
             {activeProfile?.calibration && (
-              <Card 
-                padding="$4" 
-                backgroundColor="rgba(255,255,255,0.02)"
-                borderColor="rgba(255,255,255,0.05)"
-                borderRadius="$3"
+              <GlassCard
+                padding="$4"
+                backgroundColor="rgba(255,255,255,0.05)"
+                borderColor="rgba(255,255,255,0.1)"
+                borderWidth={1}
+                borderRadius="$5"
+                blurIntensity={10}
               >
                 <YStack space="$3">
                   <H3 color="#ffffff" fontSize="$5" fontWeight="500">
@@ -176,20 +173,20 @@ export default function CalibrationScreen() {
                   </H3>
                   <YStack space="$2">
                     <XStack justifyContent="space-between">
-                      <Text color="#94a3b8" fontSize="$3">Pitch Offset:</Text>
+                      <Text color="rgba(255, 255, 255, 0.7)" fontSize="$3">Pitch Offset:</Text>
                       <Text color="#ffffff" fontSize="$3" fontWeight="500">
                         {activeProfile.calibration.pitchOffsetDegrees.toFixed(2)}°
                       </Text>
                     </XStack>
                     <XStack justifyContent="space-between">
-                      <Text color="#94a3b8" fontSize="$3">Roll Offset:</Text>
+                      <Text color="rgba(255, 255, 255, 0.7)" fontSize="$3">Roll Offset:</Text>
                       <Text color="#ffffff" fontSize="$3" fontWeight="500">
                         {activeProfile.calibration.rollOffsetDegrees.toFixed(2)}°
                       </Text>
                     </XStack>
                   </YStack>
                 </YStack>
-              </Card>
+              </GlassCard>
             )}
           </YStack>
         </ScrollView>
@@ -201,6 +198,7 @@ export default function CalibrationScreen() {
           onCancel={handleCancelCalibration}
         />
       </YStack>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SettingsScreenGradient>
   );
 }

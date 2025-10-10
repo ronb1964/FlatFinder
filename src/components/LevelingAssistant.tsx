@@ -8,6 +8,8 @@ import { normalizeAttitude, attitudeToLevelingMeasurement, SENSOR_NORMALIZATION_
 import { useAppStore } from '../state/appStore';
 import { formatMeasurement, formatLiftMeasurement } from '../lib/units';
 import { BubbleLevel } from './BubbleLevel';
+import { GlassCard } from './GlassCard';
+import { LevelingAssistantGradient } from './GradientBackground';
 
 // Helper function to render a wheel/hitch card with instructions
 function renderWheelCard(
@@ -29,7 +31,7 @@ function renderWheelCard(
   const shouldShowGreen = isLevelPosition || noBlocksFit;
   
   return (
-    <Card
+    <GlassCard
       key={lift.location}
       backgroundColor="rgba(255, 255, 255, 0.05)"
       borderColor={shouldShowGreen ? "rgba(34, 197, 94, 0.6)" : "rgba(255, 255, 255, 0.2)"}
@@ -39,6 +41,7 @@ function renderWheelCard(
       height={height}
       justifyContent="center"
       alignItems="center"
+      blurIntensity={10}
     >
       <YStack space="$1" alignItems="center">
         <Text color="white" fontSize="$2" fontWeight="600" textAlign="center" numberOfLines={1}>
@@ -118,7 +121,7 @@ function renderWheelCard(
           </YStack>
         )}
       </YStack>
-    </Card>
+    </GlassCard>
   );
 }
 
@@ -256,13 +259,14 @@ function renderDetailedBlockInstructions(levelingPlan: any, activeProfile: any, 
           const blockStack = levelingPlan.blockStacks[lift.location];
           
           return (
-            <Card
+            <GlassCard
               key={lift.location}
               backgroundColor="rgba(255, 255, 255, 0.03)"
               borderColor="rgba(255, 255, 255, 0.1)"
               borderWidth={1}
               padding="$3"
               marginBottom="$2"
+              blurIntensity={8}
             >
               <YStack space="$2">
                 <XStack justifyContent="space-between" alignItems="center">
@@ -342,7 +346,7 @@ function renderDetailedBlockInstructions(levelingPlan: any, activeProfile: any, 
                   </YStack>
                 )}
               </YStack>
-            </Card>
+            </GlassCard>
           );
         })}
     </YStack>
@@ -442,12 +446,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const isNearLevel = Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5;
 
   return (
-    <YStack 
-      flex={1}
-      style={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f172a 100%)'
-      }}
-    >
+    <LevelingAssistantGradient>
       {/* Compact Header */}
       <XStack 
         justifyContent="space-between" 
@@ -480,12 +479,13 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
           showsVerticalScrollIndicator={true}
         >
         {/* Level Status */}
-        <Card 
+        <GlassCard
           backgroundColor="rgba(255, 255, 255, 0.03)"
           borderColor="rgba(255, 255, 255, 0.1)"
           borderWidth={1}
           padding="$3"
           marginBottom="$3"
+          blurIntensity={10}
         >
           <YStack space="$2">
             <H3 color="white" textAlign="center">Current Reading</H3>
@@ -504,11 +504,11 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
               </Text>
             </XStack>
           </YStack>
-        </Card>
+        </GlassCard>
 
         {/* Level Status */}
         {isNearLevel ? (
-          <Card 
+          <GlassCard
             backgroundColor="rgba(34, 197, 94, 0.1)"
             borderColor="rgba(34, 197, 94, 0.3)"
             borderWidth={1}
@@ -516,6 +516,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             justifyContent="center"
             alignItems="center"
             marginBottom="$3"
+            blurIntensity={12}
           >
             <Text color="#22c55e" fontSize="$5" fontWeight="bold" textAlign="center">
               🎉 Level!
@@ -523,9 +524,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             <Text color="#22c55e" fontSize="$3" textAlign="center" marginTop="$1">
               Your RV is properly leveled
             </Text>
-          </Card>
+          </GlassCard>
         ) : (
-          <Card 
+          <GlassCard
             backgroundColor="rgba(239, 68, 68, 0.1)"
             borderColor="rgba(239, 68, 68, 0.3)"
             borderWidth={1}
@@ -533,6 +534,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             justifyContent="center"
             alignItems="center"
             marginBottom="$3"
+            blurIntensity={12}
           >
             <Text color="#ef4444" fontSize="$4" fontWeight="bold" textAlign="center">
               ⚠️ Not Level
@@ -540,7 +542,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             <Text color="#ef4444" fontSize="$3" textAlign="center" marginTop="$1">
               Follow instructions below to level
             </Text>
-          </Card>
+          </GlassCard>
         )}
 
         {/* Always show spatial layout when we have a plan */}
@@ -548,12 +550,13 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
           <YStack space="$3">
             {/* Warnings - Only show if not level */}
             {!isNearLevel && levelingPlan.warnings.length > 0 && (
-              <Card 
+              <GlassCard
                 backgroundColor="rgba(239, 68, 68, 0.1)"
                 borderColor="rgba(239, 68, 68, 0.3)"
                 borderWidth={1}
                 padding="$3"
                 marginBottom="$3"
+                blurIntensity={10}
               >
                 <YStack space="$2">
                   <XStack alignItems="center" space="$2">
@@ -566,7 +569,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                     {levelingPlan.warnings.join(' ')}
                   </Text>
                 </YStack>
-              </Card>
+              </GlassCard>
             )}
 
             {/* Spatial Leveling Layout - Always show */}
@@ -579,12 +582,13 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
         {/* Error State */}
         {calculationError && (
-          <Card 
+          <GlassCard
             backgroundColor="rgba(239, 68, 68, 0.1)"
             borderColor="rgba(239, 68, 68, 0.3)"
             borderWidth={1}
             padding="$4"
             marginBottom="$3"
+            blurIntensity={10}
           >
             <YStack space="$2">
               <XStack alignItems="center" space="$2">
@@ -597,12 +601,12 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 {calculationError}
               </Text>
             </YStack>
-          </Card>
+          </GlassCard>
         )}
 
         {/* No Plan State */}
         {!levelingPlan && !isCalculating && !calculationError && (
-          <Card 
+          <GlassCard
             backgroundColor="rgba(255, 255, 255, 0.03)"
             borderColor="rgba(255, 255, 255, 0.1)"
             borderWidth={1}
@@ -610,6 +614,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             justifyContent="center"
             alignItems="center"
             marginBottom="$3"
+            blurIntensity={10}
           >
             <Text color="white" fontSize="$4" textAlign="center" marginBottom="$1">
               🎯 Reading sensors...
@@ -617,12 +622,12 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             <Text color="$gray11" fontSize="$3" textAlign="center">
               Place device flat on RV floor
             </Text>
-          </Card>
+          </GlassCard>
         )}
 
         {/* Bottom spacing */}
         <YStack height="$4" />
       </ScrollView>
-    </YStack>
+    </LevelingAssistantGradient>
   );
 }

@@ -1,10 +1,10 @@
-# LevelMate - Professional RV & Trailer Leveling App
+# FlatFinder - Professional RV & Trailer Leveling App
 
 A React Native/Expo app that helps camper vans and trailers achieve perfect level positioning at campsites using advanced device sensors and proven leveling mathematics.
 
-## 🎯 What LevelMate Does
+## 🎯 What FlatFinder Does
 
-LevelMate transforms your smartphone into a professional-grade leveling tool for RVs, trailers, and motorhomes. Using your device's built-in motion sensors, it provides:
+FlatFinder transforms your smartphone into a professional-grade leveling tool for RVs, trailers, and motorhomes. Using your device's built-in motion sensors, it provides:
 
 - **Real-time level readings** with sub-degree precision
 - **Step-by-step leveling instructions** with exact measurements  
@@ -44,7 +44,7 @@ LevelMate transforms your smartphone into a professional-grade leveling tool for
 ## 🏗️ Project Structure
 
 ```
-levelmate-expo/
+flatfinder-expo/
 ├── app/                    # Expo Router app directory
 │   ├── (tabs)/            # Tab navigation screens
 │   │   ├── index.tsx      # Main level screen
@@ -68,7 +68,7 @@ levelmate-expo/
 ## 🌐 Production Deployment
 
 ### Netlify Web App
-The LevelMate web app is deployed on Netlify for global access:
+The FlatFinder web app is deployed on Netlify for global access:
 
 - **Production URL**: https://levelmate-app-1755829802.netlify.app
 - **Admin Dashboard**: https://app.netlify.com/projects/levelmate-app-1755829802
@@ -97,7 +97,7 @@ npx netlify deploy --prod --dir=dist
 1. **Clone the repository**
    ```bash
    git clone <repo-url>
-   cd levelmate-expo
+   cd flatfinder-expo
    ```
 
 2. **Install dependencies**

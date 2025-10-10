@@ -19,7 +19,16 @@
       "Bash(npx expo:*)",
       "Bash(npx netlify deploy:*)",
       "Bash(npm run web:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(/usr/bin/node:*)",
+      "Read(//usr/**)",
+      "Bash(pkill:*)",
+      "Bash(xdg-open:*)",
+      "Bash(snap list:*)",
+      "Bash(flatpak list:*)",
+      "Read(//home/ron/Pictures/Screenshots/**)"
     ],
     "deny": [],
     "ask": []

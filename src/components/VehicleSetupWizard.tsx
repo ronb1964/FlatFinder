@@ -22,6 +22,7 @@ import { createCalibration } from '../lib/levelingMath';
 // Temporarily commenting out units to debug undefined component issue
 // import { formatMeasurement, getTypicalMeasurements, getCommonBlockHeights, convertToInches, convertForDisplay } from '../lib/units';
 import { useAppStore } from '../state/appStore';
+import { GlassCard } from './GlassCard';
 
 interface VehicleSetupWizardProps {
   onComplete: (profile: {
@@ -745,17 +746,22 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
   if (!isVisible) return null;
 
   return (
-    <Card
+    <GlassCard
       position="absolute"
       top="$4"
       left="$4"
       right="$4"
       bottom="$4"
       zIndex={1000}
-      backgroundColor="$background"
-      borderColor="$borderColor"
+      backgroundColor="rgba(15, 23, 42, 0.95)"
+      borderColor="rgba(99, 102, 241, 0.4)"
       borderWidth={2}
-      borderRadius="$4"
+      borderRadius="$6"
+      blurIntensity={20}
+      shadowColor="rgba(99, 102, 241, 0.3)"
+      shadowOffset={{ width: 0, height: 12 }}
+      shadowOpacity={0.4}
+      shadowRadius={24}
     >
       <YStack flex={1} height="100%">
         {/* Fixed header */}
@@ -816,6 +822,6 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
           </Button>
         </XStack>
       </YStack>
-    </Card>
+    </GlassCard>
   );
 }

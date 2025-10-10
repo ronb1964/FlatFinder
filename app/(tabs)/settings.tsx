@@ -27,6 +27,55 @@ import {
 
 import { useAppStore } from '../../src/state/appStore';
 import { useColorScheme } from 'react-native';
+import { GlassCard } from '../../src/components/GlassCard';
+import { SettingsScreenGradient } from '../../src/components/GradientBackground';
+import Svg, { Circle, Defs, RadialGradient, Stop, G } from 'react-native-svg';
+
+// Mini FlatFinder icon component for Settings About section
+const MiniAppIcon = ({ size = 32 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 100 100">
+    <Defs>
+      {/* Glass ring gradient */}
+      <RadialGradient id="miniGlassGradient" cx="50%" cy="30%">
+        <Stop offset="0%" stopColor="rgba(100, 100, 120, 0.4)" />
+        <Stop offset="50%" stopColor="rgba(40, 40, 60, 0.5)" />
+        <Stop offset="100%" stopColor="rgba(20, 20, 30, 0.7)" />
+      </RadialGradient>
+
+      {/* Green bubble gradient */}
+      <RadialGradient id="miniBubbleGradient" cx="50%" cy="50%">
+        <Stop offset="0%" stopColor="#4ade80" />
+        <Stop offset="50%" stopColor="#22c55e" />
+        <Stop offset="100%" stopColor="#16a34a" />
+      </RadialGradient>
+
+      {/* Centered highlight */}
+      <RadialGradient id="miniCenteredHighlight" cx="50%" cy="50%">
+        <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+        <Stop offset="40%" stopColor="#ffffff" stopOpacity="0.5" />
+        <Stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+      </RadialGradient>
+    </Defs>
+
+    {/* Outer glass ring */}
+    <Circle cx="50" cy="50" r="45" fill="url(#miniGlassGradient)" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2" />
+
+    {/* Inner dark background */}
+    <Circle cx="50" cy="50" r="38" fill="rgba(15, 23, 42, 0.9)" />
+
+    {/* Precision ring */}
+    <Circle cx="50" cy="50" r="28" fill="none" stroke="rgba(34, 197, 94, 0.3)" strokeWidth="1" />
+
+    {/* Green bubble */}
+    <Circle cx="50" cy="50" r="18" fill="url(#miniBubbleGradient)" />
+
+    {/* Centered highlight glow */}
+    <Circle cx="50" cy="50" r="12" fill="url(#miniCenteredHighlight)" />
+
+    {/* Bright center spot */}
+    <Circle cx="50" cy="50" r="4" fill="rgba(255, 255, 255, 0.9)" />
+  </Svg>
+);
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -79,16 +128,23 @@ export default function SettingsScreen() {
     description?: string;
     children: React.ReactNode;
   }) => (
-    <Card padding="$4" backgroundColor="$background">
+    <GlassCard
+      padding="$4"
+      backgroundColor="rgba(255, 255, 255, 0.05)"
+      borderColor="rgba(255, 255, 255, 0.1)"
+      borderWidth={1}
+      borderRadius="$5"
+      blurIntensity={10}
+    >
       <XStack justifyContent="space-between" alignItems="center" space="$3">
         <XStack space="$3" alignItems="center" flex={1}>
           {icon}
           <YStack flex={1}>
-            <Text fontSize="$4" fontWeight="600">
+            <Text fontSize="$4" fontWeight="600" color="white">
               {title}
             </Text>
             {description && (
-              <Text fontSize="$2" color="$gray10">
+              <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)">
                 {description}
               </Text>
             )}
@@ -96,50 +152,65 @@ export default function SettingsScreen() {
         </XStack>
         {children}
       </XStack>
-    </Card>
+    </GlassCard>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.val || '#000' }}>
-      <ScrollView>
-        <YStack 
-          padding="$4" 
-          space="$4"
-        >
-          <H2>Settings</H2>
+    <SettingsScreenGradient>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView>
+          <YStack
+            padding="$4"
+            space="$4"
+          >
+            <H2 color="white">Settings</H2>
 
           {/* Active Profile Indicator */}
           {activeProfile ? (
-            <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
+            <GlassCard
+              padding="$3"
+              backgroundColor="rgba(16, 185, 129, 0.2)"
+              borderColor="rgba(34, 197, 94, 0.5)"
+              borderWidth={2}
+              borderRadius="$5"
+              blurIntensity={10}
+            >
               <XStack justifyContent="center" alignItems="center" space="$2">
-                <YStack width={8} height={8} borderRadius={4} backgroundColor="$green9" />
-                <Text color="$green11" fontSize="$3" fontWeight="600">
+                <YStack width={10} height={10} borderRadius={5} backgroundColor="#22c55e" />
+                <Text color="rgba(255, 255, 255, 0.9)" fontSize="$3" fontWeight="600">
                   Active Vehicle:
                 </Text>
-                <Text fontWeight="bold" fontSize="$3" color="$green11">
+                <Text fontWeight="bold" fontSize="$4" color="#22c55e">
                   {activeProfile.name}
                 </Text>
               </XStack>
-            </Card>
+            </GlassCard>
           ) : (
-            <Card padding="$3" backgroundColor="$red2" borderColor="$red9" borderWidth={1}>
+            <GlassCard
+              padding="$3"
+              backgroundColor="rgba(239, 68, 68, 0.2)"
+              borderColor="rgba(239, 68, 68, 0.5)"
+              borderWidth={2}
+              borderRadius="$5"
+              blurIntensity={10}
+            >
               <XStack justifyContent="center" alignItems="center" space="$2">
-                <YStack width={8} height={8} borderRadius={4} backgroundColor="$red9" />
-                <Text color="$red11" fontSize="$3" fontWeight="600">
+                <YStack width={10} height={10} borderRadius={5} backgroundColor="#ef4444" />
+                <Text color="rgba(255, 255, 255, 0.9)" fontSize="$3" fontWeight="600">
                   No Vehicle Selected - Go to Profiles
                 </Text>
               </XStack>
-            </Card>
+            </GlassCard>
           )}
 
           {/* Feedback Settings */}
           <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+            <Text fontSize="$4" fontWeight="700" color="rgba(255, 255, 255, 0.5)" letterSpacing={1}>
               FEEDBACK
             </Text>
 
             <SettingRow
-              icon={<Vibrate size={20} color={settings.hapticsEnabled ? '#10b981' : theme.color?.val || '#fff'} />}
+              icon={<Vibrate size={20} color={settings.hapticsEnabled ? '#10b981' : '#ffffff'} />}
               title="Haptic Feedback"
               description="Vibrate when level changes"
             >
@@ -153,7 +224,7 @@ export default function SettingsScreen() {
             </SettingRow>
 
             <SettingRow
-              icon={<Volume2 size={20} color={settings.audioEnabled ? '#3b82f6' : theme.color?.val || '#fff'} />}
+              icon={<Volume2 size={20} color={settings.audioEnabled ? '#3b82f6' : '#ffffff'} />}
               title="Audio Feedback"
               description="Play sounds when near level"
             >
@@ -171,7 +242,7 @@ export default function SettingsScreen() {
 
           {/* Display Settings */}
           <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+            <Text fontSize="$4" fontWeight="700" color="rgba(255, 255, 255, 0.5)" letterSpacing={1}>
               DISPLAY
             </Text>
 
@@ -214,7 +285,7 @@ export default function SettingsScreen() {
 
           {/* Measurement Settings */}
           <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+            <Text fontSize="$4" fontWeight="700" color="rgba(255, 255, 255, 0.5)" letterSpacing={1}>
               MEASUREMENTS
             </Text>
 
@@ -246,20 +317,27 @@ export default function SettingsScreen() {
               </RadioGroup>
             </SettingRow>
 
-            <Card padding="$4" backgroundColor="$background">
+            <GlassCard
+              padding="$4"
+              backgroundColor="rgba(255, 255, 255, 0.05)"
+              borderColor="rgba(255, 255, 255, 0.1)"
+              borderWidth={1}
+              borderRadius="$5"
+              blurIntensity={10}
+            >
               <YStack space="$3">
                 <XStack justifyContent="space-between" alignItems="center">
                   <XStack space="$3" alignItems="center">
-                    <Gauge size={20} color={theme.color?.val || '#fff'} />
-                    <Text fontSize="$4" fontWeight="600">
+                    <Gauge size={20} color="#ffffff" />
+                    <Text fontSize="$4" fontWeight="600" color="white">
                       Level Threshold
                     </Text>
                   </XStack>
-                  <Text fontSize="$4" fontWeight="bold" color="$green9">
+                  <Text fontSize="$4" fontWeight="bold" color="#22c55e">
                     {settings.levelThreshold.toFixed(1)}°
                   </Text>
                 </XStack>
-                <Text fontSize="$2" color="$gray10">
+                <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)">
                   Tolerance for considering the vehicle level
                 </Text>
                 <Slider
@@ -278,25 +356,32 @@ export default function SettingsScreen() {
                   <Slider.Thumb index={0} circular />
                 </Slider>
               </YStack>
-            </Card>
+            </GlassCard>
           </YStack>
 
           <Separator />
 
           {/* Developer Section - Temporary */}
           <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+            <Text fontSize="$4" fontWeight="700" color="rgba(255, 255, 255, 0.5)" letterSpacing={1}>
               DEVELOPER
             </Text>
-            <Card padding="$4" backgroundColor="$background" borderColor="$red5" borderWidth={1}>
+            <GlassCard
+              padding="$4"
+              backgroundColor="rgba(239, 68, 68, 0.1)"
+              borderColor="rgba(239, 68, 68, 0.3)"
+              borderWidth={2}
+              borderRadius="$5"
+              blurIntensity={10}
+            >
               <YStack space="$3">
                 <XStack space="$3" alignItems="center">
                   <RotateCcw size={20} color="#ef4444" />
                   <YStack flex={1}>
-                    <Text fontSize="$4" fontWeight="600">
+                    <Text fontSize="$4" fontWeight="600" color="white">
                       Reset Onboarding
                     </Text>
-                    <Text fontSize="$2" color="$gray10">
+                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)">
                       Show the onboarding tutorial again for testing
                     </Text>
                   </YStack>
@@ -320,45 +405,50 @@ export default function SettingsScreen() {
                   Reset & Restart
                 </Button>
               </YStack>
-            </Card>
+            </GlassCard>
           </YStack>
 
           <Separator />
 
           {/* About Section */}
           <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+            <Text fontSize="$4" fontWeight="700" color="rgba(255, 255, 255, 0.5)" letterSpacing={1}>
               ABOUT
             </Text>
-            <Card 
-              padding="$6" 
-              backgroundColor="$background"
-              borderColor="$blue5"
-              borderWidth={1}
+            <GlassCard
+              padding="$6"
+              backgroundColor="rgba(59, 130, 246, 0.1)"
+              borderColor="rgba(59, 130, 246, 0.3)"
+              borderWidth={2}
               borderRadius="$6"
+              blurIntensity={12}
             >
               <YStack space="$3" alignItems="center">
                 <YStack space="$2" alignItems="center">
-                  <Text fontSize="$6" fontWeight="bold" color="$blue9">
-                    🎯 LevelMate
-                  </Text>
-                  <Text fontSize="$4" color="$blue8" fontWeight="600">
+                  <XStack space="$2" alignItems="center">
+                    <MiniAppIcon size={24} />
+                    <Text fontSize="$6" fontWeight="bold" color="#3b82f6">
+                      FlatFinder
+                    </Text>
+                  </XStack>
+                  <Text fontSize="$4" color="#60a5fa" fontWeight="600">
                     Version 1.0.0
                   </Text>
                 </YStack>
-                <Text fontSize="$3" color="$gray10" textAlign="center" lineHeight="$4">
+                <Text fontSize="$3" color="rgba(255, 255, 255, 0.7)" textAlign="center" lineHeight="$4">
                   Professional RV and trailer leveling app with precision sensors and intelligent guidance
                 </Text>
                 <XStack space="$2" opacity={0.7}>
-                  <Text fontSize="$2" color="$gray9">
+                  <Text fontSize="$2" color="rgba(255, 255, 255, 0.5)">
                     Made with ❤️ for RV enthusiasts
                   </Text>
                 </XStack>
               </YStack>
-            </Card>
+            </GlassCard>
           </YStack>
         </YStack>
       </ScrollView>
     </SafeAreaView>
+    </SettingsScreenGradient>
   );
 }

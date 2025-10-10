@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "LevelMate",
-    "slug": "levelmate-rv-leveling",
+    "name": "FlatFinder",
+    "slug": "flatfinder-rv-leveling",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "levelmate",
+    "scheme": "flatfinder",
     "primaryColor": "#22c55e",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -16,10 +16,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.levelmate.rvleveling",
+      "bundleIdentifier": "com.flatfinder.rvleveling",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMotionUsageDescription": "LevelMate uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
+        "NSMotionUsageDescription": "FlatFinder uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
         "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"]
       }
     },
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.levelmate.rvleveling",
+      "package": "com.flatfinder.rvleveling",
       "versionCode": 1,
       "permissions": [
         "android.permission.WAKE_LOCK"

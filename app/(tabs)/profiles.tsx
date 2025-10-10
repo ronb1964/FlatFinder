@@ -23,6 +23,9 @@ import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
 import { ProfileCreationTest } from '../../src/components/ProfileCreationTest';
 import { SimpleProfileWizard } from '../../src/components/SimpleProfileWizard';
 import { CalibrationWizard } from '../../src/components/CalibrationWizard';
+import { GlassCard } from '../../src/components/GlassCard';
+import { GradientButton } from '../../src/components/GradientButton';
+import { ProfilesScreenGradient } from '../../src/components/GradientBackground';
 
 import { createCalibration, type Calibration } from '../../src/lib/levelingMath';
 
@@ -147,25 +150,23 @@ export default function ProfilesScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.val || '#000' }}>
-      <YStack 
-        flex={1} 
-        padding="$4" 
-        space="$4"
-      >
-        <XStack justifyContent="space-between" alignItems="center">
-          <H2>Vehicle Profiles</H2>
-          <Button
-            size="$5"
-            height="$5"
-            backgroundColor="$blue9"
-            icon={Plus}
-            onPress={() => setShowSetupWizard(true)}
-            fontSize="$4"
-          >
-            Add Vehicle
-          </Button>
-        </XStack>
+    <ProfilesScreenGradient>
+      <SafeAreaView style={{ flex: 1 }}>
+        <YStack
+          flex={1}
+          padding="$4"
+          space="$4"
+        >
+          <XStack justifyContent="space-between" alignItems="center">
+            <H2 color="white">Vehicle Profiles</H2>
+            <GradientButton
+              gradientType="primary"
+              icon={Plus}
+              onPress={() => setShowSetupWizard(true)}
+            >
+              Add Vehicle
+            </GradientButton>
+          </XStack>
 
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack space="$3">
@@ -176,7 +177,7 @@ export default function ProfilesScreen() {
                     <Caravan size={48} color="$blue9" />
                     <YStack space="$2" alignItems="center">
                       <Text color="$color" textAlign="center" fontSize="$5" fontWeight="bold">
-                        Welcome to LevelMate!
+                        Welcome to FlatFinder!
                       </Text>
                       <Text color="$colorPress" textAlign="center" fontSize="$4">
                         To get started, you'll need to set up a profile for your RV, trailer, or van.
@@ -209,25 +210,35 @@ export default function ProfilesScreen() {
               </YStack>
             ) : (
               profiles.map((profile) => (
-                <Card
+                <GlassCard
                   key={profile.id}
                   padding="$4"
                   backgroundColor={
-                    activeProfileId === profile.id ? '$green2' : '$background'
+                    activeProfileId === profile.id
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : 'rgba(255, 255, 255, 0.05)'
                   }
                   borderColor={
-                    activeProfileId === profile.id ? '$green9' : '$borderColor'
+                    activeProfileId === profile.id
+                      ? 'rgba(34, 197, 94, 0.6)'
+                      : 'rgba(255, 255, 255, 0.2)'
                   }
-                  borderWidth={activeProfileId === profile.id ? 2 : 1}
+                  borderWidth={2}
+                  borderRadius="$6"
                   pressStyle={{ scale: 0.98 }}
                   onPress={() => setActiveProfile(profile.id)}
+                  blurIntensity={12}
+                  shadowColor={activeProfileId === profile.id ? '#10b981' : 'rgba(0, 0, 0, 0.3)'}
+                  shadowOffset={{ width: 0, height: 6 }}
+                  shadowOpacity={0.3}
+                  shadowRadius={12}
                 >
                   <XStack justifyContent="space-between" alignItems="center">
                     <XStack space="$3" alignItems="center" flex={1}>
                       {getVehicleIcon(profile.type)}
                       <YStack flex={1}>
                         <XStack alignItems="center" space="$2">
-                          <Text fontSize="$5" fontWeight="bold">
+                          <Text fontSize="$5" fontWeight="bold" color="white">
                             {profile.name}
                           </Text>
                           {/* Calibration Status Indicator */}
@@ -244,16 +255,16 @@ export default function ProfilesScreen() {
                             }
                           />
                           {activeProfileId === profile.id && (
-                            <Check size={16} color={theme.green10?.val || '#0f0'} />
+                            <Check size={16} color="#22c55e" />
                           )}
                         </XStack>
-                        <Text color="$colorPress" fontSize="$2" numberOfLines={1}>
+                        <Text color="rgba(255, 255, 255, 0.7)" fontSize="$2" numberOfLines={1}>
                           {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} • Wheelbase: {profile.wheelbaseInches}" • Track: {profile.trackWidthInches}"
                         </Text>
                         {profile.calibration && (
-                          <Text color="$colorPress" fontSize="$1" marginTop="$1" numberOfLines={2}>
-                            {profile.calibration.pitchOffsetDegrees !== 0 || 
-                             profile.calibration.rollOffsetDegrees !== 0 
+                          <Text color="rgba(255, 255, 255, 0.6)" fontSize="$1" marginTop="$1" numberOfLines={2}>
+                            {profile.calibration.pitchOffsetDegrees !== 0 ||
+                             profile.calibration.rollOffsetDegrees !== 0
                               ? `Calibrated: P:${profile.calibration.pitchOffsetDegrees.toFixed(1)}°, R:${profile.calibration.rollOffsetDegrees.toFixed(1)}°`
                               : 'Not calibrated - tap Calibrate to set baseline'}
                           </Text>
@@ -264,39 +275,45 @@ export default function ProfilesScreen() {
                       {activeProfileId === profile.id && (
                         <Button
                           size="$3"
-                          backgroundColor="transparent"
-                          color="$green9"
+                          backgroundColor="rgba(34, 197, 94, 0.2)"
+                          color="#22c55e"
+                          borderWidth={1}
+                          borderColor="rgba(34, 197, 94, 0.4)"
                           onPress={() => handleCalibrateProfile(profile)}
                           paddingHorizontal="$2"
                         >
                           <XStack space="$1" alignItems="center">
-                            <Crosshair size={16} color="$green9" />
-                            <Text color="$green9" fontWeight="bold" fontSize="$3">Calibrate</Text>
+                            <Crosshair size={16} color="#22c55e" />
+                            <Text color="#22c55e" fontWeight="bold" fontSize="$3">Calibrate</Text>
                           </XStack>
                         </Button>
                       )}
                       <XStack space="$2">
                         <Button
                           size="$3"
-                          backgroundColor="transparent"
-                          color="$blue9"
+                          backgroundColor="rgba(59, 130, 246, 0.2)"
+                          color="#3b82f6"
+                          borderWidth={1}
+                          borderColor="rgba(59, 130, 246, 0.4)"
                           onPress={() => handleEditProfile(profile)}
                           flex={1}
                         >
-                          <Text color="$blue9" fontWeight="bold" fontSize="$3">Edit</Text>
+                          <Text color="#3b82f6" fontWeight="bold" fontSize="$3">Edit</Text>
                         </Button>
                         <Button
                           size="$3"
-                          backgroundColor="transparent"
-                          color="$red9"
+                          backgroundColor="rgba(239, 68, 68, 0.2)"
+                          color="#ef4444"
+                          borderWidth={1}
+                          borderColor="rgba(239, 68, 68, 0.4)"
                           onPress={() => handleDeleteProfile(profile.id, profile.name)}
                         >
-                          <Trash2 size={18} color="$red9" />
+                          <Trash2 size={18} color="#ef4444" />
                         </Button>
                       </XStack>
                     </YStack>
                   </XStack>
-                </Card>
+                </GlassCard>
               ))
             )}
           </YStack>
@@ -325,5 +342,6 @@ export default function ProfilesScreen() {
       />
 
     </SafeAreaView>
+    </ProfilesScreenGradient>
   );
 }

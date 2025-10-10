@@ -1,11 +1,23 @@
-# LevelMate - RV/Trailer Leveling App
+# FlatFinder - RV/Trailer Leveling App
 
 ## Project Overview
-LevelMate is a React Native/Expo app that helps RV owners level their vehicles using device sensors. Built with TypeScript, Tamagui UI framework, and Zustand state management.
+FlatFinder is a React Native/Expo app that helps RV owners level their vehicles using device sensors. Built with TypeScript, Tamagui UI framework, and Zustand state management.
 
 **Production URL:** https://levelmate-app-1755829802.netlify.app
 
 ## Current Status (✅ Recently Completed)
+
+### Modern UI Revamp - COMPLETED ✅ Latest (2025-10-09)
+- **Glassmorphism design system**: Frosted glass cards with CSS backdrop-filter throughout app
+- **Animated gradient backgrounds**: Screen-specific color palettes with smooth animations
+- **Modern gradient buttons**: Color-coded actions with semantic meanings (primary/success/warning/danger)
+- **Enhanced visual hierarchy**: Consistent color system documented in `COLOR_PALETTE.md`
+- **Components updated**:
+  - All main screens (Level, Profiles, Settings)
+  - Leveling Assistant with glass effect cards
+  - Vehicle Setup Wizard with indigo-tinted modal
+  - Bubble Level with radial gradients and glow effects
+- **Design documentation**: Complete color palette and usage guidelines in `COLOR_PALETTE.md`
 
 ### Profile Management Fixes - COMPLETED
 - **Fixed profile card layout**: Text wrapping issues resolved with `numberOfLines` props
@@ -13,13 +25,13 @@ LevelMate is a React Native/Expo app that helps RV owners level their vehicles u
 - **Active profile indicators**: Green/red indicators throughout app showing which vehicle is active
 - **Enhanced UX**: Users can never accidentally level with wrong vehicle settings
 
-### Calibration Wizard Improvements - COMPLETED  
+### Calibration Wizard Improvements - COMPLETED
 - **Smart UI rotation**: Interface automatically rotates so instructions are always readable
 - **Completion screen**: Prominent "Continue" button and success feedback after calibration
 - **Button text fixes**: Fixed "Start Calibration Wizard" overflow → "Start Calibration"
 - **Smooth UX**: No more struggling to read upside-down instructions during calibration
 
-### Leveling UI Enhancements - COMPLETED ✅ Latest
+### Leveling UI Enhancements - COMPLETED
 - **Always visible layout**: Spatial wheel/hitch cards and bubble level remain when vehicle is level
 - **Smart status indicators**: "✓ Good" for positions within 1/8" tolerance vs tiny measurements
 - **Green border system**: Level positions AND "No blocks fit" positions show green borders
@@ -40,12 +52,18 @@ LevelMate is a React Native/Expo app that helps RV owners level their vehicles u
 - `src/state/appStore.ts` - Zustand store with profile and settings management
 - `app/(tabs)/` - Main tab screens (Level, Profiles, Settings)
 - `src/components/` - Reusable components including wizards and level indicators
+- `src/components/GlassCard.tsx` - Glassmorphism card component
+- `src/components/GradientButton.tsx` - Gradient button component
+- `src/components/GradientBackground.tsx` - Screen-specific gradient backgrounds
 - `src/lib/levelingMath.ts` - Core leveling calculations and math functions
 - `src/sensors/attitudeAdapter.ts` - Device sensor integration
+- `COLOR_PALETTE.md` - **Official color palette and design system documentation**
 
 ### Tech Stack
 - **Frontend**: React Native + Expo
-- **UI**: Tamagui design system
+- **UI**: Tamagui design system + custom glassmorphism components
+- **Animations**: React Native Reanimated 3, Expo Linear Gradient
+- **Graphics**: React Native SVG, React Native Skia
 - **State**: Zustand + AsyncStorage
 - **Sensors**: Expo DeviceMotion
 - **Deployment**: Netlify (web), Expo (mobile)
@@ -96,12 +114,13 @@ npx netlify deploy --dir=dist --prod  # Deploy to Netlify
 ## Session Startup Protocol
 **MANDATORY: Read these key files at the start of every session to understand established procedures:**
 1. `CLAUDE.md` - This file for project overview and procedures
-2. `FEATURES.md` - Complete feature specification and planned roadmap
-3. `src/components/LevelingAssistant.tsx` - Main leveling UI logic and recent improvements
-4. `src/lib/rvLevelingMath.ts` - Core leveling calculations and block optimization
-5. `src/lib/units.ts` - Unit conversion and measurement formatting
-6. `src/state/appStore.ts` - App state management and profile handling
-7. Recent git status to understand current state
+2. `COLOR_PALETTE.md` - **Official color palette and design system standards**
+3. `FEATURES.md` - Complete feature specification and planned roadmap
+4. `src/components/LevelingAssistant.tsx` - Main leveling UI logic and recent improvements
+5. `src/lib/rvLevelingMath.ts` - Core leveling calculations and block optimization
+6. `src/lib/units.ts` - Unit conversion and measurement formatting
+7. `src/state/appStore.ts` - App state management and profile handling
+8. Recent git status to understand current state
 
 **After completing tasks:**
 - ALWAYS build and deploy changes to Netlify after completing tasks
@@ -110,11 +129,13 @@ npx netlify deploy --dir=dist --prod  # Deploy to Netlify
 - Review recent git status and current branch before starting work
 
 **Key Established Procedures:**
-- Use practical measurement rounding (1/4" Imperial, 1cm Metric)
-- Block selection restricted to standard sizes: 0.75", 1", 1.5", 2" only
-- Green borders indicate "position optimized" (level OR best achievable)
-- Always show spatial layout and bubble level, hide detailed instructions when level
-- Text standards: "Raise:" not "Need:", "Setup blocks in profile" not "Setup blocks"
+- **Design**: Follow COLOR_PALETTE.md for all colors, gradients, and glassmorphism patterns
+- **Measurements**: Use practical rounding (1/4" Imperial, 1cm Metric)
+- **Block sizes**: Restricted to standard sizes: 0.75", 1", 1.5", 2" only
+- **Visual indicators**: Green borders = "position optimized" (level OR best achievable)
+- **Layout**: Always show spatial layout and bubble level, hide detailed instructions when level
+- **Text standards**: "Raise:" not "Need:", "Setup blocks in profile" not "Setup blocks"
+- **UI components**: Use GlassCard for cards, GradientButton for primary actions
 
 ## Testing Limitations
 - **Desktop browser CANNOT test leveling features** - no motion sensors

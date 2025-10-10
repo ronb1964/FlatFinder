@@ -10,6 +10,9 @@ import { Platform } from 'react-native';
 import { useDeviceAttitude } from '../../src/hooks/useDeviceAttitude';
 import { BubbleLevel } from '../../src/components/BubbleLevel';
 import { LevelingAssistant } from '../../src/components/LevelingAssistant';
+import { GlassCard } from '../../src/components/GlassCard';
+import { GradientButton } from '../../src/components/GradientButton';
+import { LevelScreenGradient } from '../../src/components/GradientBackground';
 
 import { useAppStore } from '../../src/state/appStore';
 import {
@@ -152,50 +155,49 @@ export default function LevelScreen() {
   }
 
   return (
-    <SafeAreaView style={{ 
-      flex: 1, 
-      backgroundColor: theme.background?.val || '#000'
-    }}>
-      <YStack 
-        flex={1} 
-        padding="$4" 
-      >
-        {/* Safety Warning - Overlay */}
-        {showSafetyWarning && (
-          <Card
-            position="absolute"
-            top="$4"
-            left="$4"
-            right="$4"
-            zIndex={1000}
-            backgroundColor="rgba(239, 68, 68, 0.95)"
-            borderColor="rgba(239, 68, 68, 0.8)"
-            borderWidth={2}
-            borderRadius="$4"
-            padding="$2"
-            shadowColor="rgba(0, 0, 0, 0.5)"
-            shadowOffset={{ width: 0, height: 2 }}
-            shadowOpacity={0.3}
-            shadowRadius={4}
-            pressStyle={{ scale: 0.98 }}
-            onPress={() => setSafetyWarningDismissed(true)}
-          >
-            <XStack space="$2" alignItems="center">
-              <AlertTriangle size={20} color="#ffffff" />
-              <YStack flex={1}>
-                <Text color="#ffffff" fontWeight="700" fontSize="$4">
-                  ⚠️ Safety Warning
-                </Text>
-                <Text color="#ffffff" fontSize="$3">
-                  Slope may be unsafe for leveling. Consider finding a flatter spot.
-                </Text>
-                <Text color="rgba(255, 255, 255, 0.8)" fontSize="$2" marginTop="$1">
-                  Tap to acknowledge
-                </Text>
-              </YStack>
-            </XStack>
-          </Card>
-        )}
+    <LevelScreenGradient>
+      <SafeAreaView style={{ flex: 1 }}>
+        <YStack
+          flex={1}
+          padding="$4"
+        >
+          {/* Safety Warning - Overlay with Glass Effect */}
+          {showSafetyWarning && (
+            <GlassCard
+              position="absolute"
+              top="$4"
+              left="$4"
+              right="$4"
+              zIndex={1000}
+              backgroundColor="rgba(239, 68, 68, 0.9)"
+              borderColor="rgba(255, 255, 255, 0.3)"
+              borderWidth={2}
+              borderRadius="$6"
+              padding="$3"
+              shadowColor="rgba(239, 68, 68, 0.5)"
+              shadowOffset={{ width: 0, height: 8 }}
+              shadowOpacity={0.4}
+              shadowRadius={16}
+              pressStyle={{ scale: 0.98 }}
+              onPress={() => setSafetyWarningDismissed(true)}
+              blurIntensity={15}
+            >
+              <XStack space="$2" alignItems="center">
+                <AlertTriangle size={24} color="#ffffff" />
+                <YStack flex={1}>
+                  <Text color="#ffffff" fontWeight="700" fontSize="$5">
+                    ⚠️ Safety Warning
+                  </Text>
+                  <Text color="#ffffff" fontSize="$3" marginTop="$1">
+                    Slope may be unsafe for leveling. Consider finding a flatter spot.
+                  </Text>
+                  <Text color="rgba(255, 255, 255, 0.9)" fontSize="$2" marginTop="$2" fontWeight="600">
+                    Tap to acknowledge
+                  </Text>
+                </YStack>
+              </XStack>
+            </GlassCard>
+          )}
 
         {/* Header */}
         <YStack alignItems="center">
@@ -227,48 +229,54 @@ export default function LevelScreen() {
         </YStack>
 
         {/* Numeric Display */}
-        <Card 
-          padding="$2" 
-          backgroundColor={levelStatus.isLevel ? '$green2' : '$background'}
-          borderColor={levelStatus.color}
+        <GlassCard
+          padding="$4"
+          backgroundColor={levelStatus.isLevel ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)'}
+          borderColor={levelStatus.isLevel ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 255, 255, 0.2)'}
           borderWidth={2}
           marginHorizontal="$2"
           marginTop="$10"
+          borderRadius="$6"
+          blurIntensity={12}
+          shadowColor={levelStatus.isLevel ? '#10b981' : 'rgba(0, 0, 0, 0.3)'}
+          shadowOffset={{ width: 0, height: 8 }}
+          shadowOpacity={0.3}
+          shadowRadius={16}
         >
           <XStack justifyContent="space-around">
-            <YStack alignItems="center" space="$1">
-              <Text color="$colorPress" fontSize="$3">
+            <YStack alignItems="center" space="$2">
+              <Text color="rgba(255, 255, 255, 0.7)" fontSize="$3" fontWeight="600">
                 Pitch
               </Text>
-              <Text 
-                fontSize="$6" 
-                fontWeight="bold" 
-                color={levelStatus.color}
+              <Text
+                fontSize="$8"
+                fontWeight="bold"
+                color={levelStatus.isLevel ? '#22c55e' : '#ffffff'}
               >
                 {calibratedValues.pitch >= 0 ? '+' : ''}{calibratedValues.pitch.toFixed(1)}°
               </Text>
-              <Text color="$colorPress" fontSize="$2">
+              <Text color="rgba(255, 255, 255, 0.6)" fontSize="$3">
                 {calibratedValues.pitch > 0 ? 'Nose Up' : calibratedValues.pitch < 0 ? 'Nose Down' : 'Level'}
               </Text>
             </YStack>
 
-            <YStack alignItems="center" space="$1">
-              <Text color="$colorPress" fontSize="$3">
+            <YStack alignItems="center" space="$2">
+              <Text color="rgba(255, 255, 255, 0.7)" fontSize="$3" fontWeight="600">
                 Roll
               </Text>
-              <Text 
-                fontSize="$6" 
-                fontWeight="bold" 
-                color={levelStatus.color}
+              <Text
+                fontSize="$8"
+                fontWeight="bold"
+                color={levelStatus.isLevel ? '#22c55e' : '#ffffff'}
               >
                 {calibratedValues.roll >= 0 ? '+' : ''}{calibratedValues.roll.toFixed(1)}°
               </Text>
-              <Text color="$colorPress" fontSize="$2">
+              <Text color="rgba(255, 255, 255, 0.6)" fontSize="$3">
                 {calibratedValues.roll > 0 ? 'Right High' : calibratedValues.roll < 0 ? 'Left High' : 'Level'}
               </Text>
             </YStack>
           </XStack>
-        </Card>
+        </GlassCard>
 
         {/* Sensor Permission Button for iOS */}
         {permissionStatus === 'denied' || (!isReliable && errorMessage.includes('sensor')) ? (
@@ -286,73 +294,81 @@ export default function LevelScreen() {
         ) : null}
 
         {/* Action Buttons */}
-        <YStack space="$2" paddingTop="$1" marginHorizontal="$1" marginTop="$6">
-          <XStack space="$3">
-            <Button
+        <YStack space="$3" paddingTop="$1" marginHorizontal="$2" marginTop="$6">
+          <XStack space="$3" width="100%">
+            <GradientButton
               flex={1}
-              size="$5"
-              height="$5"
-              backgroundColor={isCalibrating ? '$green9' : '$gray9'}
-              pressStyle={{ scale: 0.96 }}
+              gradientType={isCalibrating ? 'success' : 'info'}
               onPress={handleQuickCalibrate}
-              disabled={isCalibrating || !isReliable}
               icon={isCalibrating ? RefreshCw : Target}
-              fontSize="$3"
+              disabled={isCalibrating || !isReliable}
             >
               {isCalibrating ? 'Calibrating...' : 'Quick Set'}
-            </Button>
-            
-            <Button
+            </GradientButton>
+
+            <GradientButton
               flex={1}
-              size="$5"
-              height="$5"
-              backgroundColor="$blue9"
-              pressStyle={{ scale: 0.96 }}
+              gradientType="primary"
               onPress={handleCalibrate}
               icon={Settings}
-              fontSize="$3"
             >
               Calibration
-            </Button>
+            </GradientButton>
           </XStack>
-          
-          <Button
-            size="$5"
-            height="$6"
-            backgroundColor="$orange9"
-            pressStyle={{ scale: 0.96 }}
+
+          <GradientButton
+            gradientType="warning"
             onPress={handleShowLevelingAssistant}
             icon={Zap}
-            fontSize="$4"
+            size="$5"
           >
             Leveling Assistant
-          </Button>
+          </GradientButton>
         </YStack>
 
         {/* Active Profile Indicator */}
         {activeProfile ? (
-          <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1} marginHorizontal="$2" marginTop="$4">
+          <GlassCard
+            padding="$3"
+            backgroundColor="rgba(16, 185, 129, 0.2)"
+            borderColor="rgba(34, 197, 94, 0.5)"
+            borderWidth={2}
+            marginHorizontal="$2"
+            marginTop="$4"
+            borderRadius="$5"
+            blurIntensity={10}
+          >
             <XStack justifyContent="center" alignItems="center" space="$2">
-              <YStack width={8} height={8} borderRadius={4} backgroundColor="$green9" />
-              <Text color="$green11" fontSize="$3" fontWeight="600">
+              <YStack width={10} height={10} borderRadius={5} backgroundColor="#22c55e" />
+              <Text color="rgba(255, 255, 255, 0.9)" fontSize="$3" fontWeight="600">
                 Active Vehicle:
               </Text>
-              <Text fontWeight="bold" fontSize="$3" color="$green11">
+              <Text fontWeight="bold" fontSize="$4" color="#22c55e">
                 {activeProfile.name}
               </Text>
             </XStack>
-          </Card>
+          </GlassCard>
         ) : (
-          <Card padding="$3" backgroundColor="$red2" borderColor="$red9" borderWidth={1} marginHorizontal="$2" marginTop="$4">
+          <GlassCard
+            padding="$3"
+            backgroundColor="rgba(239, 68, 68, 0.2)"
+            borderColor="rgba(239, 68, 68, 0.5)"
+            borderWidth={2}
+            marginHorizontal="$2"
+            marginTop="$4"
+            borderRadius="$5"
+            blurIntensity={10}
+          >
             <XStack justifyContent="center" alignItems="center" space="$2">
-              <YStack width={8} height={8} borderRadius={4} backgroundColor="$red9" />
-              <Text color="$red11" fontSize="$3" fontWeight="600">
+              <YStack width={10} height={10} borderRadius={5} backgroundColor="#ef4444" />
+              <Text color="rgba(255, 255, 255, 0.9)" fontSize="$3" fontWeight="600">
                 No Vehicle Selected - Go to Profiles
               </Text>
             </XStack>
-          </Card>
+          </GlassCard>
         )}
       </YStack>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LevelScreenGradient>
   );
 }

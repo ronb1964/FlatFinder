@@ -30,63 +30,106 @@ const InstructionCard = styled(Card, {
 const CALIBRATION_STEPS = [
   {
     title: 'Step 1: Position Your Device',
-    instruction: 'Place your phone FLAT on a stable surface inside your RV. The TOP of your phone (where the camera is) must point toward the FRONT of your vehicle.',
+    instruction: 'Place your phone FLAT on a stable surface inside your RV. The TOP of your phone (where the camera is) must point toward the FRONT of your vehicle. Don\'t worry if your phone has a camera bump - the calibration process will compensate for any tilt.',
     detailInstruction: '📱 Screen facing UP • Phone completely flat • Top edge pointing to vehicle front • Use a table or countertop',
     icon: Target,
   },
   {
     title: 'Step 2: Take First Reading',
-    instruction: 'Without moving your phone, tap "Take Reading" below. Keep the phone perfectly still while we measure.',
+    instruction: 'Without moving your phone, tap "Take Reading 1" below. Keep the phone perfectly still while we measure.',
     detailInstruction: '⚠️ Do not touch or move the phone • Wait for the reading to complete • This captures your baseline orientation',
     icon: RotateCw,
+    showRotationWarning: true,
   },
   {
-    title: 'Step 3: Rotate 90° Clockwise',
-    instruction: 'Turn your phone 90 degrees to the RIGHT (clockwise). Keep it flat on the same surface. Then tap "Take Reading".',
-    detailInstruction: '↻ Rotate like turning a steering wheel RIGHT • Keep phone flat • Same surface, just rotated • The right edge now points forward',
+    title: 'Step 3: Take Second Reading',
+    instruction: 'Without moving your phone, tap "Take Reading 2" below. Keep the phone perfectly still while we measure.',
+    detailInstruction: '⚠️ Do not touch or move the phone • Wait for the reading to complete • This captures your rotated orientation',
     rotationDirection: 'clockwise' as const,
     icon: RotateCw,
+    showRotationWarning: true,
   },
   {
-    title: 'Step 4: Final Rotation & Reading',
-    instruction: 'Turn your phone another 90 degrees to the RIGHT (clockwise). Keep it flat. Tap "Take Reading" for the final measurement.',
-    detailInstruction: '↻ One more 90° rotation RIGHT • Bottom edge now points forward • This completes 3 readings from different angles for best accuracy',
+    title: 'Step 4: Take Final Reading',
+    instruction: 'Without moving your phone, tap "Take Final Reading" below. Keep the phone perfectly still while we measure. After this reading completes, you can rotate your phone back to normal orientation.',
+    detailInstruction: '⚠️ Do not touch or move the phone • Wait for the reading to complete • Final step - then you can return phone to normal position',
     rotationDirection: 'clockwise' as const,
+    rotationDegrees: 180,
     icon: Check,
   },
 ];
 
-// Rotation Animation Component
-const RotationIndicator = ({ direction }: { direction: 'clockwise' | 'counterclockwise' }) => {
+// Rotation Animation Component with curved arrow
+const RotationIndicator = ({ direction, degrees = 90, showCheckmark = false }: { direction: 'clockwise' | 'counterclockwise'; degrees?: number; showCheckmark?: boolean }) => {
   const rotateValue = useRef(new Animated.Value(0)).current;
+  const checkmarkOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const rotation = Animated.loop(
-      Animated.timing(rotateValue, {
-        toValue: direction === 'clockwise' ? 1 : -1,
-        duration: 2000,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        // Rotate clockwise
+        Animated.timing(rotateValue, {
+          toValue: direction === 'clockwise' ? 1 : -1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        // Show checkmark if this is the final step
+        ...(showCheckmark ? [
+          Animated.timing(checkmarkOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.delay(400),
+          Animated.timing(checkmarkOpacity, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ] : [Animated.delay(600)]),
+        // Instantly snap back to portrait
+        Animated.timing(rotateValue, {
+          toValue: 0,
+          duration: 0, // Instant reset
+          useNativeDriver: true,
+        }),
+        // Pause before repeating
+        Animated.delay(400),
+      ])
     );
     rotation.start();
     return () => rotation.stop();
-  }, [direction, rotateValue]);
+  }, [direction, rotateValue, checkmarkOpacity, showCheckmark]);
 
   const rotate = rotateValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', direction === 'clockwise' ? '90deg' : '-90deg'],
+    outputRange: ['0deg', direction === 'clockwise' ? `${degrees}deg` : `-${degrees}deg`],
   });
 
   return (
-    <View alignItems="center" marginVertical="$3">
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        <Smartphone size={40} color="$blue9" />
-      </Animated.View>
-      <Text fontSize="$3" color="$blue9" marginTop="$2" fontWeight="600">
-        Turn phone 90° RIGHT →
+    <View alignItems="center" marginVertical="$2">
+      {/* Curved arrow pointing clockwise */}
+      <Text fontSize={32} marginBottom="$1">
+        ↻
       </Text>
-      <Text fontSize="$2" color="$gray11" textAlign="center">
-        Like turning a steering wheel right
+      <View position="relative" alignItems="center" justifyContent="center">
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Smartphone size={48} color="#6366f1" strokeWidth={2} />
+        </Animated.View>
+        {/* Green checkmark that appears at rotated position */}
+        {showCheckmark && (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              opacity: checkmarkOpacity,
+            }}
+          >
+            <Text fontSize={32} color="#22c55e">✓</Text>
+          </Animated.View>
+        )}
+      </View>
+      <Text fontSize="$3" color="#6366f1" marginTop="$2" fontWeight="700">
+        Rotate {degrees}° clockwise
       </Text>
     </View>
   );
@@ -213,10 +256,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   if (!isVisible) return null;
 
   return (
-    <View 
-      position="fixed" 
-      top={0} 
-      left={0} 
+    <View
+      position="fixed"
+      top={0}
+      left={0}
       width="100vw"
       height="100vh"
       zIndex={1000}
@@ -236,9 +279,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           flexDirection: 'column'
         }}
       >
-        <YStack flex={1} space="$2" backgroundColor={theme.background?.val || '#000'}>
-          <ScrollView flex={1} showsVerticalScrollIndicator={false} contentContainerStyle={{flexGrow: 1, padding: 4, justifyContent: 'center'}}>
-            <YStack space="$2" alignItems="center">
+        <YStack flex={1} space="$2" backgroundColor={theme.background?.val || '#000'} padding="$2" justifyContent="space-between">
+            <YStack space="$2" flex={1} justifyContent="center">
           
           {/* Completion Screen */}
           {isComplete ? (
@@ -312,130 +354,157 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             </YStack>
           ) : (
             <>
-              {/* Header with minimal spacing */}
-              <XStack justifyContent="space-between" alignItems="center" paddingHorizontal="$2" paddingVertical="$1">
-                <H2 fontSize="$4">Device Calibration</H2>
-                <Button size="$2" backgroundColor="$gray9" onPress={onCancel} fontSize="$2" height={24} marginLeft="$2">
+              {/* Header */}
+              <XStack justifyContent="space-between" alignItems="center" paddingBottom="$1">
+                <H2 fontSize="$6" color="white">Device Calibration</H2>
+                <Button
+                  size="$2"
+                  backgroundColor="rgba(239, 68, 68, 0.2)"
+                  color="#ef4444"
+                  borderWidth={1}
+                  borderColor="rgba(239, 68, 68, 0.4)"
+                  onPress={onCancel}
+                  pressStyle={{ scale: 0.95, backgroundColor: "rgba(239, 68, 68, 0.3)" }}
+                >
                   Cancel
                 </Button>
               </XStack>
 
-      {/* Minimal Progress Bar */}
-      <YStack space="$0.5" paddingHorizontal="$2" paddingVertical="$1">
-        <XStack justifyContent="center" alignItems="center">
-          <Text fontSize="$2" color="$colorPress" fontWeight="600">
-            Step {currentStep + 1} of {CALIBRATION_STEPS.length}
-          </Text>
-        </XStack>
-        
-        <Progress value={progress} backgroundColor="$gray5" size="$0.5" height={2}>
+      {/* Progress Bar */}
+      <YStack space="$1">
+        <Text fontSize="$3" color="rgba(255, 255, 255, 0.7)" fontWeight="600" textAlign="center">
+          Step {currentStep + 1} of {CALIBRATION_STEPS.length}
+        </Text>
+
+        <Progress value={progress} backgroundColor="rgba(255, 255, 255, 0.1)" size="$0.5">
           <Progress.Indicator backgroundColor="$green9" />
         </Progress>
       </YStack>
 
-      {/* Minimal Step Instructions */}
-      <Card padding="$2" backgroundColor="$blue2" borderColor="$blue6" borderWidth={1} borderRadius="$3" marginHorizontal="$2" marginVertical="$1">
-        <YStack space="$1" alignItems="center">
-          <XStack space="$1" alignItems="center">
-            <YStack 
-              backgroundColor="$blue3" 
-              borderRadius="$3" 
-              padding="$1"
+      {/* Step Instructions */}
+      <Card padding="$2.5" backgroundColor="rgba(59, 130, 246, 0.1)" borderColor="rgba(59, 130, 246, 0.3)" borderWidth={2} borderRadius="$4">
+        <YStack space="$2" alignItems="center">
+          <XStack space="$3" alignItems="center">
+            <YStack
+              backgroundColor="rgba(59, 130, 246, 0.2)"
+              borderRadius="$4"
+              padding={getRotationAngle() !== 0 ? "$2" : "$3"}
               borderWidth={1}
-              borderColor="$blue6"
+              borderColor="rgba(59, 130, 246, 0.4)"
             >
-              <IconComponent size={14} color="$blue9" />
+              <IconComponent size={getRotationAngle() !== 0 ? 20 : 24} color="#3b82f6" />
             </YStack>
-            <H3 fontSize="$3" fontWeight="600" color="$color" textAlign="center">
+            <H3 fontSize="$5" fontWeight="700" color="white" textAlign="center" flex={1}>
               {currentStepData.title}
             </H3>
           </XStack>
-          
-          <Text fontSize="$2" color="$colorPress" textAlign="center" lineHeight="$2">
+
+          <Text fontSize="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" lineHeight="$5">
             {currentStepData.instruction}
           </Text>
           
-          {/* Minimal Phone setup for step 1 */}
+          {/* Phone setup for step 1 */}
           {currentStep === 0 && (
-            <YStack space="$0.5" alignItems="center" padding="$1" backgroundColor="$blue1" borderRadius="$2" borderWidth={1} borderColor="$blue5">
-              <XStack space="$1" alignItems="center">
-                <Smartphone size={10} color="$blue9" />
-                <Text fontSize="$1" color="$blue9" fontWeight="600">
-                  Setup
+            <YStack space="$1.5" alignItems="center" padding="$2" backgroundColor="rgba(59, 130, 246, 0.05)" borderRadius="$3" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
+              <XStack space="$1.5" alignItems="center">
+                <Smartphone size={16} color="#3b82f6" />
+                <Text fontSize="$3" color="#3b82f6" fontWeight="700">
+                  Phone Setup
                 </Text>
               </XStack>
-              <Text fontSize="$1" color="$color" textAlign="center">
-                📱 Flat • UP • Top → Front
+              <Text fontSize="$2" color="rgba(255, 255, 255, 0.8)" textAlign="center">
+                📱 Screen UP • Flat on surface • Top edge ↑ Vehicle front
               </Text>
             </YStack>
           )}
-          
-          {currentStepData.rotationDirection && (
-            <RotationIndicator direction={currentStepData.rotationDirection} />
+
+          {/* Rotation Instructions for Steps 2 and 3 */}
+          {(currentStep === 1 || currentStep === 2) && currentStepData.showRotationWarning && (
+            <YStack space="$1.5" alignItems="center" padding="$2.5" backgroundColor="rgba(99, 102, 241, 0.15)" borderRadius="$4" borderWidth={2} borderColor="rgba(99, 102, 241, 0.4)">
+              <Text fontSize="$4" color="#818cf8" fontWeight="700" textAlign="center">
+                After this reading:
+              </Text>
+              <Text fontSize="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" fontWeight="600">
+                Turn your phone 90° clockwise
+              </Text>
+              {/* Animated rotation indicator */}
+              <RotationIndicator direction="clockwise" />
+              <Text fontSize="$3" color="rgba(255, 255, 255, 0.7)" textAlign="center" lineHeight="$4">
+                Keep it flat • Screen will rotate to stay readable
+              </Text>
+            </YStack>
+          )}
+
+          {/* Show rotation indicator only if NOT already shown in purple box */}
+          {currentStepData.rotationDirection && !currentStepData.showRotationWarning && (
+            <RotationIndicator
+              direction={currentStepData.rotationDirection}
+              degrees={(currentStepData as any).rotationDegrees || 90}
+              showCheckmark={currentStep === 3}
+            />
           )}
         </YStack>
       </Card>
 
-      {/* Minimal Action Buttons */}
-      <YStack space="$1" paddingHorizontal="$2" paddingVertical="$1" alignItems="center">
+      {/* Action Buttons */}
+      <YStack space="$2" paddingTop="$1">
         {!hasStarted ? (
-          // Start Calibration Button
+          // Next Button (Step 1)
           <Button
-            size="$4"
-            fontWeight="600"
-            borderRadius="$3"
+            size="$5"
+            fontWeight="700"
+            borderRadius="$4"
             onPress={handleStartCalibration}
             disabled={!isReliable}
-            backgroundColor={!isReliable ? "$gray7" : "$green9"}
+            backgroundColor={!isReliable ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
             color="white"
-            pressStyle={{ 
-              backgroundColor: !isReliable ? "$gray8" : "$green10",
-              scale: 0.98
+            pressStyle={{
+              backgroundColor: !isReliable ? "rgba(156, 163, 175, 0.4)" : "#d97706",
+              scale: 0.97
             }}
-            height={40}
-            minWidth={200}
+            borderWidth={2}
+            borderColor={!isReliable ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
           >
-            🚀 Start Calibration
+            <Text color="white" fontSize="$4" fontWeight="bold">
+              Next
+            </Text>
           </Button>
         ) : (
           // Sensor Status and Take Reading Button
-          <>
-            <Card padding="$1" backgroundColor="$gray2" borderColor={getStatusColor()} borderWidth={1} minWidth={180} marginBottom="$1">
-              <Text fontSize="$2" color={getStatusColor()} textAlign="center" fontWeight="500">
+          <YStack space="$2">
+            <Card padding="$2" backgroundColor="rgba(255, 255, 255, 0.05)" borderColor={getStatusColor()} borderWidth={2} borderRadius="$3">
+              <Text fontSize="$3" color={getStatusColor()} textAlign="center" fontWeight="600">
                 {getStatusText()}
               </Text>
-              
+
               {!isReliable && (
-                <Text fontSize="$1" color="#eab308" textAlign="center">
+                <Text fontSize="$2" color="#eab308" textAlign="center" marginTop="$1">
                   Waiting for sensors...
                 </Text>
               )}
             </Card>
-            
+
             {/* Take Reading Button */}
             <Button
-              size="$4"
-              fontWeight="600"
-              borderRadius="$3"
+              size="$5"
+              fontWeight="700"
+              borderRadius="$4"
               onPress={takeReading}
               disabled={!isReliable || isCollecting}
-              backgroundColor={(!isReliable || isCollecting) ? "$gray7" : "$orange9"}
+              backgroundColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
               color="white"
-              pressStyle={{ 
-                backgroundColor: (!isReliable || isCollecting) ? "$gray8" : "$orange10",
-                scale: 0.98
+              pressStyle={{
+                backgroundColor: (!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.4)" : "#d97706",
+                scale: 0.97
               }}
-              borderWidth={1}
-              borderColor={(!isReliable || isCollecting) ? "$gray8" : "$orange10"}
-              height={36}
-              minWidth={180}
-              marginTop={2}
+              borderWidth={2}
+              borderColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
             >
-              <Text color="white" fontSize="$3" fontWeight="bold">
-                {isCollecting ? '⏱️ Collecting...' : `📱 Take Reading ${readings.length + 1}`}
+              <Text color="white" fontSize="$5" fontWeight="bold">
+                {isCollecting ? '⏱️ Collecting...' : readings.length === 2 ? '📱 Take Final Reading' : `📱 Take Reading ${readings.length + 1}`}
               </Text>
             </Button>
-          </>
+          </YStack>
         )}
       </YStack>
 
@@ -501,7 +570,6 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             </>
           )}
             </YStack>
-          </ScrollView>
         </YStack>
       </View>
     </View>
