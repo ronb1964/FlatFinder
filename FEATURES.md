@@ -91,6 +91,34 @@
 - **Safety thresholds**: Adjustable slope limits
 - **Feedback settings**: Haptic and audio preferences
 
+## 🔊 Enhanced Audio Feedback System (Planned)
+
+### Audio Cues for Hands-Free Leveling
+- **Proximity Beeps**: Increasing frequency as device approaches level
+  - Getting closer: Beeps every 2°, 1°, 0.5°
+  - Near level: Continuous soft tone when within 0.5°
+  - Perfect level: Distinct success sound when ±0.1°
+- **Directional Voice Commands**: 
+  - "Raise left side", "Lower front", "Almost level", "Perfect level"
+  - Configurable voice settings (gender, speed, language)
+- **Smart Audio Logic**:
+  - Debounced feedback to prevent audio spam
+  - Context-aware patterns for different leveling phases
+  - Battery-optimized timing
+
+### Audio Settings & Customization
+- **Audio Volume Control**: 0-100% volume slider
+- **Audio Style Options**: "Beeps Only", "Voice Only", or "Beeps + Voice"
+- **Proximity Sensitivity**: Conservative/Normal/Frequent timing
+- **Achievement Sounds**: Success/level celebration audio
+- **Cross-Platform Support**: Works with earbuds, phone speakers, external audio
+
+### Accessibility Benefits
+- **Hands-free operation**: Level without constantly watching screen
+- **Low-light compatibility**: Audio cues work in dark/dawn conditions
+- **Visual impairment support**: Full audio-guided leveling process
+- **Multitasking friendly**: Listen for cues while handling equipment
+
 ## 🔧 Technical Requirements
 
 ### Sensor Integration

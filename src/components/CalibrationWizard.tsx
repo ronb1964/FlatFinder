@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { YStack, XStack, Text, Button, H2, H3, Card, Progress, styled, ScrollView, View } from 'tamagui';
+import { YStack, XStack, Text, Button, H2, H3, Card, Progress, styled, ScrollView, View, useTheme } from 'tamagui';
 import { Target, RotateCw, Check, AlertCircle, Star, Smartphone } from '@tamagui/lucide-icons';
 import { Animated } from 'react-native';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
@@ -102,6 +102,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   const [calibrationQuality, setCalibrationQuality] = useState<ReturnType<typeof assessCalibrationQuality> | null>(null);
   
   const { pitchDeg, rollDeg, isReliable, errorMessage } = useDeviceAttitude();
+  const theme = useTheme();
   const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const progress = ((currentStep + 1) / CALIBRATION_STEPS.length) * 100;
@@ -212,27 +213,32 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   if (!isVisible) return null;
 
   return (
-    <Card 
-      position="absolute" 
-      top="$0" 
-      left="$0" 
-      right="$0" 
-      bottom="$0"
+    <View 
+      position="fixed" 
+      top={0} 
+      left={0} 
+      width="100vw"
+      height="100vh"
       zIndex={1000}
-      backgroundColor="$background" 
-      borderColor="$borderColor" 
-      borderWidth={2}
-      borderRadius="$4"
-      padding="$0"
+      backgroundColor={theme.background?.val || '#000'}
       style={{
-        transform: `rotate(${getRotationAngle()}deg)`,
-        transition: 'transform 0.8s ease-in-out',
         overflow: 'hidden'
       }}
     >
-      <YStack flex={1} space="$2">
-      <ScrollView flex={1} showsVerticalScrollIndicator={false} contentContainerStyle={{flexGrow: 1, padding: 4, justifyContent: 'center'}}>
-        <YStack space="$2" alignItems="center">
+      <View
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: theme.background?.val || '#000',
+          transform: `rotate(${getRotationAngle()}deg)`,
+          transition: 'transform 0.8s ease-in-out',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <YStack flex={1} space="$2" backgroundColor={theme.background?.val || '#000'}>
+          <ScrollView flex={1} showsVerticalScrollIndicator={false} contentContainerStyle={{flexGrow: 1, padding: 4, justifyContent: 'center'}}>
+            <YStack space="$2" alignItems="center">
           
           {/* Completion Screen */}
           {isComplete ? (
@@ -494,10 +500,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       )}
             </>
           )}
+            </YStack>
+          </ScrollView>
         </YStack>
-      </ScrollView>
-
-      </YStack>
-    </Card>
+      </View>
+    </View>
   );
 }

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { YStack, XStack, Text, Button, H1, H2, Card, ScrollView, useTheme, Switch, Input, Label } from 'tamagui';
+import { YStack, XStack, Text, Button, H1, H2, Card, ScrollView, useTheme, Switch, Input, Label, Checkbox } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowRight, ArrowLeft, Target, AlertTriangle, Zap, CheckCircle, Car, Truck, Home, Ruler, Package, Info } from '@tamagui/lucide-icons';
+import { ArrowRight, ArrowLeft, Target, AlertTriangle, Zap, CheckCircle, Caravan, Bus, Truck, Ruler, Package, Info } from '@tamagui/lucide-icons';
 import { useAppStore } from '../src/state/appStore';
 import { StandardBlockSets, BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
@@ -13,19 +13,19 @@ const VEHICLE_TYPES = [
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    icon: Car
+    icon: Caravan
   },
   {
     id: 'motorhome',
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
-    icon: Truck
+    icon: Bus
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
-    icon: Home
+    icon: Truck
   }
 ];
 
@@ -43,10 +43,11 @@ export default function OnboardingScreen() {
     trackWidthInches: 96,
     hitchOffsetInches: 120,
     hasLevelingBlocks: true,
-    selectedBlockHeights: [2, 4] as number[],
-    customBlockHeight: '',
-    showCustomBlockInput: false
+    selectedBlockHeights: [0.75, 1] as number[],
+    customBlockHeight: ''
   });
+  
+  const [useTypicalMeasurements, setUseTypicalMeasurements] = useState(true);
 
   // Get typical measurements based on selected units
   const typicalMeasurements = getTypicalMeasurements(setupData.measurementUnits);
@@ -99,33 +100,11 @@ export default function OnboardingScreen() {
     let blockInventory: BlockInventory[] = [];
     
     if (setupData.hasLevelingBlocks) {
-      if (setupData.showCustomBlockInput && setupData.customBlockHeight.trim()) {
-        // Custom block height
-        const customHeight = convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits);
-        blockInventory = [
-          { thickness: customHeight, quantity: 8 },
-          // Add some precision blocks for better stacking
-          { thickness: 1.0, quantity: 8 },
-          { thickness: 0.5, quantity: 8 },
-          { thickness: 0.25, quantity: 8 }
-        ];
-      } else {
-        // Standard block heights with more inventory and precision blocks
-        const baseBlocks = setupData.selectedBlockHeights.map(height => ({
-          thickness: height,
-          quantity: 8 // More blocks per height
-        }));
-        
-        // Add smaller increment blocks for better precision and higher stacking
-        const precisionBlocks = [
-          { thickness: 1.0, quantity: 12 },
-          { thickness: 0.5, quantity: 12 },
-          { thickness: 0.25, quantity: 12 },
-          { thickness: 0.125, quantity: 8 }
-        ];
-        
-        blockInventory = [...baseBlocks, ...precisionBlocks];
-      }
+      // Build block inventory based on selected heights (user manages actual quantity)
+      blockInventory = setupData.selectedBlockHeights.map(height => ({
+        thickness: height,
+        quantity: 20 // Sufficient quantity for calculations
+      }));
     }
 
     // Create the vehicle profile
@@ -175,9 +154,6 @@ export default function OnboardingScreen() {
       case 5: return !!setupData.vehicleName.trim(); // Vehicle details step
       case 6: // Blocks step
         if (!setupData.hasLevelingBlocks) return true;
-        if (setupData.showCustomBlockInput) {
-          return setupData.customBlockHeight.trim() !== '' && !isNaN(parseFloat(setupData.customBlockHeight));
-        }
         return setupData.selectedBlockHeights.length > 0;
       default: return true;
     }
@@ -475,29 +451,212 @@ export default function OnboardingScreen() {
                 </Text>
               </YStack>
 
-              <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-                <YStack space="$2">
-                  <Text fontWeight="bold">Great news!</Text>
-                  <Text color="$colorPress" fontSize="$3">
-                    We'll use typical measurements for your {selectedVehicleType?.name}. You can adjust these later if needed.
-                  </Text>
-                  <Text color="$colorPress" fontSize="$3">
-                    {(() => {
+              <YStack space="$4">
+                {/* Typical vs Custom measurements toggle */}
+                <YStack space="$3">
+                  <Card
+                    padding="$3"
+                    backgroundColor={useTypicalMeasurements ? '$blue2' : '$background'}
+                    borderColor={useTypicalMeasurements ? '$blue9' : '$borderColor'}
+                    borderWidth={1}
+                    pressStyle={{ scale: 0.98 }}
+                    onPress={() => {
+                      setUseTypicalMeasurements(true);
+                      // Reset to typical measurements when toggled
                       const typical = typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
-                      if (!typical) return 'Loading measurements...';
-                      
-                      let text = `• Wheelbase: ${formatMeasurement(convertToInches(typical.wheelbase, setupData.measurementUnits), setupData.measurementUnits)}\n`;
-                      text += `• Track Width: ${formatMeasurement(convertToInches(typical.track, setupData.measurementUnits), setupData.measurementUnits)}`;
-                      
-                      if (setupData.vehicleType === 'trailer' && typical.hitch) {
-                        text += `\n• Hitch Offset: ${formatMeasurement(convertToInches(typical.hitch, setupData.measurementUnits), setupData.measurementUnits)}`;
+                      if (typical) {
+                        setSetupData(prev => ({
+                          ...prev,
+                          wheelbaseInches: convertToInches(typical.wheelbase, setupData.measurementUnits),
+                          trackWidthInches: convertToInches(typical.track, setupData.measurementUnits),
+                          hitchOffsetInches: convertToInches(typical.hitch || 0, setupData.measurementUnits)
+                        }));
                       }
-                      
-                      return text;
-                    })()}
-                  </Text>
+                    }}
+                  >
+                    <XStack space="$3" alignItems="center">
+                      <Card
+                        width={20}
+                        height={20}
+                        borderRadius={10}
+                        borderWidth={2}
+                        borderColor="$blue9"
+                        backgroundColor={useTypicalMeasurements ? '$blue9' : '$background'}
+                        justifyContent="center"
+                        alignItems="center"
+                      >
+                        {useTypicalMeasurements && (
+                          <Card width={10} height={10} borderRadius={5} backgroundColor="white" />
+                        )}
+                      </Card>
+                      <YStack flex={1}>
+                        <Text fontSize="$5" fontWeight="bold">
+                          Use typical measurements
+                        </Text>
+                        <Text fontSize="$3" color="$colorPress">
+                          Perfect for most {selectedVehicleType?.name}s
+                        </Text>
+                      </YStack>
+                    </XStack>
+                  </Card>
+
+                  <Card
+                    padding="$3"
+                    backgroundColor={!useTypicalMeasurements ? '$orange2' : '$background'}
+                    borderColor={!useTypicalMeasurements ? '$orange9' : '$borderColor'}
+                    borderWidth={1}
+                    pressStyle={{ scale: 0.98 }}
+                    onPress={() => setUseTypicalMeasurements(false)}
+                  >
+                    <XStack space="$3" alignItems="center">
+                      <Card
+                        width={20}
+                        height={20}
+                        borderRadius={10}
+                        borderWidth={2}
+                        borderColor="$orange9"
+                        backgroundColor={!useTypicalMeasurements ? '$orange9' : '$background'}
+                        justifyContent="center"
+                        alignItems="center"
+                      >
+                        {!useTypicalMeasurements && (
+                          <Card width={10} height={10} borderRadius={5} backgroundColor="white" />
+                        )}
+                      </Card>
+                      <YStack flex={1}>
+                        <Text fontSize="$5" fontWeight="bold">
+                          Enter custom measurements
+                        </Text>
+                        <Text fontSize="$3" color="$colorPress">
+                          For exact precision
+                        </Text>
+                      </YStack>
+                    </XStack>
+                  </Card>
                 </YStack>
-              </Card>
+
+                {/* Show measurements based on choice */}
+                {useTypicalMeasurements ? (
+                  <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
+                    <YStack space="$2">
+                      <Text fontWeight="bold">Typical {selectedVehicleType?.name} measurements:</Text>
+                      <Text color="$colorPress" fontSize="$3">
+                        {(() => {
+                          const typical = typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
+                          if (!typical) return 'Loading measurements...';
+                          
+                          let text = `• ${setupData.vehicleType === 'trailer' ? 'Hitch to Axle' : 'Wheelbase'}: ${formatMeasurement(convertToInches(typical.wheelbase, setupData.measurementUnits), setupData.measurementUnits, 0, true)}\n`;
+                          text += `• Track Width: ${formatMeasurement(convertToInches(typical.track, setupData.measurementUnits), setupData.measurementUnits, 0, true)}`;
+                          
+                          return text;
+                        })()}
+                      </Text>
+                      <Text fontSize="$2" color="$colorPress" fontStyle="italic">
+                        You can adjust these later if needed
+                      </Text>
+                    </YStack>
+                  </Card>
+                ) : (
+                  <YStack space="$4">
+                    {/* Custom Hitch Distance Input (trailers only) - Show FIRST */}
+                    {setupData.vehicleType === 'trailer' && (
+                      <YStack space="$2">
+                        <Text fontSize="$5" fontWeight="bold">Hitch to Axle Distance</Text>
+                        <Text color="$colorPress" fontSize="$3">
+                          Distance from hitch ball to rear axle center
+                        </Text>
+                        <XStack space="$2" alignItems="center">
+                          <Input
+                            flex={1}
+                            size="$5"
+                            placeholder={`e.g., ${setupData.measurementUnits === 'metric' ? '305' : '120'}`}
+                            value={setupData.measurementUnits === 'metric' 
+                              ? Math.round(setupData.hitchOffsetInches * 2.54).toString()
+                              : setupData.hitchOffsetInches.toString()
+                            }
+                            onChangeText={(text) => {
+                              const num = parseFloat(text) || 0;
+                              const inches = convertToInches(num, setupData.measurementUnits);
+                              setSetupData(prev => ({ 
+                                ...prev, 
+                                hitchOffsetInches: inches,
+                                wheelbaseInches: inches // For trailers, hitch offset IS the wheelbase
+                              }));
+                            }}
+                            keyboardType="decimal-pad"
+                          />
+                          <Text color="$colorPress" fontSize="$4" minWidth={50}>
+                            {setupData.measurementUnits === 'metric' ? 'cm' : 'inches'}
+                          </Text>
+                        </XStack>
+                      </YStack>
+                    )}
+
+                    {/* Custom Wheelbase Input (motorhomes and vans only) */}
+                    {setupData.vehicleType !== 'trailer' && (
+                      <YStack space="$2">
+                        <Text fontSize="$5" fontWeight="bold">Wheelbase Length</Text>
+                        <Text color="$colorPress" fontSize="$3">
+                          Distance from front axle to rear axle center-to-center
+                        </Text>
+                        <XStack space="$2" alignItems="center">
+                          <Input
+                            flex={1}
+                            size="$5"
+                            placeholder={`e.g., ${setupData.measurementUnits === 'metric' ? '610' : '240'}`}
+                            value={setupData.measurementUnits === 'metric' 
+                              ? Math.round(setupData.wheelbaseInches * 2.54).toString()
+                              : setupData.wheelbaseInches.toString()
+                            }
+                            onChangeText={(text) => {
+                              const num = parseFloat(text) || 0;
+                              setSetupData(prev => ({ 
+                                ...prev, 
+                                wheelbaseInches: convertToInches(num, setupData.measurementUnits)
+                              }));
+                            }}
+                            keyboardType="decimal-pad"
+                          />
+                          <Text color="$colorPress" fontSize="$4" minWidth={50}>
+                            {setupData.measurementUnits === 'metric' ? 'cm' : 'inches'}
+                          </Text>
+                        </XStack>
+                      </YStack>
+                    )}
+
+                    {/* Custom Track Width Input */}
+                    <YStack space="$2">
+                      <Text fontSize="$5" fontWeight="bold">Track Width</Text>
+                      <Text color="$colorPress" fontSize="$3">
+                        Distance between left and right wheels
+                      </Text>
+                      <XStack space="$2" alignItems="center">
+                        <Input
+                          flex={1}
+                          size="$5"
+                          placeholder={`e.g., ${setupData.measurementUnits === 'metric' ? '244' : '96'}`}
+                          value={setupData.measurementUnits === 'metric' 
+                            ? Math.round(setupData.trackWidthInches * 2.54).toString()
+                            : setupData.trackWidthInches.toString()
+                          }
+                          onChangeText={(text) => {
+                            const num = parseFloat(text) || 0;
+                            setSetupData(prev => ({ 
+                              ...prev, 
+                              trackWidthInches: convertToInches(num, setupData.measurementUnits)
+                            }));
+                          }}
+                          keyboardType="decimal-pad"
+                        />
+                        <Text color="$colorPress" fontSize="$4" minWidth={50}>
+                          {setupData.measurementUnits === 'metric' ? 'cm' : 'inches'}
+                        </Text>
+                      </XStack>
+                    </YStack>
+
+                  </YStack>
+                )}
+              </YStack>
             </YStack>
           </Card>
         </YStack>
@@ -555,39 +714,56 @@ export default function OnboardingScreen() {
                     What block heights do you have?
                   </Text>
                   
+                  <Card padding="$3" backgroundColor="$cyan1" borderColor="$cyan6" borderWidth={1}>
+                    <Text color="$cyan11" fontSize="$3" fontWeight="600" marginBottom="$2">💡 Block Selection Tips:</Text>
+                    <Text color="$cyan11" fontSize="$3" marginBottom="$1">
+                      • Select all heights you own - the app will optimize which to use
+                    </Text>
+                    <Text color="$cyan11" fontSize="$3" marginBottom="$1">
+                      • Common heights: 3/4", 1", 1½", 2" blocks work for most situations
+                    </Text>
+                    <Text color="$cyan11" fontSize="$3">
+                      • You can add custom heights if needed
+                    </Text>
+                  </Card>
+                  
                   <YStack space="$3">
-                    {getCommonBlockHeights(setupData.measurementUnits).map((block) => (
+                    {(() => {
+                      // Use our defined common block heights only
+                      const standardHeights = [0.75, 1, 1.5, 2];
+                      const customHeights = setupData.selectedBlockHeights.filter(h => !standardHeights.includes(h));
+                      const allHeights = [...standardHeights, ...customHeights].sort((a, b) => a - b);
+                      
+                      return allHeights.map((height) => ({ 
+                        value: height, 
+                        label: formatMeasurement(height, setupData.measurementUnits, 0, true),
+                        description: `${formatMeasurement(height, setupData.measurementUnits, 0, true)} leveling block` 
+                      }));
+                    })().map((block) => (
                       <Card
                         key={block.value}
                         padding="$3"
                         backgroundColor={setupData.selectedBlockHeights.includes(block.value) ? '$green2' : '$background'}
                         borderColor={setupData.selectedBlockHeights.includes(block.value) ? '$green9' : '$borderColor'}
                         borderWidth={1}
-                        pressStyle={{ scale: 0.98 }}
-                        onPress={() => {
-                          setSetupData(prev => ({
-                            ...prev,
-                            selectedBlockHeights: prev.selectedBlockHeights.includes(block.value)
-                              ? prev.selectedBlockHeights.filter(h => h !== block.value)
-                              : [...prev.selectedBlockHeights, block.value].sort((a, b) => a - b)
-                          }));
-                        }}
                       >
                         <XStack space="$3" alignItems="center">
-                          <Card
-                            width={24}
-                            height={24}
-                            borderRadius={4}
-                            borderWidth={2}
-                            borderColor="$green9"
-                            backgroundColor={setupData.selectedBlockHeights.includes(block.value) ? '$green9' : '$background'}
-                            justifyContent="center"
-                            alignItems="center"
+                          <Checkbox
+                            size="$5"
+                            checked={setupData.selectedBlockHeights.includes(block.value)}
+                            onCheckedChange={() => {
+                              setSetupData(prev => ({
+                                ...prev,
+                                selectedBlockHeights: prev.selectedBlockHeights.includes(block.value)
+                                  ? prev.selectedBlockHeights.filter(h => h !== block.value)
+                                  : [...prev.selectedBlockHeights, block.value].sort((a, b) => a - b)
+                              }));
+                            }}
                           >
-                            {setupData.selectedBlockHeights.includes(block.value) && (
-                              <Text color="white" fontSize="$3" fontWeight="bold">✓</Text>
-                            )}
-                          </Card>
+                            <Checkbox.Indicator>
+                              {setupData.selectedBlockHeights.includes(block.value) ? <Text>✓</Text> : null}
+                            </Checkbox.Indicator>
+                          </Checkbox>
                           <YStack flex={1}>
                             <Text fontSize="$5" fontWeight="bold">
                               {block.label}
@@ -599,86 +775,79 @@ export default function OnboardingScreen() {
                         </XStack>
                       </Card>
                     ))}
-
-                    {/* Custom block option */}
-                    <Card
-                      padding="$3"
-                      backgroundColor={setupData.showCustomBlockInput ? '$blue2' : '$background'}
-                      borderColor={setupData.showCustomBlockInput ? '$blue9' : '$borderColor'}
-                      borderWidth={1}
-                      pressStyle={{ scale: 0.98 }}
-                      onPress={() => {
-                        setSetupData(prev => ({
-                          ...prev,
-                          showCustomBlockInput: !prev.showCustomBlockInput,
-                          selectedBlockHeights: prev.showCustomBlockInput ? prev.selectedBlockHeights : []
-                        }));
-                      }}
-                    >
-                      <XStack space="$3" alignItems="center">
-                        <Card
-                          width={24}
-                          height={24}
-                          borderRadius={4}
-                          borderWidth={2}
-                          borderColor="$blue9"
-                          backgroundColor={setupData.showCustomBlockInput ? '$blue9' : '$background'}
-                          justifyContent="center"
-                          alignItems="center"
-                        >
-                          {setupData.showCustomBlockInput && (
-                            <Text color="white" fontSize="$3" fontWeight="bold">✓</Text>
-                          )}
-                        </Card>
-                        <YStack flex={1}>
-                          <Text fontSize="$5" fontWeight="bold">
-                            Custom Size
-                          </Text>
-                          <Text fontSize="$3" color="$colorPress">
-                            Enter your own block height
-                          </Text>
-                        </YStack>
-                      </XStack>
-                    </Card>
                   </YStack>
 
-                  {/* Custom input field */}
-                  {setupData.showCustomBlockInput && (
-                    <YStack space="$2">
-                      <Label htmlFor="custom-block">Custom Block Height</Label>
+                  {/* Custom block input */}
+                  <Card padding="$3" backgroundColor="$blue1" borderColor="$blue6" borderWidth={1}>
+                    <YStack space="$3">
+                      <Text fontWeight="bold">Add Custom Height</Text>
                       <XStack space="$2" alignItems="center">
                         <Input
-                          id="custom-block"
                           flex={1}
                           size="$4"
-                          placeholder={setupData.measurementUnits === 'imperial' ? 'e.g., 1.5' : 'e.g., 3.8'}
+                          placeholder={setupData.measurementUnits === 'imperial' ? 'e.g., 1.75' : 'e.g., 4.5'}
+                          keyboardType="decimal-pad"
                           value={setupData.customBlockHeight}
                           onChangeText={(text) => setSetupData(prev => ({ ...prev, customBlockHeight: text }))}
-                          keyboardType="decimal-pad"
+                          onSubmitEditing={() => {
+                            const value = parseFloat(setupData.customBlockHeight);
+                            const maxValue = setupData.measurementUnits === 'metric' ? 30 : 12;
+                            if (value && value > 0 && value <= maxValue) {
+                              // Convert to inches for internal storage
+                              const inches = convertToInches(value, setupData.measurementUnits);
+                              if (!setupData.selectedBlockHeights.includes(inches)) {
+                                setSetupData(prev => ({
+                                  ...prev,
+                                  selectedBlockHeights: [...prev.selectedBlockHeights, inches].sort((a, b) => a - b),
+                                  customBlockHeight: ''
+                                }));
+                              }
+                            }
+                          }}
                         />
-                        <Text color="$colorPress" fontSize="$4" minWidth={30}>
-                          {setupData.measurementUnits === 'imperial' ? 'in' : 'cm'}
-                        </Text>
+                        <Button
+                          size="$4"
+                          backgroundColor="$blue9"
+                          onPress={() => {
+                            const value = parseFloat(setupData.customBlockHeight);
+                            const maxValue = setupData.measurementUnits === 'metric' ? 30 : 12;
+                            if (value && value > 0 && value <= maxValue) {
+                              // Convert to inches for internal storage
+                              const inches = convertToInches(value, setupData.measurementUnits);
+                              if (!setupData.selectedBlockHeights.includes(inches)) {
+                                setSetupData(prev => ({
+                                  ...prev,
+                                  selectedBlockHeights: [...prev.selectedBlockHeights, inches].sort((a, b) => a - b),
+                                  customBlockHeight: ''
+                                }));
+                              }
+                            }
+                          }}
+                          disabled={!setupData.customBlockHeight.trim()}
+                        >
+                          Add
+                        </Button>
+                        <Text>{setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}</Text>
                       </XStack>
-                      <Text color="$colorPress" fontSize="$3">
-                        Enter the height of your custom leveling blocks
+                      <Text fontSize="$2" color="$colorPress">
+                        Enter a custom block height ({setupData.measurementUnits === 'imperial' ? '0.1 - 12 inches' : '0.5 - 30 cm'})
                       </Text>
                     </YStack>
-                  )}
+                  </Card>
 
-                  {/* Summary */}
-                  {!setupData.showCustomBlockInput && setupData.selectedBlockHeights.length > 0 && (
-                    <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
-                      <Text color="$green11" fontSize="$3" textAlign="center">
-                        ✓ Selected: {setupData.selectedBlockHeights.map(h => formatMeasurement(h, setupData.measurementUnits, 0)).join(', ')}
+                  {/* Validation messages */}
+                  {setupData.selectedBlockHeights.length === 0 && (
+                    <Card padding="$3" backgroundColor="$yellow2" borderColor="$yellow9" borderWidth={1}>
+                      <Text color="$yellow11" fontSize="$3">
+                        Please select at least one block height, or turn off "I have leveling blocks" above.
                       </Text>
                     </Card>
                   )}
 
-                  {setupData.showCustomBlockInput && setupData.customBlockHeight.trim() && !isNaN(parseFloat(setupData.customBlockHeight)) && (
-                    <Card padding="$3" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-                      <Text color="$blue11" fontSize="$3" textAlign="center">
-                        ✓ Custom: {formatMeasurement(convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits), setupData.measurementUnits, 1)}
+                  {setupData.selectedBlockHeights.length > 0 && (
+                    <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
+                      <Text color="$green11" fontSize="$3" textAlign="center">
+                        ✓ Selected: {setupData.selectedBlockHeights.map(h => formatMeasurement(h, setupData.measurementUnits, 0, true)).join(', ')}
                       </Text>
                     </Card>
                   )}
@@ -724,7 +893,7 @@ export default function OnboardingScreen() {
                 📦 <Text fontWeight="bold">Blocks:</Text> {(() => {
                   if (!setupData.hasLevelingBlocks) return 'Measurement mode';
                   if (setupData.showCustomBlockInput && setupData.customBlockHeight.trim()) {
-                    return `Custom (${formatMeasurement(convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits), setupData.measurementUnits, 1)})`;
+                    return `Custom (${formatMeasurement(convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits), setupData.measurementUnits, 1, true)})`;
                   }
                   return `${setupData.selectedBlockHeights.length} height${setupData.selectedBlockHeights.length !== 1 ? 's' : ''}`;
                 })()}
@@ -773,12 +942,12 @@ export default function OnboardingScreen() {
         </ScrollView>
 
         {/* Navigation */}
-        <YStack space="$3">
+        <YStack space="$2">
           <XStack space="$3">
             {currentStep > 0 && (
               <Button
                 flex={1}
-                size="$5"
+                size="$4"
                 backgroundColor="$gray9"
                 pressStyle={{ scale: 0.95 }}
                 onPress={handleBack}
@@ -790,7 +959,7 @@ export default function OnboardingScreen() {
             
             <Button
               flex={1}
-              size="$5"
+              size="$4"
               backgroundColor="$blue9"
               pressStyle={{ scale: 0.95 }}
               onPress={handleNext}
@@ -801,22 +970,24 @@ export default function OnboardingScreen() {
             </Button>
           </XStack>
 
-          {/* Skip Option */}
-          <Button
-            size="$4"
-            backgroundColor="transparent"
-            color="$colorPress"
-            pressStyle={{ scale: 0.95 }}
-            onPress={skipOnboarding}
-          >
-            Skip Tutorial
-          </Button>
-        </YStack>
+          <XStack justifyContent="space-between" alignItems="center">
+            {/* Skip Option */}
+            <Button
+              size="$3"
+              backgroundColor="transparent"
+              color="$colorPress"
+              pressStyle={{ scale: 0.95 }}
+              onPress={skipOnboarding}
+            >
+              Skip Tutorial
+            </Button>
 
-        {/* Step Counter */}
-        <Text color="$colorPress" fontSize="$3" textAlign="center">
-          {currentStep + 1} of {STEPS.length}
-        </Text>
+            {/* Step Counter */}
+            <Text color="$colorPress" fontSize="$3">
+              {currentStep + 1} of {STEPS.length}
+            </Text>
+          </XStack>
+        </YStack>
       </YStack>
     </SafeAreaView>
   );

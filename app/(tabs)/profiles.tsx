@@ -14,7 +14,7 @@ import {
   useTheme,
 } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle, Crosshair } from '@tamagui/lucide-icons';
+import { Plus, Trash2, Check, Caravan, Bus, Truck, HelpCircle, Crosshair } from '@tamagui/lucide-icons';
 // Temporarily removing Edit icon to fix undefined component error
 // import { Edit } from '@tamagui/lucide-icons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
@@ -136,13 +136,13 @@ export default function ProfilesScreen() {
   const getVehicleIcon = (type: string) => {
     switch (type) {
       case 'trailer':
-        return <Truck size={20} />;
+        return <Caravan size={20} />;
       case 'motorhome':
-        return <Home size={20} />;
+        return <Bus size={20} />;
       case 'van':
-        return <Car size={20} />;
+        return <Truck size={20} />;
       default:
-        return <Car size={20} />;
+        return <Caravan size={20} />;
     }
   };
 
@@ -173,7 +173,7 @@ export default function ProfilesScreen() {
               <YStack space="$4">
                 <Card padding="$6" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
                   <YStack alignItems="center" space="$4">
-                    <Car size={48} color="$blue9" />
+                    <Caravan size={48} color="$blue9" />
                     <YStack space="$2" alignItems="center">
                       <Text color="$color" textAlign="center" fontSize="$5" fontWeight="bold">
                         Welcome to LevelMate!

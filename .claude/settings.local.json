@@ -12,7 +12,14 @@
       "Bash(firefox --private-window \"http://localhost:8081\")",
       "Bash(chromium --incognito \"http://localhost:8081\")",
       "Bash(google-chrome --incognito \"http://localhost:8081\")",
-      "Bash(curl -s \"http://localhost:8081\")"
+      "Bash(curl -s \"http://localhost:8081\")",
+      "Bash(node:*)",
+      "Read(//home/ron/Downloads/**)",
+      "WebSearch",
+      "Bash(npx expo:*)",
+      "Bash(npx netlify deploy:*)",
+      "Bash(npm run web:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
