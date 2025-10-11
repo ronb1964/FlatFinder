@@ -1,15 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { YStack, XStack, Text, Button, H2, H3, Card, Progress, styled, ScrollView, View, useTheme } from 'tamagui';
+import { YStack, XStack, Text, Button, H2, H3, Card, Progress, styled, View, useTheme } from 'tamagui';
 import { Target, RotateCw, Check, AlertCircle, Star, Smartphone } from '@tamagui/lucide-icons';
 import { Animated } from 'react-native';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { BubbleLevel } from './BubbleLevel';
-import { 
-  CalibrationReading, 
-  createCalibrationReading, 
+import {
+  CalibrationReading,
+  createCalibrationReading,
   calculateAverageCalibration,
-  assessCalibrationQuality 
+  assessCalibrationQuality
 } from '../lib/calibration';
+import {
+  ScrollContainer,
+  StickyActionButtons,
+  ResponsiveContainer,
+  ScalableText,
+  ScalableH2,
+  ScalableH3
+} from './responsive';
 
 import { Calibration } from '../lib/levelingMath';
 
@@ -107,14 +115,14 @@ const RotationIndicator = ({ direction, degrees = 90, showCheckmark = false }: {
   });
 
   return (
-    <View alignItems="center" marginVertical="$2">
+    <View alignItems="center" marginVertical="$1">
       {/* Curved arrow pointing clockwise */}
-      <Text fontSize={32} marginBottom="$1">
+      <Text fontSize={24} marginBottom="$0.5">
         ↻
       </Text>
       <View position="relative" alignItems="center" justifyContent="center">
         <Animated.View style={{ transform: [{ rotate }] }}>
-          <Smartphone size={48} color="#6366f1" strokeWidth={2} />
+          <Smartphone size={32} color="#6366f1" strokeWidth={2} />
         </Animated.View>
         {/* Green checkmark that appears at rotated position */}
         {showCheckmark && (
@@ -124,12 +132,12 @@ const RotationIndicator = ({ direction, degrees = 90, showCheckmark = false }: {
               opacity: checkmarkOpacity,
             }}
           >
-            <Text fontSize={32} color="#22c55e">✓</Text>
+            <Text fontSize={24} color="#22c55e">✓</Text>
           </Animated.View>
         )}
       </View>
-      <Text fontSize="$3" color="#6366f1" marginTop="$2" fontWeight="700">
-        Rotate {degrees}° clockwise
+      <Text fontSize="$2" color="#6366f1" marginTop="$1" fontWeight="700">
+        {degrees}° clockwise
       </Text>
     </View>
   );
@@ -164,6 +172,27 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       if (collectingTimeoutRef.current) {
         clearTimeout(collectingTimeoutRef.current);
       }
+    }
+  }, [isVisible]);
+
+  // Lock screen orientation to portrait during calibration
+  useEffect(() => {
+    if (isVisible && typeof window !== 'undefined' && (window.screen as any).orientation) {
+      const lockOrientation = async () => {
+        try {
+          await (window.screen as any).orientation.lock('portrait');
+        } catch (err) {
+          console.log('Screen orientation lock not supported:', err);
+        }
+      };
+      lockOrientation();
+
+      // Unlock when wizard closes
+      return () => {
+        if ((window.screen as any).orientation?.unlock) {
+          (window.screen as any).orientation.unlock();
+        }
+      };
     }
   }, [isVisible]);
 
@@ -241,10 +270,11 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
     if (isComplete) return -180; // Completion: Keep upside down until continue pressed
     if (!hasStarted) return 0; // Normal orientation for intro
     if (currentStep === 1) return 0; // Step 1: Normal orientation
-    if (currentStep === 2) return -90; // Step 2: Rotate UI counter-clockwise
-    if (currentStep === 3) return -180; // Step 3: Continue counter-clockwise (270° total = -180°)
+    if (currentStep === 2) return -90; // Step 2: Rotate UI counter-clockwise (phone rotates clockwise)
+    if (currentStep === 3) return -180; // Step 3: Continue counter-clockwise (upside down)
     return 0;
   };
+
 
   const handleContinue = () => {
     if (finalCalibration) {
@@ -256,52 +286,84 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   if (!isVisible) return null;
 
   return (
-    <View
-      position="fixed"
-      top={0}
-      left={0}
-      width="100vw"
-      height="100vh"
-      zIndex={1000}
-      backgroundColor={theme.background?.val || '#000'}
-      style={{
-        overflow: 'hidden'
-      }}
-    >
-      <View
-        style={{
-          width: '100%',
-          height: '100%',
-          backgroundColor: theme.background?.val || '#000',
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1000,
+      backgroundColor: theme.background?.val || '#000',
+    }}>
+      {/* Scrollable content */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: window.innerWidth > 800 ? '120px' : '100px',
+        overflowY: 'scroll',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        padding: window.innerWidth > 800 ? '24px' : '12px',
+        maxWidth: window.innerWidth > 1024 ? '768px' : '100%',
+        margin: window.innerWidth > 1024 ? '0 auto' : '0',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start'
+      }}>
+        {/* Inner rotating content */}
+        <div style={{
           transform: `rotate(${getRotationAngle()}deg)`,
           transition: 'transform 0.8s ease-in-out',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <YStack flex={1} space="$2" backgroundColor={theme.background?.val || '#000'} padding="$2" justifyContent="space-between">
-            <YStack space="$2" flex={1} justifyContent="center">
+          width: '100%',
+          minHeight: '100%'
+        }}>
+            <YStack space="$3"
+              $md={{ space: '$4' }}
+            >
           
+          {/* Header */}
+          <XStack justifyContent="space-between" alignItems="center">
+            <ScalableText base="$4" md="$6" color="white" fontWeight="bold">Calibration</ScalableText>
+            <Button
+              size="$2"
+              backgroundColor="rgba(239, 68, 68, 0.2)"
+              color="#ef4444"
+              borderWidth={1}
+              borderColor="rgba(239, 68, 68, 0.4)"
+              onPress={onCancel}
+              pressStyle={{ scale: 0.95, backgroundColor: "rgba(239, 68, 68, 0.3)" }}
+              paddingHorizontal="$2"
+              paddingVertical="$1"
+            >
+              <Text color="#ef4444" fontSize="$2">Cancel</Text>
+            </Button>
+          </XStack>
+
           {/* Completion Screen */}
           {isComplete ? (
-            <YStack space="$4" alignItems="center" paddingVertical="$6">
-              <YStack 
-                backgroundColor="$green3" 
-                borderRadius="$8" 
+            <YStack space="$3" alignItems="center" paddingVertical="$4"
+              $md={{ space: '$4', paddingVertical: '$5' }}
+            >
+              <YStack
+                backgroundColor="$green3"
+                borderRadius="$6"
                 padding="$4"
                 borderWidth={1}
                 borderColor="$green6"
                 alignItems="center"
+                $md={{ padding: '$5' }}
               >
                 <Check size={48} color="$green9" />
               </YStack>
-              
-              <H2 color="$green9" textAlign="center">
+
+              <ScalableH2 base="$6" md="$8" color="$green9" textAlign="center">
                 Calibration Complete!
-              </H2>
-              
+              </ScalableH2>
+
               <Text fontSize="$4" color="$colorPress" textAlign="center" lineHeight="$5">
-                Your device has been successfully calibrated for accurate leveling measurements.
+                Device calibrated for accurate measurements.
               </Text>
               
               {calibrationQuality && (
@@ -325,112 +387,75 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                 </Card>
               )}
               
-              <YStack space="$3" alignSelf="stretch" paddingHorizontal="$4">
-                <Button
-                  size="$5"
-                  fontWeight="600"
-                  borderRadius="$4"
-                  onPress={handleContinue}
-                  backgroundColor="$green9"
-                  color="#ffffff"
-                  borderWidth={0}
-                  pressStyle={{ 
-                    backgroundColor: "rgba(34, 197, 94, 0.8)",
-                    scale: 0.98
-                  }}
-                >
-                  Continue
-                </Button>
-                
-                <Button
-                  size="$3"
-                  backgroundColor="transparent"
-                  color="$gray11"
-                  onPress={onCancel}
-                >
-                  Back to Profiles
-                </Button>
-              </YStack>
             </YStack>
           ) : (
             <>
-              {/* Header */}
-              <XStack justifyContent="space-between" alignItems="center" paddingBottom="$1">
-                <H2 fontSize="$6" color="white">Device Calibration</H2>
-                <Button
-                  size="$2"
-                  backgroundColor="rgba(239, 68, 68, 0.2)"
-                  color="#ef4444"
-                  borderWidth={1}
-                  borderColor="rgba(239, 68, 68, 0.4)"
-                  onPress={onCancel}
-                  pressStyle={{ scale: 0.95, backgroundColor: "rgba(239, 68, 68, 0.3)" }}
-                >
-                  Cancel
-                </Button>
-              </XStack>
 
       {/* Progress Bar */}
-      <YStack space="$1">
-        <Text fontSize="$3" color="rgba(255, 255, 255, 0.7)" fontWeight="600" textAlign="center">
+      <YStack space="$2" marginBottom="$3">
+        <ScalableText base="$2" md="$3" color="rgba(255, 255, 255, 0.7)" fontWeight="600" textAlign="center">
           Step {currentStep + 1} of {CALIBRATION_STEPS.length}
-        </Text>
+        </ScalableText>
 
-        <Progress value={progress} backgroundColor="rgba(255, 255, 255, 0.1)" size="$0.5">
+        <Progress value={progress} backgroundColor="rgba(255, 255, 255, 0.1)" size="$0.75">
           <Progress.Indicator backgroundColor="$green9" />
         </Progress>
       </YStack>
 
       {/* Step Instructions */}
-      <Card padding="$2.5" backgroundColor="rgba(59, 130, 246, 0.1)" borderColor="rgba(59, 130, 246, 0.3)" borderWidth={2} borderRadius="$4">
-        <YStack space="$2" alignItems="center">
-          <XStack space="$3" alignItems="center">
+      <Card padding="$3" backgroundColor="rgba(59, 130, 246, 0.1)" borderColor="rgba(59, 130, 246, 0.3)" borderWidth={2} borderRadius="$4"
+        marginTop="$2"
+        $md={{ padding: '$4', borderRadius: '$5' }}
+      >
+        <YStack space="$2" alignItems="center"
+          $md={{ space: '$3' }}
+        >
+          <XStack space="$1.5" alignItems="center">
             <YStack
               backgroundColor="rgba(59, 130, 246, 0.2)"
-              borderRadius="$4"
-              padding={getRotationAngle() !== 0 ? "$2" : "$3"}
+              borderRadius="$2"
+              padding="$1.5"
               borderWidth={1}
               borderColor="rgba(59, 130, 246, 0.4)"
             >
-              <IconComponent size={getRotationAngle() !== 0 ? 20 : 24} color="#3b82f6" />
+              <IconComponent size={16} color="#3b82f6" />
             </YStack>
-            <H3 fontSize="$5" fontWeight="700" color="white" textAlign="center" flex={1}>
+            <ScalableText base="$3" md="$5" fontWeight="700" color="white" textAlign="center" flex={1}>
               {currentStepData.title}
-            </H3>
+            </ScalableText>
           </XStack>
 
-          <Text fontSize="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" lineHeight="$5">
+          <ScalableText base="$2" md="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" lineHeight="$3">
             {currentStepData.instruction}
-          </Text>
+          </ScalableText>
           
           {/* Phone setup for step 1 */}
           {currentStep === 0 && (
-            <YStack space="$1.5" alignItems="center" padding="$2" backgroundColor="rgba(59, 130, 246, 0.05)" borderRadius="$3" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
-              <XStack space="$1.5" alignItems="center">
-                <Smartphone size={16} color="#3b82f6" />
-                <Text fontSize="$3" color="#3b82f6" fontWeight="700">
+            <YStack space="$1" alignItems="center" padding="$1.5" backgroundColor="rgba(59, 130, 246, 0.05)" borderRadius="$2" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
+              <XStack space="$1" alignItems="center">
+                <Smartphone size={14} color="#3b82f6" />
+                <Text fontSize="$2" color="#3b82f6" fontWeight="700">
                   Phone Setup
                 </Text>
               </XStack>
-              <Text fontSize="$2" color="rgba(255, 255, 255, 0.8)" textAlign="center">
-                📱 Screen UP • Flat on surface • Top edge ↑ Vehicle front
+              <Text fontSize="$1" color="rgba(255, 255, 255, 0.8)" textAlign="center">
+                📱 Screen UP • Flat • Top ↑ Front
               </Text>
             </YStack>
           )}
 
           {/* Rotation Instructions for Steps 2 and 3 */}
           {(currentStep === 1 || currentStep === 2) && currentStepData.showRotationWarning && (
-            <YStack space="$1.5" alignItems="center" padding="$2.5" backgroundColor="rgba(99, 102, 241, 0.15)" borderRadius="$4" borderWidth={2} borderColor="rgba(99, 102, 241, 0.4)">
-              <Text fontSize="$4" color="#818cf8" fontWeight="700" textAlign="center">
-                After this reading:
+            <YStack space="$1" alignItems="center" padding="$1.5" backgroundColor="rgba(99, 102, 241, 0.15)" borderRadius="$3" borderWidth={2} borderColor="rgba(99, 102, 241, 0.4)">
+              <Text fontSize="$2" color="#818cf8" fontWeight="700" textAlign="center">
+                After: Turn phone 90° clockwise
               </Text>
-              <Text fontSize="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" fontWeight="600">
-                Turn your phone 90° clockwise
-              </Text>
-              {/* Animated rotation indicator */}
-              <RotationIndicator direction="clockwise" />
-              <Text fontSize="$3" color="rgba(255, 255, 255, 0.7)" textAlign="center" lineHeight="$4">
-                Keep it flat • Screen will rotate to stay readable
+              {/* Animated rotation indicator - smaller */}
+              <View marginVertical="$1">
+                <RotationIndicator direction="clockwise" />
+              </View>
+              <Text fontSize="$1" color="rgba(255, 255, 255, 0.7)" textAlign="center">
+                Flat • Screen auto-rotates
               </Text>
             </YStack>
           )}
@@ -446,132 +471,115 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
         </YStack>
       </Card>
 
-      {/* Action Buttons */}
-      <YStack space="$2" paddingTop="$1">
-        {!hasStarted ? (
-          // Next Button (Step 1)
-          <Button
-            size="$5"
-            fontWeight="700"
-            borderRadius="$4"
-            onPress={handleStartCalibration}
-            disabled={!isReliable}
-            backgroundColor={!isReliable ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
-            color="white"
-            pressStyle={{
-              backgroundColor: !isReliable ? "rgba(156, 163, 175, 0.4)" : "#d97706",
-              scale: 0.97
-            }}
-            borderWidth={2}
-            borderColor={!isReliable ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
-          >
-            <Text color="white" fontSize="$4" fontWeight="bold">
-              Next
-            </Text>
-          </Button>
-        ) : (
-          // Sensor Status and Take Reading Button
-          <YStack space="$2">
-            <Card padding="$2" backgroundColor="rgba(255, 255, 255, 0.05)" borderColor={getStatusColor()} borderWidth={2} borderRadius="$3">
-              <Text fontSize="$3" color={getStatusColor()} textAlign="center" fontWeight="600">
-                {getStatusText()}
-              </Text>
-
-              {!isReliable && (
-                <Text fontSize="$2" color="#eab308" textAlign="center" marginTop="$1">
-                  Waiting for sensors...
-                </Text>
-              )}
-            </Card>
-
-            {/* Take Reading Button */}
-            <Button
-              size="$5"
-              fontWeight="700"
-              borderRadius="$4"
-              onPress={takeReading}
-              disabled={!isReliable || isCollecting}
-              backgroundColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
-              color="white"
-              pressStyle={{
-                backgroundColor: (!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.4)" : "#d97706",
-                scale: 0.97
-              }}
-              borderWidth={2}
-              borderColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
-            >
-              <Text color="white" fontSize="$5" fontWeight="bold">
-                {isCollecting ? '⏱️ Collecting...' : readings.length === 2 ? '📱 Take Final Reading' : `📱 Take Reading ${readings.length + 1}`}
-              </Text>
-            </Button>
-          </YStack>
-        )}
-      </YStack>
-
-
-      {/* Calibration Quality Indicator with proper spacing */}
-      {calibrationQuality && readings.length >= 2 && (
-        <Card 
-          padding="$3" 
-          marginTop="$4"
-          backgroundColor={
-            calibrationQuality.quality === 'excellent' ? 'rgba(34, 197, 94, 0.1)' :
-            calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.05)' :
-            calibrationQuality.quality === 'fair' ? 'rgba(234, 179, 8, 0.1)' :
-            'rgba(239, 68, 68, 0.1)'
-          }
-          borderColor={
-            calibrationQuality.quality === 'excellent' ? 'rgba(34, 197, 94, 0.3)' :
-            calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.2)' :
-            calibrationQuality.quality === 'fair' ? 'rgba(234, 179, 8, 0.3)' :
-            'rgba(239, 68, 68, 0.3)'
-          }
-          borderWidth={1}
+      {/* Sensor Status (informational only) */}
+      {hasStarted && (
+        <Card padding="$2" backgroundColor="rgba(255, 255, 255, 0.05)" borderColor={getStatusColor()} borderWidth={2} borderRadius="$4"
+          marginTop="$3"
+          $md={{ padding: '$3' }}
         >
-          <XStack space="$2" alignItems="center" marginBottom="$2">
-            <Star 
-              size={16} 
-              color={
-                calibrationQuality.quality === 'excellent' ? '#22c55e' :
-                calibrationQuality.quality === 'good' ? '#22c55e' :
-                calibrationQuality.quality === 'fair' ? '#eab308' :
-                '#ef4444'
-              }
-            />
-            <Text 
-              fontSize="$3" 
-              fontWeight="600"
-              color={
-                calibrationQuality.quality === 'excellent' ? '#22c55e' :
-                calibrationQuality.quality === 'good' ? '#22c55e' :
-                calibrationQuality.quality === 'fair' ? '#eab308' :
-                '#ef4444'
-              }
-            >
-              Quality: {calibrationQuality.quality} ({Math.round(calibrationQuality.confidence * 100)}%)
+          <ScalableText base="$3" md="$4" color={getStatusColor()} textAlign="center" fontWeight="600">
+            {getStatusText()}
+          </ScalableText>
+
+          {!isReliable && (
+            <Text fontSize="$2" color="#eab308" textAlign="center" marginTop="$1">
+              Waiting for sensors...
             </Text>
-          </XStack>
-          
-          <Text fontSize="$2" color="#94a3b8">
-            {calibrationQuality.recommendation}
-          </Text>
-          
-          {calibrationQuality.issues.length > 0 && (
-            <YStack marginTop="$2" space="$1">
-              {calibrationQuality.issues.map((issue, index) => (
-                <Text key={index} fontSize="$2" color="#ef4444">
-                  • {issue}
-                </Text>
-              ))}
-            </YStack>
           )}
         </Card>
       )}
+
+      {/* Calibration Quality Indicator - Hidden to save space, shown on completion */}
             </>
           )}
             </YStack>
-        </YStack>
-      </View>
-    </View>
+        </div>
+      </div>
+
+      {/* Action Buttons - Always visible at bottom */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: window.innerWidth > 800 ? '120px' : '100px',
+        backgroundColor: theme.background?.val || '#000',
+        padding: window.innerWidth > 800 ? '24px' : '16px',
+        borderTop: '2px solid rgba(255, 255, 255, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        maxWidth: window.innerWidth > 1024 ? '768px' : '100%',
+        margin: window.innerWidth > 1024 ? '0 auto' : '0'
+      }}>
+        {/* Inner rotating button */}
+        <div style={{
+          transform: `rotate(${getRotationAngle()}deg)`,
+          transition: 'transform 0.8s ease-in-out',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+            {isComplete ? (
+              <Button
+                size="$4"
+                fontWeight="600"
+                borderRadius="$4"
+                onPress={handleContinue}
+                backgroundColor="$green9"
+                color="#ffffff"
+                borderWidth={0}
+                pressStyle={{
+                  backgroundColor: "rgba(34, 197, 94, 0.8)",
+                  scale: 0.98
+                }}
+              >
+                Continue
+              </Button>
+            ) : !hasStarted ? (
+              <Button
+                size="$4"
+                fontWeight="700"
+                borderRadius="$4"
+                onPress={handleStartCalibration}
+                disabled={!isReliable}
+                backgroundColor={!isReliable ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
+                color="white"
+                pressStyle={{
+                  backgroundColor: !isReliable ? "rgba(156, 163, 175, 0.4)" : "#d97706",
+                  scale: 0.97
+                }}
+                borderWidth={2}
+                borderColor={!isReliable ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
+              >
+                <Text color="white" fontSize="$4" fontWeight="bold">
+                  Next
+                </Text>
+              </Button>
+            ) : (
+              <Button
+                size="$4"
+                fontWeight="700"
+                borderRadius="$4"
+                onPress={takeReading}
+                disabled={!isReliable || isCollecting}
+                backgroundColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.3)" : "#f59e0b"}
+                color="white"
+                pressStyle={{
+                  backgroundColor: (!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.4)" : "#d97706",
+                  scale: 0.97
+                }}
+                borderWidth={2}
+                borderColor={(!isReliable || isCollecting) ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
+              >
+                <Text color="white" fontSize="$4" fontWeight="bold">
+                  {isCollecting ? '⏱️ Collecting...' : readings.length === 2 ? '📱 Final Reading' : `📱 Take Reading ${readings.length + 1}`}
+                </Text>
+              </Button>
+            )}
+        </div>
+      </div>
+    </div>
   );
 }
