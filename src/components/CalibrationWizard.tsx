@@ -263,8 +263,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
       setLastVariance({ pitch: sampledData.pitchVariance, roll: sampledData.rollVariance });
 
-      // Check if device was moving during reading (skip variance check on web for testing)
-      if (!sampledData.isStable && Platform.OS !== 'web') {
+      // Check if device was moving during reading
+      if (!sampledData.isStable) {
         setIsCollecting(false);
         setShowMotionWarning(true);
 
