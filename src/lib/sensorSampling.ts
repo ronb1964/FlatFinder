@@ -22,6 +22,8 @@ export interface SamplingConfig {
   outlierThreshold?: number;
   /** Maximum acceptable variance for stable reading (default: 0.05°²) */
   varianceThreshold?: number;
+  /** Maximum acceptable range (max - min) for stable reading (default: 0.3°) */
+  rangeThreshold?: number;
 }
 
 export interface SamplingResult {
@@ -31,6 +33,8 @@ export interface SamplingResult {
   durationMs: number;
   pitchVariance: number;
   rollVariance: number;
+  pitchRange: number;
+  rollRange: number;
   isStable: boolean;
 }
 
@@ -117,7 +121,8 @@ export async function sampleSensorData(
     intervalMs = 50,
     useMedianFilter = true,
     outlierThreshold = 0.1,
-    varianceThreshold = 0.05
+    varianceThreshold = 0.05,
+    rangeThreshold = 0.3
   } = config;
 
   const readings: SensorReading[] = [];
@@ -141,12 +146,20 @@ export async function sampleSensorData(
   const pitchValues = readings.map(r => r.pitch);
   const rollValues = readings.map(r => r.roll);
 
-  // Calculate variance to detect motion
+  // Calculate variance to detect shaking/vibration
   const pitchVariance = variance(pitchValues);
   const rollVariance = variance(rollValues);
 
-  // Determine stability (low variance = stable device)
-  const isStable = pitchVariance <= varianceThreshold && rollVariance <= varianceThreshold;
+  // Calculate range to detect tilting (max - min angle change)
+  const pitchRange = Math.max(...pitchValues) - Math.min(...pitchValues);
+  const rollRange = Math.max(...rollValues) - Math.min(...rollValues);
+
+  // Determine stability (low variance AND low range = stable device)
+  const isStable =
+    pitchVariance <= varianceThreshold &&
+    rollVariance <= varianceThreshold &&
+    pitchRange <= rangeThreshold &&
+    rollRange <= rangeThreshold;
 
   // Apply filtering
   let filteredPitch: number;
@@ -168,6 +181,8 @@ export async function sampleSensorData(
     durationMs: Date.now() - startTime,
     pitchVariance,
     rollVariance,
+    pitchRange,
+    rollRange,
     isStable
   };
 }

@@ -165,6 +165,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   const [retryCount, setRetryCount] = useState(0);
   const [showMotionWarning, setShowMotionWarning] = useState(false);
   const [lastVariance, setLastVariance] = useState<{ pitch: number; roll: number } | null>(null);
+  const [lastRange, setLastRange] = useState<{ pitch: number; roll: number } | null>(null);
 
   const { pitchDeg, rollDeg, isReliable, errorMessage } = useDeviceAttitude();
   const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -253,15 +254,18 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           intervalMs: 50,
           useMedianFilter: true,
           outlierThreshold: 0.1,
-          varianceThreshold: 0.01 // Maximum acceptable variance for stable reading (5x more sensitive)
+          varianceThreshold: 0.01, // Maximum acceptable variance for stable reading (detects shaking)
+          rangeThreshold: 0.3 // Maximum acceptable angle change (detects tilting)
         }
       );
 
       console.log(`Sampled ${sampledData.sampleCount} readings over ${sampledData.durationMs}ms`);
       console.log(`Filtered result: pitch=${sampledData.pitch.toFixed(3)}°, roll=${sampledData.roll.toFixed(3)}°`);
-      console.log(`Variance: pitch=${sampledData.pitchVariance.toFixed(4)}°², roll=${sampledData.rollVariance.toFixed(4)}°² | Stable: ${sampledData.isStable}`);
+      console.log(`Variance: pitch=${sampledData.pitchVariance.toFixed(4)}°², roll=${sampledData.rollVariance.toFixed(4)}°²`);
+      console.log(`Range: pitch=${sampledData.pitchRange.toFixed(2)}°, roll=${sampledData.rollRange.toFixed(2)}° | Stable: ${sampledData.isStable}`);
 
       setLastVariance({ pitch: sampledData.pitchVariance, roll: sampledData.rollVariance });
+      setLastRange({ pitch: sampledData.pitchRange, roll: sampledData.rollRange });
 
       // Check if device was moving during reading
       if (!sampledData.isStable) {
@@ -723,9 +727,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               : 'Max retries reached. Device is too unstable for accurate calibration.'}
           </Text>
 
-          {lastVariance && (
+          {lastVariance && lastRange && (
             <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)" marginBottom="$3">
-              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
+              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.01°²){'\n'}
+              Range: Pitch {lastRange.pitch.toFixed(2)}° | Roll {lastRange.roll.toFixed(2)}° (max: 0.3°)
             </Text>
           )}
 
