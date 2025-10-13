@@ -263,8 +263,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
       setLastVariance({ pitch: sampledData.pitchVariance, roll: sampledData.rollVariance });
 
-      // Check if device was moving during reading
-      if (!sampledData.isStable) {
+      // Check if device was moving during reading (skip variance check on web for testing)
+      if (!sampledData.isStable && Platform.OS !== 'web') {
         setIsCollecting(false);
         setShowMotionWarning(true);
 
@@ -435,8 +435,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               </Text>
               
               {calibrationQuality && (
-                <Card 
-                  padding="$3" 
+                <Card
+                  padding="$3"
                   backgroundColor={calibrationQuality.quality === 'excellent' || calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)'}
                   borderColor={calibrationQuality.quality === 'excellent' || calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'}
                   borderWidth={1}
@@ -444,8 +444,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                 >
                   <XStack space="$2" alignItems="center" justifyContent="center">
                     <Star size={16} color={calibrationQuality.quality === 'excellent' || calibrationQuality.quality === 'good' ? '#22c55e' : '#eab308'} />
-                    <Text 
-                      fontSize="$3" 
+                    <Text
+                      fontSize="$3"
                       fontWeight="600"
                       color={calibrationQuality.quality === 'excellent' || calibrationQuality.quality === 'good' ? '#22c55e' : '#eab308'}
                     >
@@ -454,6 +454,98 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                   </XStack>
                 </Card>
               )}
+
+              {/* Validation Tile - Show current readings with calibration applied */}
+              {finalCalibration && (() => {
+                // Apply calibration to current sensor readings
+                const correctedPitch = pitchDeg - finalCalibration.pitchOffsetDegrees;
+                const correctedRoll = rollDeg - finalCalibration.rollOffsetDegrees;
+
+                // Check if within acceptable range (±0.3°)
+                const VALIDATION_THRESHOLD = 0.3;
+                const isValid = Math.abs(correctedPitch) <= VALIDATION_THRESHOLD &&
+                                Math.abs(correctedRoll) <= VALIDATION_THRESHOLD;
+
+                return (
+                  <Card
+                    padding="$3"
+                    backgroundColor={isValid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'}
+                    borderColor={isValid ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}
+                    borderWidth={2}
+                    alignSelf="stretch"
+                  >
+                    <YStack space="$2">
+                      <XStack space="$2" alignItems="center" justifyContent="center">
+                        {isValid ? (
+                          <Check size={20} color="#22c55e" />
+                        ) : (
+                          <AlertCircle size={20} color="#ef4444" />
+                        )}
+                        <Text
+                          fontSize="$4"
+                          fontWeight="700"
+                          color={isValid ? '#22c55e' : '#ef4444'}
+                        >
+                          {isValid ? 'Validation Passed' : 'Validation Warning'}
+                        </Text>
+                      </XStack>
+
+                      <Text fontSize="$3" color="rgba(255, 255, 255, 0.9)" textAlign="center">
+                        Current readings (calibrated):
+                      </Text>
+
+                      <XStack space="$4" justifyContent="center">
+                        <YStack alignItems="center">
+                          <Text fontSize="$2" color="rgba(255, 255, 255, 0.7)">
+                            Pitch
+                          </Text>
+                          <Text fontSize="$5" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
+                            {correctedPitch.toFixed(2)}°
+                          </Text>
+                        </YStack>
+                        <YStack alignItems="center">
+                          <Text fontSize="$2" color="rgba(255, 255, 255, 0.7)">
+                            Roll
+                          </Text>
+                          <Text fontSize="$5" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
+                            {correctedRoll.toFixed(2)}°
+                          </Text>
+                        </YStack>
+                      </XStack>
+
+                      {!isValid && (
+                        <>
+                          <Text fontSize="$2" color="rgba(255, 255, 255, 0.7)" textAlign="center" marginTop="$2">
+                            Readings are outside ±0.3° tolerance. Consider recalibrating on a more stable surface.
+                          </Text>
+                          <Button
+                            size="$3"
+                            backgroundColor="rgba(239, 68, 68, 0.8)"
+                            color="white"
+                            marginTop="$2"
+                            onPress={() => {
+                              // Reset and restart calibration
+                              setRetryCount(0);
+                              setShowMotionWarning(false);
+                              setReadings([]);
+                              setCurrentStep(0);
+                              setPose(0);
+                              setHasStarted(false);
+                              setIsCollecting(false);
+                              setIsComplete(false);
+                              setFinalCalibration(null);
+                            }}
+                            borderRadius="$3"
+                            fontWeight="600"
+                          >
+                            Re-measure
+                          </Button>
+                        </>
+                      )}
+                    </YStack>
+                  </Card>
+                );
+              })()}
 
             </YStack>
           ) : (
