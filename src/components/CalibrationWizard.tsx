@@ -390,58 +390,6 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       zIndex={1000}
       backgroundColor="$background"
     >
-      {/* DEBUG: Motion detection values (always visible after first reading) */}
-      {lastVariance && lastRange && (
-        <TamaguiView
-          position="absolute"
-          top={60}
-          left={10}
-          right={10}
-          zIndex={2000}
-          backgroundColor="rgba(0, 0, 0, 0.9)"
-          padding="$2"
-          borderRadius="$2"
-          borderWidth={2}
-          borderColor="rgba(255, 255, 255, 0.3)"
-        >
-          <Text fontSize="$2" color="white" fontWeight="bold" marginBottom="$1">
-            🔬 Motion Detection Debug
-          </Text>
-          <Text fontSize="$1" color="#fbbf24">
-            Variance: P={lastVariance.pitch.toFixed(4)}°² R={lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
-          </Text>
-          <Text fontSize="$1" color="#fbbf24">
-            Range: P={lastRange.pitch.toFixed(2)}° R={lastRange.roll.toFixed(2)}° (max: 0.3°)
-          </Text>
-          <Text fontSize="$1" color={
-            (lastVariance.pitch <= 0.01 && lastVariance.roll <= 0.01 &&
-             lastRange.pitch <= 0.3 && lastRange.roll <= 0.3) ? '#22c55e' : '#ef4444'
-          } fontWeight="bold">
-            Status: {
-              (lastVariance.pitch <= 0.01 && lastVariance.roll <= 0.01 &&
-               lastRange.pitch <= 0.3 && lastRange.roll <= 0.3) ? '✓ STABLE' : '✗ UNSTABLE'
-            }
-          </Text>
-        </TamaguiView>
-      )}
-
-      {/* DEV MODE: Visual pose indicator (bottom-left, web only) - moved so it doesn't hide cancel */}
-      {Platform.OS === 'web' && (
-        <TamaguiView
-          position="absolute"
-          bottom={10}
-          left={10}
-          zIndex={2000}
-          backgroundColor="rgba(99, 102, 241, 0.8)"
-          paddingHorizontal="$2"
-          paddingVertical="$1"
-          borderRadius="$2"
-        >
-          <Text fontSize="$1" color="white" fontWeight="bold">
-            P{pose} {rotationAngle}° | 0-3/S/R
-          </Text>
-        </TamaguiView>
-      )}
 
       <RotatingViewport angleDeg={rotationAngle}>
         <YStack flex={1} padding={pose === 1 ? "$2" : "$3"} space={pose === 1 ? "$1.5" : "$3"}>
@@ -944,17 +892,6 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                     ? `Please hold your device perfectly still during readings. Retry ${retryCount}/2.`
                     : 'Max retries reached. Device is too unstable for accurate calibration.'}
                 </Text>
-
-                {lastVariance && lastRange && (
-                  <Card padding="$2" backgroundColor="rgba(0, 0, 0, 0.3)" borderRadius="$3">
-                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.9)" textAlign="center">
-                      Variance: P={lastVariance.pitch.toFixed(4)}°² R={lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
-                    </Text>
-                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.9)" textAlign="center">
-                      Range: P={lastRange.pitch.toFixed(2)}° R={lastRange.roll.toFixed(2)}° (max: 0.3°)
-                    </Text>
-                  </Card>
-                )}
 
                 {retryCount < 2 ? (
                   <Button
