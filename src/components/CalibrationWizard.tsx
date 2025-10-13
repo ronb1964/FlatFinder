@@ -253,7 +253,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           intervalMs: 50,
           useMedianFilter: true,
           outlierThreshold: 0.1,
-          varianceThreshold: 0.05 // Maximum acceptable variance for stable reading
+          varianceThreshold: 0.01 // Maximum acceptable variance for stable reading (5x more sensitive)
         }
       );
 
@@ -725,7 +725,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
           {lastVariance && (
             <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)" marginBottom="$3">
-              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.05°²)
+              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
             </Text>
           )}
 
