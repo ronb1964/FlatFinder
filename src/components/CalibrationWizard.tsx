@@ -380,7 +380,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       {lastVariance && lastRange && (
         <TamaguiView
           position="absolute"
-          bottom={40}
+          top={60}
           left={10}
           right={10}
           zIndex={2000}
