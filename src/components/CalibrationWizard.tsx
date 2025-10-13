@@ -904,29 +904,30 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             zIndex={3000}
           />
 
-          {/* Modal Content */}
-          <TamaguiView
-            position="absolute"
-            top="50%"
-            left="50%"
-            zIndex={3001}
-            style={{
-              transform: [{ translateX: '-50%' }, { translateY: '-50%' }]
-            }}
-            width="90%"
-            maxWidth={400}
-          >
-            <Card
-              padding="$4"
-              backgroundColor="rgba(239, 68, 68, 0.95)"
-              borderColor="#ef4444"
-              borderWidth={3}
-              borderRadius="$5"
-              shadowColor="$shadowColor"
-              shadowOffset={{ width: 0, height: 4 }}
-              shadowOpacity={0.3}
-              shadowRadius={8}
+          {/* Modal Content - Rotated to match device orientation */}
+          <RotatingViewport angleDeg={rotationAngle}>
+            <TamaguiView
+              position="absolute"
+              top="50%"
+              left="50%"
+              zIndex={3001}
+              style={{
+                transform: [{ translateX: '-50%' }, { translateY: '-50%' }]
+              }}
+              width="90%"
+              maxWidth={400}
             >
+              <Card
+                padding="$4"
+                backgroundColor="rgba(239, 68, 68, 0.95)"
+                borderColor="#ef4444"
+                borderWidth={3}
+                borderRadius="$5"
+                shadowColor="$shadowColor"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.3}
+                shadowRadius={8}
+              >
               <YStack space="$3">
                 <XStack space="$2" alignItems="center" justifyContent="center">
                   <AlertCircle size={24} color="white" />
@@ -998,6 +999,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               </YStack>
             </Card>
           </TamaguiView>
+          </RotatingViewport>
         </>
       )}
     </YStack>
