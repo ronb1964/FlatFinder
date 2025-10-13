@@ -375,6 +375,41 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       zIndex={1000}
       backgroundColor="$background"
     >
+      {/* DEBUG: Motion detection values (always visible after first reading) */}
+      {lastVariance && lastRange && (
+        <TamaguiView
+          position="absolute"
+          bottom={40}
+          left={10}
+          right={10}
+          zIndex={2000}
+          backgroundColor="rgba(0, 0, 0, 0.9)"
+          padding="$2"
+          borderRadius="$2"
+          borderWidth={2}
+          borderColor="rgba(255, 255, 255, 0.3)"
+        >
+          <Text fontSize="$2" color="white" fontWeight="bold" marginBottom="$1">
+            🔬 Motion Detection Debug
+          </Text>
+          <Text fontSize="$1" color="#fbbf24">
+            Variance: P={lastVariance.pitch.toFixed(4)}°² R={lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
+          </Text>
+          <Text fontSize="$1" color="#fbbf24">
+            Range: P={lastRange.pitch.toFixed(2)}° R={lastRange.roll.toFixed(2)}° (max: 0.3°)
+          </Text>
+          <Text fontSize="$1" color={
+            (lastVariance.pitch <= 0.01 && lastVariance.roll <= 0.01 &&
+             lastRange.pitch <= 0.3 && lastRange.roll <= 0.3) ? '#22c55e' : '#ef4444'
+          } fontWeight="bold">
+            Status: {
+              (lastVariance.pitch <= 0.01 && lastVariance.roll <= 0.01 &&
+               lastRange.pitch <= 0.3 && lastRange.roll <= 0.3) ? '✓ STABLE' : '✗ UNSTABLE'
+            }
+          </Text>
+        </TamaguiView>
+      )}
+
       {/* DEV MODE: Visual pose indicator (bottom-left, web only) - moved so it doesn't hide cancel */}
       {Platform.OS === 'web' && (
         <TamaguiView
