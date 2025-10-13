@@ -20,6 +20,8 @@ export interface SamplingConfig {
   useMedianFilter?: boolean;
   /** Percentage of outliers to remove from each end (0-0.5, default: 0.1 = 10%) */
   outlierThreshold?: number;
+  /** Maximum acceptable variance for stable reading (default: 0.05°²) */
+  varianceThreshold?: number;
 }
 
 export interface SamplingResult {
@@ -27,6 +29,9 @@ export interface SamplingResult {
   roll: number;
   sampleCount: number;
   durationMs: number;
+  pitchVariance: number;
+  rollVariance: number;
+  isStable: boolean;
 }
 
 /**
@@ -72,6 +77,22 @@ function average(values: number[]): number {
 }
 
 /**
+ * Calculate variance of an array
+ * Variance measures how spread out the values are from the mean
+ *
+ * @param values - Array of numbers
+ * @returns Variance (average of squared differences from mean)
+ */
+function variance(values: number[]): number {
+  if (values.length === 0) return 0;
+  if (values.length === 1) return 0;
+
+  const mean = average(values);
+  const squaredDiffs = values.map(val => Math.pow(val - mean, 2));
+  return average(squaredDiffs);
+}
+
+/**
  * Sample sensor data over a time window and apply filtering
  *
  * @param getSensorReading - Function that returns current pitch and roll
@@ -95,7 +116,8 @@ export async function sampleSensorData(
     durationMs = 1000,
     intervalMs = 50,
     useMedianFilter = true,
-    outlierThreshold = 0.1
+    outlierThreshold = 0.1,
+    varianceThreshold = 0.05
   } = config;
 
   const readings: SensorReading[] = [];
@@ -119,6 +141,13 @@ export async function sampleSensorData(
   const pitchValues = readings.map(r => r.pitch);
   const rollValues = readings.map(r => r.roll);
 
+  // Calculate variance to detect motion
+  const pitchVariance = variance(pitchValues);
+  const rollVariance = variance(rollValues);
+
+  // Determine stability (low variance = stable device)
+  const isStable = pitchVariance <= varianceThreshold && rollVariance <= varianceThreshold;
+
   // Apply filtering
   let filteredPitch: number;
   let filteredRoll: number;
@@ -136,7 +165,10 @@ export async function sampleSensorData(
     pitch: filteredPitch,
     roll: filteredRoll,
     sampleCount: readings.length,
-    durationMs: Date.now() - startTime
+    durationMs: Date.now() - startTime,
+    pitchVariance,
+    rollVariance,
+    isStable
   };
 }
 

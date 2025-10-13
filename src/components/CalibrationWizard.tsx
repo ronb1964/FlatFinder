@@ -162,6 +162,9 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   const [isComplete, setIsComplete] = useState(false);
   const [finalCalibration, setFinalCalibration] = useState<Calibration | null>(null);
   const [calibrationQuality, setCalibrationQuality] = useState<ReturnType<typeof assessCalibrationQuality> | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [showMotionWarning, setShowMotionWarning] = useState(false);
+  const [lastVariance, setLastVariance] = useState<{ pitch: number; roll: number } | null>(null);
 
   const { pitchDeg, rollDeg, isReliable, errorMessage } = useDeviceAttitude();
   const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -230,9 +233,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
     }
 
     setIsCollecting(true);
+    setShowMotionWarning(false);
 
     try {
-      // Sample sensor data over 1 second with filtering
+      // Sample sensor data over 1 second with filtering and variance check
       const sampledData = await sampleSensorData(
         () => {
           // Use fake data on web if sensors aren't available
@@ -248,12 +252,37 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           durationMs: 1000,
           intervalMs: 50,
           useMedianFilter: true,
-          outlierThreshold: 0.1
+          outlierThreshold: 0.1,
+          varianceThreshold: 0.05 // Maximum acceptable variance for stable reading
         }
       );
 
       console.log(`Sampled ${sampledData.sampleCount} readings over ${sampledData.durationMs}ms`);
       console.log(`Filtered result: pitch=${sampledData.pitch.toFixed(3)}°, roll=${sampledData.roll.toFixed(3)}°`);
+      console.log(`Variance: pitch=${sampledData.pitchVariance.toFixed(4)}°², roll=${sampledData.rollVariance.toFixed(4)}°² | Stable: ${sampledData.isStable}`);
+
+      setLastVariance({ pitch: sampledData.pitchVariance, roll: sampledData.rollVariance });
+
+      // Check if device was moving during reading
+      if (!sampledData.isStable) {
+        setIsCollecting(false);
+        setShowMotionWarning(true);
+
+        if (retryCount < 2) {
+          // Allow retry
+          setRetryCount(prev => prev + 1);
+          console.warn(`Reading unstable (retry ${retryCount + 1}/2). Please hold device steady.`);
+          return;
+        } else {
+          // Max retries reached
+          console.error('Max retries reached. Device too unstable for calibration.');
+          return;
+        }
+      }
+
+      // Reading is stable - reset retry count and proceed
+      setRetryCount(0);
+      setShowMotionWarning(false);
 
       const newReading = createCalibrationReading(sampledData.pitch, sampledData.roll);
       const updatedReadings = [...readings, newReading];
@@ -575,6 +604,70 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
             <Text fontSize="$2" color="#eab308" textAlign="center" marginTop="$1">
               Waiting for sensors...
             </Text>
+          )}
+        </Card>
+      )}
+
+      {/* Motion Warning Card */}
+      {showMotionWarning && !isComplete && (
+        <Card
+          padding="$3"
+          backgroundColor="rgba(239, 68, 68, 0.1)"
+          borderColor="rgba(239, 68, 68, 0.4)"
+          borderWidth={2}
+          borderRadius="$4"
+          marginTop="$3"
+        >
+          <XStack space="$2" alignItems="center" marginBottom="$2">
+            <AlertCircle size={20} color="#ef4444" />
+            <Text fontSize="$4" color="#ef4444" fontWeight="700">
+              Device Movement Detected
+            </Text>
+          </XStack>
+
+          <Text fontSize="$3" color="rgba(255, 255, 255, 0.9)" lineHeight="$4" marginBottom="$2">
+            {retryCount < 2
+              ? `Please hold your device perfectly still during readings. Retry ${retryCount}/2.`
+              : 'Max retries reached. Device is too unstable for accurate calibration.'}
+          </Text>
+
+          {lastVariance && (
+            <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)" marginBottom="$3">
+              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.05°²)
+            </Text>
+          )}
+
+          {retryCount < 2 ? (
+            <Button
+              size="$3"
+              backgroundColor="#f59e0b"
+              color="white"
+              onPress={takeReading}
+              borderRadius="$3"
+              fontWeight="600"
+            >
+              Retry Reading
+            </Button>
+          ) : (
+            <Button
+              size="$3"
+              backgroundColor="#ef4444"
+              color="white"
+              onPress={() => {
+                // Reset everything and restart calibration
+                setRetryCount(0);
+                setShowMotionWarning(false);
+                setReadings([]);
+                setCurrentStep(0);
+                setPose(0);
+                setHasStarted(false);
+                setIsCollecting(false);
+              }}
+              borderRadius="$3"
+              fontWeight="600"
+            >
+              Restart Calibration
+            </Button>
           )}
         </Card>
       )}
