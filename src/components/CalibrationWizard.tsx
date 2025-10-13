@@ -5,12 +5,13 @@ import { RotatingViewport } from './RotatingViewport';
 import { Animated, Platform, View } from 'react-native';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { BubbleLevel } from './BubbleLevel';
-import { 
-  CalibrationReading, 
-  createCalibrationReading, 
+import {
+  CalibrationReading,
+  createCalibrationReading,
   calculateAverageCalibration,
-  assessCalibrationQuality 
+  assessCalibrationQuality
 } from '../lib/calibration';
+import { sampleSensorData } from '../lib/sensorSampling';
 
 import { Calibration } from '../lib/levelingMath';
 
@@ -206,32 +207,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
         setIsCollecting(false);
       }
 
-      // Press 's' to simulate a sensor reading (fake data for testing)
+      // Press 's' to simulate a sensor reading with sampling
       if (e.key === 's' && hasStarted && !isCollecting) {
-        console.log('DEV MODE: Simulating sensor reading');
-        setIsCollecting(true);
-        setTimeout(() => {
-          const fakeReading = createCalibrationReading(
-            Math.random() * 2 - 1, // Random pitch ±1°
-            Math.random() * 2 - 1  // Random roll ±1°
-          );
-          const updatedReadings = [...readings, fakeReading];
-          setReadings(updatedReadings);
-          setIsCollecting(false);
-
-          // Advance pose for next reading
-          if (updatedReadings.length === 1) {
-            setPose(1);
-            setCurrentStep(2);
-          } else if (updatedReadings.length === 2) {
-            setPose(2);
-            setCurrentStep(3);
-          } else if (updatedReadings.length >= 3) {
-            const calibration = calculateAverageCalibration(updatedReadings);
-            setFinalCalibration(calibration);
-            setIsComplete(true);
-          }
-        }, 1000);
+        console.log('DEV MODE: Simulating sensor reading with sampling');
+        takeReading();
       }
     };
     window.addEventListener('keydown', handleKeyPress);
@@ -244,7 +223,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
     setCurrentStep(1); // Move to first reading step
   };
 
-  const takeReading = () => {
+  const takeReading = async () => {
     // On web (dev mode), allow readings even without sensors
     if (Platform.OS !== 'web' && !isReliable) {
       return;
@@ -252,14 +231,33 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
     setIsCollecting(true);
 
-    // Collect reading after a short delay to ensure device is stable
-    collectingTimeoutRef.current = setTimeout(() => {
-      // Use fake data on web if sensors aren't available
-      const pitch = (Platform.OS === 'web' && !isReliable) ? Math.random() * 2 - 1 : pitchDeg;
-      const roll = (Platform.OS === 'web' && !isReliable) ? Math.random() * 2 - 1 : rollDeg;
-      const newReading = createCalibrationReading(pitch, roll);
+    try {
+      // Sample sensor data over 1 second with filtering
+      const sampledData = await sampleSensorData(
+        () => {
+          // Use fake data on web if sensors aren't available
+          if (Platform.OS === 'web' && !isReliable) {
+            return {
+              pitch: Math.random() * 2 - 1,
+              roll: Math.random() * 2 - 1
+            };
+          }
+          return { pitch: pitchDeg, roll: rollDeg };
+        },
+        {
+          durationMs: 1000,
+          intervalMs: 50,
+          useMedianFilter: true,
+          outlierThreshold: 0.1
+        }
+      );
+
+      console.log(`Sampled ${sampledData.sampleCount} readings over ${sampledData.durationMs}ms`);
+      console.log(`Filtered result: pitch=${sampledData.pitch.toFixed(3)}°, roll=${sampledData.roll.toFixed(3)}°`);
+
+      const newReading = createCalibrationReading(sampledData.pitch, sampledData.roll);
       const updatedReadings = [...readings, newReading];
-      
+
       setReadings(updatedReadings);
       setIsCollecting(false);
 
@@ -274,20 +272,20 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       // Assess quality after each reading
       const quality = assessCalibrationQuality(updatedReadings);
       setCalibrationQuality(quality);
-      
+
       if (updatedReadings.length >= 3) {
         // Calculate final calibration using enhanced averaging
         const calibration = calculateAverageCalibration(updatedReadings);
-        
+
         // Debug logging
         console.log('=== CALIBRATION DEBUG ===');
         console.log('Raw readings taken:', updatedReadings);
         console.log('Calculated calibration offsets:', calibration);
-        console.log('Will apply offsets:', { 
-          pitch: calibration.pitchOffsetDegrees, 
-          roll: calibration.rollOffsetDegrees 
+        console.log('Will apply offsets:', {
+          pitch: calibration.pitchOffsetDegrees,
+          roll: calibration.rollOffsetDegrees
         });
-        
+
         // Set completion state instead of immediately completing
         setFinalCalibration(calibration);
         setIsComplete(true);
@@ -295,7 +293,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
         // Move to next step
         setCurrentStep(prev => prev + 1);
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error sampling sensor data:', error);
+      setIsCollecting(false);
+    }
   };
 
   const getStatusColor = () => {
