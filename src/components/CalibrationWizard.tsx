@@ -914,7 +914,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               transform: [
                 { translateX: '-50%' },
                 { translateY: '-50%' },
-                { rotate: `${rotationAngle}deg` }
+                { rotate: `${-rotationAngle}deg` }
               ]
             }}
             width="90%"
