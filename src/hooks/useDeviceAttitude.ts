@@ -18,9 +18,11 @@ export interface DeviceAttitudeData {
   errorMessage?: string;
   isAvailable: boolean | null;
   permissionStatus: string;
+  /** Get the latest sensor reading synchronously (bypasses React state) */
+  getLatestReading: () => { pitch: number; roll: number };
 }
 
-const DEFAULT_ATTITUDE: DeviceAttitudeData = {
+const DEFAULT_ATTITUDE: Omit<DeviceAttitudeData, 'getLatestReading'> = {
   pitchDeg: 0,
   rollDeg: 0,
   raw: { pitch: 0, roll: 0, yaw: 0 },
@@ -31,10 +33,13 @@ const DEFAULT_ATTITUDE: DeviceAttitudeData = {
 };
 
 export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): DeviceAttitudeData {
-  const [attitude, setAttitude] = useState<DeviceAttitudeData>(DEFAULT_ATTITUDE);
-  
+  const [attitude, setAttitude] = useState<Omit<DeviceAttitudeData, 'getLatestReading'>>(DEFAULT_ATTITUDE);
+
   const adapterRef = useRef<AttitudeAdapter | null>(null);
   const configRef = useRef<AttitudeConfig | null>(null);
+
+  // Store latest reading in a ref so it can be accessed synchronously
+  const latestReadingRef = useRef<{ pitch: number; roll: number }>({ pitch: 0, roll: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -97,6 +102,13 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
         const handleAttitudeUpdate = (reading: AttitudeReading) => {
           if (!mounted) return;
 
+          // Update ref immediately (synchronous, no re-render needed)
+          latestReadingRef.current = {
+            pitch: reading.pitchDeg,
+            roll: reading.rollDeg
+          };
+
+          // Update state for UI (triggers re-render)
           setAttitude(prev => ({
             ...prev,
             pitchDeg: reading.pitchDeg,
@@ -146,6 +158,9 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
     };
   }, [customConfig]);
 
-  // Return current attitude data
-  return attitude;
+  // Return current attitude data with function to get latest reading
+  return {
+    ...attitude,
+    getLatestReading: () => latestReadingRef.current
+  };
 }

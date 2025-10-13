@@ -167,7 +167,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   const [lastVariance, setLastVariance] = useState<{ pitch: number; roll: number } | null>(null);
   const [lastRange, setLastRange] = useState<{ pitch: number; roll: number } | null>(null);
 
-  const { pitchDeg, rollDeg, isReliable, errorMessage } = useDeviceAttitude();
+  const { pitchDeg, rollDeg, isReliable, errorMessage, getLatestReading } = useDeviceAttitude();
   const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const progress = ((currentStep + 1) / CALIBRATION_STEPS.length) * 100;
@@ -247,7 +247,8 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               roll: Math.random() * 2 - 1
             };
           }
-          return { pitch: pitchDeg, roll: rollDeg };
+          // Use getLatestReading() to bypass React state and get fresh sensor values
+          return getLatestReading();
         },
         {
           durationMs: 1000,
