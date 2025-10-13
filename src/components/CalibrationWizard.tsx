@@ -166,6 +166,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
   const [showMotionWarning, setShowMotionWarning] = useState(false);
   const [lastVariance, setLastVariance] = useState<{ pitch: number; roll: number } | null>(null);
   const [lastRange, setLastRange] = useState<{ pitch: number; roll: number } | null>(null);
+  const [validationReading, setValidationReading] = useState<{ pitch: number; roll: number } | null>(null);
 
   const { pitchDeg, rollDeg, isReliable, errorMessage, getLatestReading } = useDeviceAttitude();
   const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,6 +185,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
       setHasStarted(false);
       setIsComplete(false);
       setFinalCalibration(null);
+      setValidationReading(null);
       if (collectingTimeoutRef.current) {
         clearTimeout(collectingTimeoutRef.current);
       }
@@ -320,7 +322,19 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           roll: calibration.rollOffsetDegrees
         });
 
-        // Set completion state instead of immediately completing
+        // Take a validation reading (brief sample to avoid flickering)
+        const validationSample = await sampleSensorData(
+          () => getLatestReading(),
+          {
+            durationMs: 500, // Shorter sample for validation
+            intervalMs: 50,
+            useMedianFilter: true,
+            outlierThreshold: 0.1
+          }
+        );
+        setValidationReading({ pitch: validationSample.pitch, roll: validationSample.roll });
+
+        // Set completion state
         setFinalCalibration(calibration);
         setIsComplete(true);
       } else {
@@ -431,7 +445,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
       <RotatingViewport angleDeg={rotationAngle}>
         <YStack flex={1} padding={pose === 1 ? "$2" : "$3"} space={pose === 1 ? "$1.5" : "$3"}>
-          <ScrollView flex={1} showsVerticalScrollIndicator={false} scrollEnabled={pose !== 1}>
+          <ScrollView flex={1} showsVerticalScrollIndicator={false} scrollEnabled={pose !== 1 || showMotionWarning}>
             <YStack space={pose === 1 ? "$2" : "$3"} paddingBottom="$2">
 
           {/* Header with Cancel button - hide on completion */}
@@ -496,10 +510,10 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               )}
 
               {/* Validation Tile - Show current readings with calibration applied */}
-              {finalCalibration && (() => {
-                // Apply calibration to current sensor readings
-                const correctedPitch = pitchDeg - finalCalibration.pitchOffsetDegrees;
-                const correctedRoll = rollDeg - finalCalibration.rollOffsetDegrees;
+              {finalCalibration && validationReading && (() => {
+                // Apply calibration to validation reading (stable, non-flickering)
+                const correctedPitch = validationReading.pitch - finalCalibration.pitchOffsetDegrees;
+                const correctedRoll = validationReading.roll - finalCalibration.rollOffsetDegrees;
 
                 // Check if within acceptable range (±0.3°)
                 const VALIDATION_THRESHOLD = 0.3;
@@ -574,6 +588,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                               setIsCollecting(false);
                               setIsComplete(false);
                               setFinalCalibration(null);
+                              setValidationReading(null);
                             }}
                             borderRadius="$3"
                             fontWeight="600"
@@ -795,6 +810,9 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                 setPose(0);
                 setHasStarted(false);
                 setIsCollecting(false);
+                setIsComplete(false);
+                setFinalCalibration(null);
+                setValidationReading(null);
               }}
               borderRadius="$3"
               fontWeight="600"
