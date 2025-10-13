@@ -436,17 +436,165 @@ describe('RV Presets and Standard Sets', () => {
       StandardBlockSets.professional(),
       StandardBlockSets.extended()
     ];
-    
+
     blockSets.forEach(inventory => {
       const totalBlocks = inventory.reduce((sum, item) => sum + item.quantity, 0);
-      const maxHeight = inventory.reduce((sum, item) => 
+      const maxHeight = inventory.reduce((sum, item) =>
         sum + (item.thickness * item.quantity), 0
       );
-      
+
       expect(totalBlocks).toBeGreaterThan(0);
       expect(totalBlocks).toBeLessThan(100); // Reasonable to own/transport
       expect(maxHeight).toBeGreaterThan(5);   // Sufficient for most situations
       expect(maxHeight).toBeLessThan(50);     // Not ridiculously excessive
+    });
+  });
+
+  describe('Block Height Enumeration', () => {
+    test('enumerates all achievable heights with basic inventory', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 0.5, quantity: 2 },
+        { thickness: 1.0, quantity: 2 }
+      ];
+
+      const heights = RVLevelingCalculator.enumerateAchievableHeights(inventory, 5.0);
+
+      // Possible combinations:
+      // 0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0
+      expect(heights).toContain(0);
+      expect(heights).toContain(0.5);
+      expect(heights).toContain(1.0);
+      expect(heights).toContain(1.5);
+      expect(heights).toContain(2.0);
+      expect(heights).toContain(2.5);
+      expect(heights).toContain(3.0);
+
+      // Should be sorted
+      expect(heights).toEqual([...heights].sort((a, b) => a - b));
+    });
+
+    test('returns only 0 for empty inventory', () => {
+      const inventory: BlockInventory[] = [];
+      const heights = RVLevelingCalculator.enumerateAchievableHeights(inventory);
+
+      expect(heights).toEqual([0]);
+    });
+
+    test('respects maxHeight limit', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 1.0, quantity: 10 }
+      ];
+
+      const heights = RVLevelingCalculator.enumerateAchievableHeights(inventory, 3.0);
+
+      // Should only include 0, 1.0, 2.0, 3.0
+      expect(heights).toContain(0);
+      expect(heights).toContain(1.0);
+      expect(heights).toContain(2.0);
+      expect(heights).toContain(3.0);
+      expect(heights).not.toContain(4.0);
+    });
+
+    test('handles fractional blocks correctly', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 0.25, quantity: 4 },
+        { thickness: 0.75, quantity: 2 }
+      ];
+
+      const heights = RVLevelingCalculator.enumerateAchievableHeights(inventory, 3.0);
+
+      // Should include quarter-inch increments and combinations
+      expect(heights).toContain(0.25);
+      expect(heights).toContain(0.5);
+      expect(heights).toContain(0.75);
+      expect(heights).toContain(1.0);
+      expect(heights).toContain(1.25);
+      expect(heights).toContain(1.5);
+      expect(heights).toContain(1.75);
+      expect(heights).toContain(2.0);
+    });
+
+    test('works with standard block sets', () => {
+      const inventory = StandardBlockSets.basic();
+      const heights = RVLevelingCalculator.enumerateAchievableHeights(inventory, 6.0);
+
+      // Basic set should support many common heights
+      expect(heights.length).toBeGreaterThan(10);
+      expect(heights).toContain(0);
+      expect(heights).toContain(1.0);
+      expect(heights).toContain(2.0);
+    });
+  });
+
+  describe('Closest Achievable Height', () => {
+    test('finds exact match when available', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 0.5, quantity: 4 },
+        { thickness: 1.0, quantity: 2 }
+      ];
+
+      const result = RVLevelingCalculator.findClosestAchievableHeight(1.5, inventory);
+
+      expect(result.closestHeight).toBe(1.5);
+      expect(result.withinTolerance).toBe(true);
+      expect(result.difference).toBe(0);
+    });
+
+    test('finds closest height when exact match not available', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 1.0, quantity: 3 }
+      ];
+
+      const result = RVLevelingCalculator.findClosestAchievableHeight(1.3, inventory);
+
+      expect(result.closestHeight).toBe(1.0);
+      expect(result.difference).toBeCloseTo(-0.3, 2);
+    });
+
+    test('respects tolerance parameter', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 1.0, quantity: 3 }
+      ];
+
+      // 0.3" difference is within 0.5° tolerance but not 0.2°
+      const resultLoose = RVLevelingCalculator.findClosestAchievableHeight(1.3, inventory, 0.5);
+      const resultStrict = RVLevelingCalculator.findClosestAchievableHeight(1.3, inventory, 0.1);
+
+      expect(resultLoose.withinTolerance).toBe(true);
+      expect(resultStrict.withinTolerance).toBe(false);
+    });
+
+    test('handles edge case of target beyond max inventory', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 1.0, quantity: 2 }
+      ];
+
+      const result = RVLevelingCalculator.findClosestAchievableHeight(5.0, inventory);
+
+      expect(result.closestHeight).toBe(2.0); // Max achievable
+      expect(result.withinTolerance).toBe(false);
+      expect(result.difference).toBeCloseTo(-3.0, 2);
+    });
+
+    test('returns 0 for empty inventory', () => {
+      const inventory: BlockInventory[] = [];
+      const result = RVLevelingCalculator.findClosestAchievableHeight(1.5, inventory);
+
+      expect(result.closestHeight).toBe(0);
+      expect(result.withinTolerance).toBe(false);
+      expect(result.difference).toBe(-1.5);
+    });
+
+    test('handles tie-breaker (chooses lower height)', () => {
+      const inventory: BlockInventory[] = [
+        { thickness: 1.0, quantity: 3 }
+      ];
+
+      // 1.5 is equidistant from 1.0 and 2.0
+      const result = RVLevelingCalculator.findClosestAchievableHeight(1.5, inventory);
+
+      // Should prefer lower height (safer stacking)
+      expect(result.closestHeight).toBeLessThanOrEqual(2.0);
     });
   });
 });

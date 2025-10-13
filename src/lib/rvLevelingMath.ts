@@ -248,7 +248,111 @@ export class RVLevelingCalculator {
     
     return result;
   }
-  
+
+  /**
+   * Enumerate all achievable stack heights from given block inventory
+   *
+   * @param inventory Available blocks
+   * @param maxHeight Maximum height to enumerate (default 12 inches)
+   * @param tolerance Tolerance for height matching in degrees (default 0.2°)
+   * @returns Sorted array of achievable heights
+   */
+  static enumerateAchievableHeights(
+    inventory: BlockInventory[],
+    maxHeight: number = 12.0,
+    tolerance: number = 0.2
+  ): number[] {
+    // Convert tolerance from degrees to inches (rough approximation)
+    // For typical RV dimensions, 0.2° ≈ 0.25-0.35 inches depending on wheelbase/track
+    const toleranceInches = tolerance * 0.7; // Conservative conversion
+
+    const heights = new Set<number>();
+    heights.add(0); // Always achievable (no blocks)
+
+    // Filter and prepare blocks
+    const availableBlocks = inventory
+      .filter(block => block.thickness > 0.001 && block.quantity > 0)
+      .sort((a, b) => a.thickness - b.thickness);
+
+    if (availableBlocks.length === 0) {
+      return [0];
+    }
+
+    // Generate all possible combinations using dynamic programming
+    const achievable: Set<number> = new Set([0]);
+
+    for (const blockType of availableBlocks) {
+      const newHeights: number[] = [];
+
+      for (const height of achievable) {
+        // Try adding 1 to quantity of this block type
+        for (let count = 1; count <= blockType.quantity; count++) {
+          const newHeight = height + (count * blockType.thickness);
+          if (newHeight <= maxHeight) {
+            // Round to nearest 0.01 inch to avoid floating point issues
+            const roundedHeight = Math.round(newHeight * 100) / 100;
+            newHeights.push(roundedHeight);
+          }
+        }
+      }
+
+      newHeights.forEach(h => achievable.add(h));
+    }
+
+    // Convert to sorted array
+    const sortedHeights = Array.from(achievable).sort((a, b) => a - b);
+
+    return sortedHeights;
+  }
+
+  /**
+   * Find closest achievable height to target
+   *
+   * @param targetHeight Target height in inches
+   * @param inventory Available blocks
+   * @param toleranceDegrees Tolerance in degrees (default 0.2°)
+   * @returns Object with closest height, whether it's within tolerance, and difference
+   */
+  static findClosestAchievableHeight(
+    targetHeight: number,
+    inventory: BlockInventory[],
+    toleranceDegrees: number = 0.2
+  ): { closestHeight: number; withinTolerance: boolean; difference: number } {
+    const achievableHeights = this.enumerateAchievableHeights(inventory, targetHeight + 2, toleranceDegrees);
+
+    if (achievableHeights.length === 0) {
+      return {
+        closestHeight: 0,
+        withinTolerance: false,
+        difference: targetHeight
+      };
+    }
+
+    // Find closest height
+    let closestHeight = achievableHeights[0];
+    let minDiff = Math.abs(targetHeight - closestHeight);
+
+    for (const height of achievableHeights) {
+      const diff = Math.abs(targetHeight - height);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestHeight = height;
+      }
+    }
+
+    // Convert tolerance from degrees to inches
+    // For typical RV track/wheelbase, 0.2° ≈ 0.25-0.35 inches
+    // Using 0.7 multiplier (0.5° → 0.35" tolerance)
+    const toleranceInches = toleranceDegrees * 0.7;
+    const withinTolerance = minDiff <= toleranceInches;
+
+    return {
+      closestHeight,
+      withinTolerance,
+      difference: closestHeight - targetHeight
+    };
+  }
+
   /**
    * Create complete leveling plan with block recommendations
    */
