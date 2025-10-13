@@ -445,7 +445,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
       <RotatingViewport angleDeg={rotationAngle}>
         <YStack flex={1} padding={pose === 1 ? "$2" : "$3"} space={pose === 1 ? "$1.5" : "$3"}>
-          <ScrollView flex={1} showsVerticalScrollIndicator={false} scrollEnabled={pose !== 1 || showMotionWarning}>
+          <ScrollView flex={1} showsVerticalScrollIndicator={false} scrollEnabled={pose !== 1}>
             <YStack space={pose === 1 ? "$2" : "$3"} paddingBottom="$2">
 
           {/* Header with Cancel button - hide on completion */}
@@ -755,73 +755,6 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
         </Card>
       )}
 
-      {/* Motion Warning Card */}
-      {showMotionWarning && !isComplete && (
-        <Card
-          padding="$3"
-          backgroundColor="rgba(239, 68, 68, 0.1)"
-          borderColor="rgba(239, 68, 68, 0.4)"
-          borderWidth={2}
-          borderRadius="$4"
-          marginTop="$3"
-        >
-          <XStack space="$2" alignItems="center" marginBottom="$2">
-            <AlertCircle size={20} color="#ef4444" />
-            <Text fontSize="$4" color="#ef4444" fontWeight="700">
-              Device Movement Detected
-            </Text>
-          </XStack>
-
-          <Text fontSize="$3" color="rgba(255, 255, 255, 0.9)" lineHeight="$4" marginBottom="$2">
-            {retryCount < 2
-              ? `Please hold your device perfectly still during readings. Retry ${retryCount}/2.`
-              : 'Max retries reached. Device is too unstable for accurate calibration.'}
-          </Text>
-
-          {lastVariance && lastRange && (
-            <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)" marginBottom="$3">
-              Variance: Pitch {lastVariance.pitch.toFixed(4)}°² | Roll {lastVariance.roll.toFixed(4)}°² (max: 0.01°²){'\n'}
-              Range: Pitch {lastRange.pitch.toFixed(2)}° | Roll {lastRange.roll.toFixed(2)}° (max: 0.3°)
-            </Text>
-          )}
-
-          {retryCount < 2 ? (
-            <Button
-              size="$3"
-              backgroundColor="#f59e0b"
-              color="white"
-              onPress={takeReading}
-              borderRadius="$3"
-              fontWeight="600"
-            >
-              Retry Reading
-            </Button>
-          ) : (
-            <Button
-              size="$3"
-              backgroundColor="#ef4444"
-              color="white"
-              onPress={() => {
-                // Reset everything and restart calibration
-                setRetryCount(0);
-                setShowMotionWarning(false);
-                setReadings([]);
-                setCurrentStep(0);
-                setPose(0);
-                setHasStarted(false);
-                setIsCollecting(false);
-                setIsComplete(false);
-                setFinalCalibration(null);
-                setValidationReading(null);
-              }}
-              borderRadius="$3"
-              fontWeight="600"
-            >
-              Restart Calibration
-            </Button>
-          )}
-        </Card>
-      )}
 
       {/* Calibration Quality Indicator - hide in landscape to save vertical space */}
       {calibrationQuality && readings.length >= 2 && pose === 0 && (
@@ -956,6 +889,117 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
           </YStack>
         </YStack>
       </RotatingViewport>
+
+      {/* Motion Warning Modal - Overlay on top of everything */}
+      {showMotionWarning && !isComplete && (
+        <>
+          {/* Backdrop */}
+          <TamaguiView
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            backgroundColor="rgba(0, 0, 0, 0.7)"
+            zIndex={3000}
+          />
+
+          {/* Modal Content */}
+          <TamaguiView
+            position="absolute"
+            top="50%"
+            left="50%"
+            zIndex={3001}
+            style={{
+              transform: [{ translateX: '-50%' }, { translateY: '-50%' }]
+            }}
+            width="90%"
+            maxWidth={400}
+          >
+            <Card
+              padding="$4"
+              backgroundColor="rgba(239, 68, 68, 0.95)"
+              borderColor="#ef4444"
+              borderWidth={3}
+              borderRadius="$5"
+              shadowColor="$shadowColor"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.3}
+              shadowRadius={8}
+            >
+              <YStack space="$3">
+                <XStack space="$2" alignItems="center" justifyContent="center">
+                  <AlertCircle size={24} color="white" />
+                  <Text fontSize="$5" color="white" fontWeight="800">
+                    Device Movement Detected
+                  </Text>
+                </XStack>
+
+                <Text fontSize="$4" color="white" lineHeight="$5" textAlign="center">
+                  {retryCount < 2
+                    ? `Please hold your device perfectly still during readings. Retry ${retryCount}/2.`
+                    : 'Max retries reached. Device is too unstable for accurate calibration.'}
+                </Text>
+
+                {lastVariance && lastRange && (
+                  <Card padding="$2" backgroundColor="rgba(0, 0, 0, 0.3)" borderRadius="$3">
+                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.9)" textAlign="center">
+                      Variance: P={lastVariance.pitch.toFixed(4)}°² R={lastVariance.roll.toFixed(4)}°² (max: 0.01°²)
+                    </Text>
+                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.9)" textAlign="center">
+                      Range: P={lastRange.pitch.toFixed(2)}° R={lastRange.roll.toFixed(2)}° (max: 0.3°)
+                    </Text>
+                  </Card>
+                )}
+
+                {retryCount < 2 ? (
+                  <Button
+                    size="$4"
+                    backgroundColor="white"
+                    color="#ef4444"
+                    onPress={takeReading}
+                    borderRadius="$4"
+                    fontWeight="700"
+                    pressStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      scale: 0.98
+                    }}
+                  >
+                    Retry Reading
+                  </Button>
+                ) : (
+                  <Button
+                    size="$4"
+                    backgroundColor="white"
+                    color="#ef4444"
+                    onPress={() => {
+                      // Reset everything and restart calibration
+                      setRetryCount(0);
+                      setShowMotionWarning(false);
+                      setReadings([]);
+                      setCurrentStep(0);
+                      setPose(0);
+                      setHasStarted(false);
+                      setIsCollecting(false);
+                      setIsComplete(false);
+                      setFinalCalibration(null);
+                      setValidationReading(null);
+                    }}
+                    borderRadius="$4"
+                    fontWeight="700"
+                    pressStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      scale: 0.98
+                    }}
+                  >
+                    Restart Calibration
+                  </Button>
+                )}
+              </YStack>
+            </Card>
+          </TamaguiView>
+        </>
+      )}
     </YStack>
   );
 }
