@@ -3,16 +3,24 @@ import { YStack, XStack, Text, Button, H1, H2, Card, useTheme, View } from 'tama
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RefreshCw, Target, Settings, Zap, AlertTriangle } from '@tamagui/lucide-icons';
+import { RefreshCw, Target, Settings, Zap, AlertTriangle, Volume2, VolumeX } from '@tamagui/lucide-icons';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { useDeviceAttitude } from '../../src/hooks/useDeviceAttitude';
+import { useAudioFeedback } from '../../src/hooks/useAudioFeedback';
 import { BubbleLevel } from '../../src/components/BubbleLevel';
 import { LevelingAssistant } from '../../src/components/LevelingAssistant';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { LevelScreenGradient } from '../../src/components/GradientBackground';
+import {
+  ScrollContainer,
+  ResponsiveContainer,
+  ScalableText,
+  ScalableH1,
+  StickyActionButtons,
+} from '../../src/components/responsive';
 
 import { useAppStore } from '../../src/state/appStore';
 import {
@@ -30,7 +38,7 @@ export default function LevelScreen() {
   const theme = useTheme();
   
   const { pitchDeg, rollDeg, isAvailable, isReliable, permissionStatus, errorMessage } = useDeviceAttitude();
-  const { activeProfile, settings, calibrateActiveProfile, loadProfiles, loadSettings } = useAppStore();
+  const { activeProfile, settings, calibrateActiveProfile, loadProfiles, loadSettings, updateSettings } = useAppStore();
   
   const [calibratedValues, setCalibratedValues] = useState({ pitch: 0, roll: 0 });
   const [levelStatus, setLevelStatus] = useState(getLevelStatus({ pitch: 0, roll: 0 }));
@@ -38,7 +46,15 @@ export default function LevelScreen() {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [showLevelingAssistant, setShowLevelingAssistant] = useState(false);
   const [safetyWarningDismissed, setSafetyWarningDismissed] = useState(false);
-  
+
+  // Audio feedback for hands-free leveling
+  useAudioFeedback({
+    pitch: calibratedValues.pitch,
+    roll: calibratedValues.roll,
+    isLevel: levelStatus.isLevel,
+    settings,
+  });
+
   const requestSensorPermission = async () => {
     // This will trigger the iOS permission dialog
     if (typeof window !== 'undefined' && (window as any).DeviceOrientationEvent) {
@@ -103,18 +119,37 @@ export default function LevelScreen() {
 
   const handleQuickCalibrate = () => {
     setIsCalibrating(true);
-    
+
     // Haptic feedback for calibration
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // Calculate and save calibration offsets
-    const offsets = calculateCalibrationOffsets({ pitch: pitchDeg, roll: rollDeg });
-    calibrateActiveProfile(offsets);
-    
-    setTimeout(() => {
-      setIsCalibrating(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 500);
+
+    // Collect multiple readings to average out sensor noise
+    const readings = [];
+    readings.push({ pitch: pitchDeg, roll: rollDeg });
+
+    // Take 4 more readings over 400ms (100ms intervals)
+    let sampleCount = 0;
+    const sampleInterval = setInterval(() => {
+      readings.push({ pitch: pitchDeg, roll: rollDeg });
+      sampleCount++;
+
+      if (sampleCount >= 4) {
+        clearInterval(sampleInterval);
+
+        // Calculate average of all readings
+        const avgPitch = readings.reduce((sum, r) => sum + r.pitch, 0) / readings.length;
+        const avgRoll = readings.reduce((sum, r) => sum + r.roll, 0) / readings.length;
+
+        // Calculate and save calibration offsets using averaged values
+        const offsets = calculateCalibrationOffsets({ pitch: avgPitch, roll: avgRoll });
+        calibrateActiveProfile(offsets);
+
+        setTimeout(() => {
+          setIsCalibrating(false);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }, 100);
+      }
+    }, 100);
   };
 
   if (isAvailable === false) {
@@ -157,10 +192,36 @@ export default function LevelScreen() {
   return (
     <LevelScreenGradient>
       <SafeAreaView style={{ flex: 1 }}>
-        <YStack
-          flex={1}
-          padding="$4"
-        >
+        <YStack flex={1}>
+          {/* Floating Audio Toggle Button */}
+          <GlassCard
+            position="absolute"
+            top="$3"
+            right="$3"
+            zIndex={999}
+            padding="$2"
+            backgroundColor={settings.audioEnabled ? "rgba(59, 130, 246, 0.2)" : "rgba(239, 68, 68, 0.2)"}
+            borderColor={settings.audioEnabled ? "rgba(59, 130, 246, 0.4)" : "rgba(239, 68, 68, 0.4)"}
+            borderWidth={2}
+            borderRadius="$10"
+            pressStyle={{ scale: 0.95, opacity: 0.8 }}
+            onPress={() => updateSettings({ audioEnabled: !settings.audioEnabled })}
+            blurIntensity={12}
+          >
+            {settings.audioEnabled ? (
+              <Volume2 size={20} color="#3b82f6" />
+            ) : (
+              <VolumeX size={20} color="#ef4444" />
+            )}
+          </GlassCard>
+
+          <ScrollContainer flex={1} showFadeIndicator={true}>
+            <ResponsiveContainer maxWidth="lg">
+              <YStack
+                space="$4"
+                paddingVertical="$4"
+                $md={{ space: '$5', paddingVertical: '$6' }}
+              >
           {/* Safety Warning - Overlay with Glass Effect */}
           {showSafetyWarning && (
             <GlassCard
@@ -201,24 +262,28 @@ export default function LevelScreen() {
 
         {/* Header */}
         <YStack alignItems="center">
-          <H1 
-            color={levelStatus.color} 
-            fontSize="$9" 
+          <ScalableH1
+            base="$9"
+            md="$10"
+            lg="$11"
+            color={levelStatus.color}
             fontWeight="bold"
             paddingBottom="$6"
           >
             {levelStatus.description}
-          </H1>
-
+          </ScalableH1>
         </YStack>
 
         {/* Bubble Level */}
-        <YStack 
-          flex={0.7} 
-          justifyContent="center" 
-          alignItems="center" 
-          paddingVertical="$2"
+        <YStack
+          justifyContent="center"
+          alignItems="center"
+          paddingVertical="$4"
           marginTop="$3"
+          $md={{
+            paddingVertical: '$6',
+            marginTop: '$4',
+          }}
         >
           <BubbleLevel
             pitch={calibratedValues.pitch}
@@ -235,7 +300,7 @@ export default function LevelScreen() {
           borderColor={levelStatus.isLevel ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 255, 255, 0.2)'}
           borderWidth={2}
           marginHorizontal="$2"
-          marginTop="$10"
+          marginTop={70}
           borderRadius="$6"
           blurIntensity={12}
           shadowColor={levelStatus.isLevel ? '#10b981' : 'rgba(0, 0, 0, 0.3)'}
@@ -286,45 +351,11 @@ export default function LevelScreen() {
             pressStyle={{ scale: 0.95 }}
             onPress={requestSensorPermission}
             icon={Target}
-            marginHorizontal="$2"
-            marginTop="$6"
+            marginTop="$4"
           >
             Enable Motion Sensors
           </Button>
         ) : null}
-
-        {/* Action Buttons */}
-        <YStack space="$3" paddingTop="$1" marginHorizontal="$2" marginTop="$6">
-          <XStack space="$3" width="100%">
-            <GradientButton
-              flex={1}
-              gradientType={isCalibrating ? 'success' : 'info'}
-              onPress={handleQuickCalibrate}
-              icon={isCalibrating ? RefreshCw : Target}
-              disabled={isCalibrating || !isReliable}
-            >
-              {isCalibrating ? 'Calibrating...' : 'Quick Set'}
-            </GradientButton>
-
-            <GradientButton
-              flex={1}
-              gradientType="primary"
-              onPress={handleCalibrate}
-              icon={Settings}
-            >
-              Calibration
-            </GradientButton>
-          </XStack>
-
-          <GradientButton
-            gradientType="warning"
-            onPress={handleShowLevelingAssistant}
-            icon={Zap}
-            size="$5"
-          >
-            Leveling Assistant
-          </GradientButton>
-        </YStack>
 
         {/* Active Profile Indicator */}
         {activeProfile ? (
@@ -367,7 +398,43 @@ export default function LevelScreen() {
             </XStack>
           </GlassCard>
         )}
-      </YStack>
+              </YStack>
+            </ResponsiveContainer>
+          </ScrollContainer>
+
+          {/* Sticky Action Buttons - Always Visible */}
+          <StickyActionButtons direction="column">
+            <XStack space="$3" width="100%">
+              <GradientButton
+                flex={1}
+                gradientType={isCalibrating ? 'success' : 'info'}
+                onPress={handleQuickCalibrate}
+                icon={isCalibrating ? RefreshCw : Target}
+                disabled={isCalibrating || !isReliable}
+              >
+                {isCalibrating ? 'Calibrating...' : 'Quick Set'}
+              </GradientButton>
+
+              <GradientButton
+                flex={1}
+                gradientType="primary"
+                onPress={handleCalibrate}
+                icon={Settings}
+              >
+                Calibration
+              </GradientButton>
+            </XStack>
+
+            <GradientButton
+              gradientType="warning"
+              onPress={handleShowLevelingAssistant}
+              icon={Zap}
+              size="$5"
+            >
+              Leveling Assistant
+            </GradientButton>
+          </StickyActionButtons>
+        </YStack>
       </SafeAreaView>
     </LevelScreenGradient>
   );

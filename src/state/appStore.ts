@@ -21,6 +21,9 @@ export interface AppSettings {
   measurementUnits: 'imperial' | 'metric';
   hapticsEnabled: boolean;
   audioEnabled: boolean;
+  audioStyle: 'beeps' | 'voice' | 'both';
+  audioVolume: number; // 0-100
+  audioSensitivity: 'conservative' | 'normal' | 'frequent';
   levelThreshold: number;
   nightMode: boolean;
   keepAwake: boolean;
@@ -59,6 +62,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   measurementUnits: 'imperial',
   hapticsEnabled: true,
   audioEnabled: false,
+  audioStyle: 'both',
+  audioVolume: 75,
+  audioSensitivity: 'normal',
   levelThreshold: 0.5,
   nightMode: false,
   keepAwake: true,

@@ -29,6 +29,10 @@ import { useAppStore } from '../../src/state/appStore';
 import { useColorScheme } from 'react-native';
 import { GlassCard } from '../../src/components/GlassCard';
 import { SettingsScreenGradient } from '../../src/components/GradientBackground';
+import {
+  ResponsiveContainer,
+  ScalableH2,
+} from '../../src/components/responsive';
 import Svg, { Circle, Defs, RadialGradient, Stop, G } from 'react-native-svg';
 
 // Mini FlatFinder icon component for Settings About section
@@ -159,11 +163,13 @@ export default function SettingsScreen() {
     <SettingsScreenGradient>
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView>
-          <YStack
-            padding="$4"
-            space="$4"
-          >
-            <H2 color="white">Settings</H2>
+          <ResponsiveContainer maxWidth="lg">
+            <YStack
+              space="$4"
+              paddingVertical="$4"
+              $md={{ space: '$5', paddingVertical: '$6' }}
+            >
+              <ScalableH2 base="$6" md="$7" color="white">Settings</ScalableH2>
 
           {/* Active Profile Indicator */}
           {activeProfile ? (
@@ -226,7 +232,7 @@ export default function SettingsScreen() {
             <SettingRow
               icon={<Volume2 size={20} color={settings.audioEnabled ? '#3b82f6' : '#ffffff'} />}
               title="Audio Feedback"
-              description="Play sounds when near level"
+              description="Play sounds and voice guidance when near level"
             >
               <ColoredSwitch
                 checked={settings.audioEnabled}
@@ -236,6 +242,136 @@ export default function SettingsScreen() {
                 color="$blue9"
               />
             </SettingRow>
+
+            {/* Audio Settings - Show when enabled */}
+            {settings.audioEnabled && (
+              <>
+                <GlassCard
+                  padding="$4"
+                  backgroundColor="rgba(59, 130, 246, 0.1)"
+                  borderColor="rgba(59, 130, 246, 0.2)"
+                  borderWidth={1}
+                  borderRadius="$5"
+                  blurIntensity={10}
+                  marginLeft="$2"
+                >
+                  <YStack space="$3">
+                    <Text fontSize="$3" fontWeight="600" color="rgba(255, 255, 255, 0.9)">
+                      Audio Style
+                    </Text>
+                    <RadioGroup
+                      value={settings.audioStyle}
+                      onValueChange={(value: string) =>
+                        updateSettings({ audioStyle: value as 'beeps' | 'voice' | 'both' })
+                      }
+                    >
+                      <YStack space="$2">
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="beeps" id="beeps">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Beeps Only</Text>
+                        </XStack>
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="voice" id="voice">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Voice Only</Text>
+                        </XStack>
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="both" id="both">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Beeps + Voice</Text>
+                        </XStack>
+                      </YStack>
+                    </RadioGroup>
+                  </YStack>
+                </GlassCard>
+
+                <GlassCard
+                  padding="$4"
+                  backgroundColor="rgba(59, 130, 246, 0.1)"
+                  borderColor="rgba(59, 130, 246, 0.2)"
+                  borderWidth={1}
+                  borderRadius="$5"
+                  blurIntensity={10}
+                  marginLeft="$2"
+                >
+                  <YStack space="$3">
+                    <XStack justifyContent="space-between" alignItems="center">
+                      <Text fontSize="$3" fontWeight="600" color="rgba(255, 255, 255, 0.9)">
+                        Volume
+                      </Text>
+                      <Text fontSize="$3" fontWeight="bold" color="#3b82f6">
+                        {settings.audioVolume}%
+                      </Text>
+                    </XStack>
+                    <Slider
+                      size="$4"
+                      value={[settings.audioVolume]}
+                      max={100}
+                      min={0}
+                      step={5}
+                      onValueChange={([value]) =>
+                        updateSettings({ audioVolume: value })
+                      }
+                    >
+                      <Slider.Track backgroundColor="rgba(59, 130, 246, 0.2)">
+                        <Slider.TrackActive backgroundColor="#3b82f6" />
+                      </Slider.Track>
+                      <Slider.Thumb index={0} circular backgroundColor="#3b82f6" />
+                    </Slider>
+                  </YStack>
+                </GlassCard>
+
+                <GlassCard
+                  padding="$4"
+                  backgroundColor="rgba(59, 130, 246, 0.1)"
+                  borderColor="rgba(59, 130, 246, 0.2)"
+                  borderWidth={1}
+                  borderRadius="$5"
+                  blurIntensity={10}
+                  marginLeft="$2"
+                >
+                  <YStack space="$3">
+                    <Text fontSize="$3" fontWeight="600" color="rgba(255, 255, 255, 0.9)">
+                      Sensitivity
+                    </Text>
+                    <Text fontSize="$2" color="rgba(255, 255, 255, 0.6)">
+                      How often audio cues play as you level
+                    </Text>
+                    <RadioGroup
+                      value={settings.audioSensitivity}
+                      onValueChange={(value: string) =>
+                        updateSettings({ audioSensitivity: value as 'conservative' | 'normal' | 'frequent' })
+                      }
+                    >
+                      <YStack space="$2">
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="conservative" id="conservative">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Conservative</Text>
+                        </XStack>
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="normal" id="normal">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Normal</Text>
+                        </XStack>
+                        <XStack alignItems="center" space="$2">
+                          <RadioGroup.Item value="frequent" id="frequent">
+                            <RadioGroup.Indicator />
+                          </RadioGroup.Item>
+                          <Text fontSize="$3" color="white">Frequent</Text>
+                        </XStack>
+                      </YStack>
+                    </RadioGroup>
+                  </YStack>
+                </GlassCard>
+              </>
+            )}
           </YStack>
 
           <Separator />
@@ -446,9 +582,10 @@ export default function SettingsScreen() {
               </YStack>
             </GlassCard>
           </YStack>
-        </YStack>
-      </ScrollView>
-    </SafeAreaView>
+            </YStack>
+          </ResponsiveContainer>
+        </ScrollView>
+      </SafeAreaView>
     </SettingsScreenGradient>
   );
 }

@@ -21,15 +21,31 @@ function renderWheelCard(
 ) {
   const getCardSize = () => {
     if (position === 'center') return { width: 120, height: 120 };
-    return { width: 140, height: 100 };
+    return { width: 140, height: 110 }; // Slightly taller for larger text
   };
-  
+
   const { width, height } = getCardSize();
-  
+
   const isLevelPosition = lift.liftInches <= 0.125;
   const noBlocksFit = blockStack.blocks.length === 0 && activeProfile.blockInventory && activeProfile.blockInventory.length > 0;
   const shouldShowGreen = isLevelPosition || noBlocksFit;
-  
+
+  // Calculate total block count for simplified display
+  const filteredBlocks = blockStack.blocks.filter((block: any) => {
+    // NUCLEAR OPTION: Only allow exact standard sizes - reject anything close to 0.8
+    const validSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+    const isValidSize = validSizes.some(size => Math.abs(block.thickness - size) < 0.01);
+
+    // Specifically block any 0.8-ish values
+    const isInvalidEight = Math.abs(block.thickness - 0.8) < 0.1;
+
+    const blockExists = activeProfile.blockInventory?.some((inventoryBlock: any) =>
+      Math.abs(inventoryBlock.thickness - block.thickness) < 0.001
+    );
+    return block.thickness > 0.001 && block.count > 0 && blockExists && isValidSize && !isInvalidEight;
+  });
+  const totalBlockCount = filteredBlocks.reduce((sum: number, block: any) => sum + block.count, 0);
+
   return (
     <GlassCard
       key={lift.location}
@@ -43,80 +59,67 @@ function renderWheelCard(
       alignItems="center"
       blurIntensity={10}
     >
-      <YStack space="$1" alignItems="center">
-        <Text color="white" fontSize="$2" fontWeight="600" textAlign="center" numberOfLines={1}>
+      <YStack space="$1.5" alignItems="center">
+        {/* Position label - larger, high contrast */}
+        <Text color="white" fontSize="$3" fontWeight="700" textAlign="center" numberOfLines={2}>
           {lift.description.replace(' Wheel', '').replace(' ', '\n')}
         </Text>
-        
+
         {lift.liftInches <= 0.125 ? (
+          // Level indicator - larger and more prominent
           <View
-            backgroundColor="rgba(34, 197, 94, 0.2)"
-            borderRadius="$2"
-            paddingHorizontal="$1"
-            paddingVertical="$0.5"
+            backgroundColor="rgba(34, 197, 94, 0.25)"
+            borderRadius="$3"
+            paddingHorizontal="$2"
+            paddingVertical="$1.5"
           >
-            <Text color="#22c55e" fontSize="$1" fontWeight="600" textAlign="center">
+            <Text color="#22c55e" fontSize="$4" fontWeight="700" textAlign="center">
               ✓ Good
             </Text>
           </View>
         ) : (
           <YStack space="$1" alignItems="center">
-            <Text color="$gray11" fontSize="$1" textAlign="center">
+            {/* Target height - smaller, secondary info */}
+            <Text color="rgba(255, 255, 255, 0.6)" fontSize="$2" textAlign="center">
               Raise: {formatLiftMeasurement(lift.liftInches, settings.measurementUnits)}
             </Text>
-            
+
             {!activeProfile.blockInventory || activeProfile.blockInventory.length === 0 ? (
+              // Setup blocks message - larger and more visible
               <View
-                backgroundColor="rgba(59, 130, 246, 0.2)"
-                borderRadius="$2"
-                paddingHorizontal="$1"
-                paddingVertical="$0.5"
+                backgroundColor="rgba(59, 130, 246, 0.25)"
+                borderRadius="$3"
+                paddingHorizontal="$2"
+                paddingVertical="$1"
               >
-                <Text color="#3b82f6" fontSize="$1" textAlign="center" numberOfLines={2}>
+                <Text color="#3b82f6" fontSize="$3" fontWeight="700" textAlign="center" numberOfLines={2}>
                   Setup blocks in profile
                 </Text>
               </View>
-            ) : blockStack.blocks.length === 0 ? (
+            ) : blockStack.blocks.length === 0 || totalBlockCount === 0 ? (
+              // No blocks fit warning - larger and more visible
               <View
-                backgroundColor="rgba(239, 68, 68, 0.2)"
-                borderRadius="$2"
-                paddingHorizontal="$1"
-                paddingVertical="$0.5"
+                backgroundColor="rgba(239, 68, 68, 0.25)"
+                borderRadius="$3"
+                paddingHorizontal="$2"
+                paddingVertical="$1"
               >
-                <Text color="#ef4444" fontSize="$1" textAlign="center" numberOfLines={2}>
+                <Text color="#ef4444" fontSize="$3" fontWeight="700" textAlign="center" numberOfLines={2}>
                   No blocks fit
                 </Text>
               </View>
             ) : (
-              <YStack alignItems="center" space="$0.5">
-                {blockStack.blocks
-                  .filter((block: any) => {
-                    // NUCLEAR OPTION: Only allow exact standard sizes - reject anything close to 0.8
-                    const validSizes = [0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
-                    const isValidSize = validSizes.some(size => Math.abs(block.thickness - size) < 0.01);
-                    
-                    // Specifically block any 0.8-ish values
-                    const isInvalidEight = Math.abs(block.thickness - 0.8) < 0.1;
-                    
-                    const blockExists = activeProfile.blockInventory?.some((inventoryBlock: any) => 
-                      Math.abs(inventoryBlock.thickness - block.thickness) < 0.001
-                    );
-                    return block.thickness > 0.001 && block.count > 0 && blockExists && isValidSize && !isInvalidEight;
-                  })
-                  .map((block: any, blockIndex: number) => (
-                    <View
-                      key={blockIndex}
-                      backgroundColor="rgba(34, 197, 94, 0.2)"
-                      borderRadius="$1"
-                      paddingHorizontal="$1"
-                      paddingVertical="$0.5"
-                    >
-                      <Text color="#22c55e" fontSize="$1" textAlign="center" fontWeight="600" numberOfLines={1}>
-                        {block.count}×{formatMeasurement(block.thickness, settings.measurementUnits)} blocks
-                      </Text>
-                    </View>
-                  ))}
-              </YStack>
+              // Simplified block count - large, high contrast
+              <View
+                backgroundColor="rgba(34, 197, 94, 0.25)"
+                borderRadius="$3"
+                paddingHorizontal="$2.5"
+                paddingVertical="$1.5"
+              >
+                <Text color="#22c55e" fontSize="$5" fontWeight="700" textAlign="center">
+                  +{totalBlockCount} blocks
+                </Text>
+              </View>
             )}
           </YStack>
         )}
