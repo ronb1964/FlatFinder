@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "LevelMate",
+    "slug": "levelmate-rv-leveling",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "scheme": "levelmate",
+    "primaryColor": "#22c55e",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.levelmate.rvleveling",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMotionUsageDescription": "LevelMate uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
+        "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.levelmate.rvleveling",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static"
+    }
+  }
+}
