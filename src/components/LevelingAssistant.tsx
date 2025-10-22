@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView } from 'tamagui';
+import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView, View } from 'tamagui';
 import { AlertCircle, ArrowLeft } from '@tamagui/lucide-icons';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { applyCalibration } from '../lib/calibration';
@@ -49,8 +49,13 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
       setIsCalculating(true);
       
       try {
-        const calculator = new RVLevelingCalculator(activeProfile);
-        const plan = calculator.createLevelingPlan(physicalReadings);
+        const geometry = {
+          wheelbaseInches: activeProfile.wheelbaseInches,
+          trackWidthInches: activeProfile.trackWidthInches,
+          hitchOffsetInches: activeProfile.hitchOffsetInches,
+        };
+        const inventory = activeProfile.blockInventory || [];
+        const plan = RVLevelingCalculator.createLevelingPlan(geometry, physicalReadings, inventory);
         setLevelingPlan(plan);
       } catch (error) {
         console.error('Error calculating leveling plan:', error);
@@ -149,14 +154,14 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             <XStack justifyContent="space-between" alignItems="center">
               <Text color="$gray11" fontSize="$3">Pitch:</Text>
               <Text color="white" fontSize="$4" fontWeight="600">
-                {formatMeasurement(Math.abs(physicalReadings.pitchDegrees), 'degrees', settings.measurementUnits)}
+                {Math.abs(physicalReadings.pitchDegrees).toFixed(1)}°
                 {physicalReadings.pitchDegrees > 0 ? ' (nose up)' : physicalReadings.pitchDegrees < 0 ? ' (nose down)' : ''}
               </Text>
             </XStack>
             <XStack justifyContent="space-between" alignItems="center">
               <Text color="$gray11" fontSize="$3">Roll:</Text>
               <Text color="white" fontSize="$4" fontWeight="600">
-                {formatMeasurement(Math.abs(physicalReadings.rollDegrees), 'degrees', settings.measurementUnits)}
+                {Math.abs(physicalReadings.rollDegrees).toFixed(1)}°
                 {physicalReadings.rollDegrees > 0 ? ' (right up)' : physicalReadings.rollDegrees < 0 ? ' (left up)' : ''}
               </Text>
             </XStack>
@@ -227,7 +232,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             )}
 
             {/* Lift Instructions */}
-            {levelingPlan.lifts
+            {levelingPlan.wheelLifts
               .filter(lift => lift.liftInches > 0.001) // Only show meaningful lifts
               .map((lift, index) => {
                 const blockStack = levelingPlan.blockStacks[lift.location];
@@ -245,7 +250,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                         {lift.location}
                       </H3>
                       <Text color="$gray11" fontSize="$3">
-                        Lift needed: {formatMeasurement(lift.liftInches, 'inches', settings.measurementUnits)}
+                        Lift needed: {formatMeasurement(lift.liftInches, settings.measurementUnits || 'imperial')}
                       </Text>
                       
                       {blockStack.blocks.length === 0 ? (
@@ -274,10 +279,10 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                               >
                                 <XStack justifyContent="space-between" alignItems="center">
                                   <Text color="#22c55e" fontSize="$3" fontWeight="600">
-                                    {block.count} × {formatMeasurement(block.thickness, 'inches', settings.measurementUnits)}
+                                    {block.count} × {formatMeasurement(block.thickness, settings.measurementUnits || 'imperial')}
                                   </Text>
                                   <Text color="#22c55e" fontSize="$3">
-                                    = {formatMeasurement(block.count * block.thickness, 'inches', settings.measurementUnits)}
+                                    = {formatMeasurement(block.count * block.thickness, settings.measurementUnits || 'imperial')}
                                   </Text>
                                 </XStack>
                               </Card>
@@ -294,7 +299,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                                 Total Height:
                               </Text>
                               <Text color="#3b82f6" fontSize="$4" fontWeight="bold">
-                                {formatMeasurement(blockStack.totalHeight, 'inches', settings.measurementUnits)}
+                                {formatMeasurement(blockStack.totalHeight, settings.measurementUnits || 'imperial')}
                               </Text>
                             </XStack>
                           </Card>

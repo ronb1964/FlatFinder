@@ -20,9 +20,6 @@ import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from '@tamagui/luci
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
 import { StandardBlockSets, BlockInventory } from '../../src/lib/rvLevelingMath';
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
-import { ProfileCreationTest } from '../../src/components/ProfileCreationTest';
-import { SimpleProfileWizard } from '../../src/components/SimpleProfileWizard';
-
 import { createCalibration } from '../../src/lib/levelingMath';
 
 export default function ProfilesScreen() {

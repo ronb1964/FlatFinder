@@ -262,7 +262,7 @@ export default function LevelScreen() {
         </Card>
 
         {/* Sensor Permission Button for iOS */}
-        {permissionStatus === 'denied' || (!isReliable && errorMessage.includes('sensor')) ? (
+        {permissionStatus === 'denied' || (!isReliable && errorMessage?.includes('sensor')) ? (
           <Button
             size="$4"
             backgroundColor="$red9"
