@@ -1,8 +1,8 @@
 # FlatFinder Session Memory - 2025-10-09
 
 ## Current Status: REBRANDED TO FLATFINDER 🎯
-**Production URL:** https://levelmate-app-1755829802.netlify.app
-**App Name:** FlatFinder (formerly LevelMate)
+**Production URL:** https://flatfinder-app.netlify.app
+**App Name:** FlatFinder (formerly FlatFinder)
 **Last Deploy:** 68e858c4cc5f8ada4e2a4e16 (UI Modernization Complete)
 
 ## Latest Session: Modern UI Revamp (2025-10-09)

@@ -2,7 +2,7 @@
  * Cross-platform attitude sensor adapter
  * Uses expo-sensors on native platforms and DeviceOrientationEvent on web
  * 
- * All outputs use LevelMate canonical coordinate system:
+ * All outputs use FlatFinder canonical coordinate system:
  * +pitch = nose up, -pitch = nose down
  * +roll = right side up, -roll = left side up
  */
@@ -100,7 +100,7 @@ class NativeAttitudeAdapter implements AttitudeAdapter {
 
         this.prevReading = { pitch: filteredPitch, roll: filteredRoll };
 
-        // Normalize to LevelMate canonical coordinate system
+        // Normalize to FlatFinder canonical coordinate system
         const normalized = normalizeAttitude(
           { pitch: filteredPitch, roll: filteredRoll, yaw: rawYaw },
           SENSOR_NORMALIZATION_PRESETS.EXPO_DEVICE_MOTION
@@ -211,7 +211,7 @@ class WebAttitudeAdapter implements AttitudeAdapter {
 
       this.prevReading = { pitch: filteredPitch, roll: filteredRoll };
 
-      // Normalize to LevelMate canonical coordinate system
+      // Normalize to FlatFinder canonical coordinate system
       const normalized = normalizeAttitude(
         { pitch: filteredPitch, roll: filteredRoll, yaw: rawYaw },
         SENSOR_NORMALIZATION_PRESETS.WEB_DEVICE_ORIENTATION

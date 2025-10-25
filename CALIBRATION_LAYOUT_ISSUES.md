@@ -117,7 +117,7 @@ The calibration wizard improvements are complete feature-wise, but the layout do
 
 ## Deployed Version
 Current version with layout issues is live at:
-https://levelmate-app-1755829802.netlify.app
+https://flatfinder-app.netlify.app
 
 ## Git Status
 All changes committed to branch `ui-revamp-modern` and pushed to GitHub.

@@ -99,7 +99,7 @@ const getRotationAngle = () => {
 - No UI complexity, guaranteed to work
 
 ## Deployment Info
-- **Production URL**: https://levelmate-app-1755829802.netlify.app
+- **Production URL**: https://flatfinder-app.netlify.app
 - **Last Deploy**: 68e9bcb9da1527fce09655e8
 - **Current Branch**: ui-revamp-modern
 - **Deploy Command**: `npx expo export --clear && npx netlify deploy --dir=dist --prod`

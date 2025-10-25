@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView, View } from 'tamagui';
-import { AlertCircle, ArrowLeft } from '@tamagui/lucide-icons';
+import React, { useState, useEffect, useRef } from 'react';
+import { YStack, XStack, Text, Button, Card, H2, H3, Separator, ScrollView, View, AnimatePresence } from 'tamagui';
+import { AlertCircle, ArrowLeft, ArrowUp, ArrowDown, ChevronDown } from '@tamagui/lucide-icons';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { applyCalibration } from '../lib/calibration';
 import { RVLevelingCalculator, LevelingPlan } from '../lib/rvLevelingMath';
@@ -10,6 +10,90 @@ import { formatMeasurement, formatLiftMeasurement } from '../lib/units';
 import { BubbleLevel } from './BubbleLevel';
 import { GlassCard } from './GlassCard';
 import { LevelingAssistantGradient } from './GradientBackground';
+import { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Animated, Easing } from 'react-native';
+
+// Scroll Indicator Component - Fixed on right edge with fade+glow
+function ScrollIndicator({ visible }: { visible: boolean }) {
+  const fadeAnim = useRef(new Animated.Value(0.5)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Fade animation - pulsates opacity
+      const fade = Animated.loop(
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 0.5,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      // Glow animation - synchronized with fade
+      const glow = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false, // shadowRadius can't use native driver
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ])
+      );
+
+      fade.start();
+      glow.start();
+
+      return () => {
+        fade.stop();
+        glow.stop();
+      };
+    }
+  }, [visible, fadeAnim, glowAnim]);
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        right: 12,
+        top: '50%',
+        marginTop: -30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: fadeAnim,
+        shadowColor: 'rgba(255, 255, 255, 0.8)',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: glowAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [4, 12],
+        }),
+      }}
+    >
+      <YStack alignItems="center" space={-8}>
+        <ChevronDown size={24} color="rgba(255, 255, 255, 0.9)" strokeWidth={2.5} />
+        <ChevronDown size={24} color="rgba(255, 255, 255, 0.9)" strokeWidth={2.5} />
+      </YStack>
+    </Animated.View>
+  );
+}
 
 // Helper function to render a wheel/hitch card with instructions
 function renderWheelCard(
@@ -26,9 +110,9 @@ function renderWheelCard(
 
   const { width, height } = getCardSize();
 
-  const isLevelPosition = lift.liftInches <= 0.125;
+  // Check if position is within tolerance (both positive and negative)
+  const isLevelPosition = Math.abs(lift.liftInches) <= 0.125;
   const noBlocksFit = blockStack.blocks.length === 0 && activeProfile.blockInventory && activeProfile.blockInventory.length > 0;
-  const shouldShowGreen = isLevelPosition || noBlocksFit;
 
   // Calculate total block count for simplified display
   const filteredBlocks = blockStack.blocks.filter((block: any) => {
@@ -46,11 +130,31 @@ function renderWheelCard(
   });
   const totalBlockCount = filteredBlocks.reduce((sum: number, block: any) => sum + block.count, 0);
 
+  // Calculate how close blocks can get to target
+  const blockStackHeight = blockStack.totalHeight || 0;
+  const targetHeight = lift.liftInches;
+  const heightDifference = Math.abs(blockStackHeight - targetHeight);
+
+  // Determine state: perfect, close, or too far
+  const isPerfect = isLevelPosition; // Within 1/8"
+  const isClose = !isPerfect && heightDifference <= 0.5 && totalBlockCount > 0; // Within 1/2"
+  const isTooFar = !isPerfect && !isClose; // More than 1/2" off or no blocks
+
+  // Determine border color based on graduated state
+  let borderColor = "rgba(255, 255, 255, 0.2)"; // Default neutral
+  if (isPerfect) {
+    borderColor = "rgba(34, 197, 94, 0.6)"; // Green for perfect/level
+  } else if (isClose) {
+    borderColor = "rgba(249, 115, 22, 0.6)"; // Orange for close
+  } else {
+    borderColor = "rgba(239, 68, 68, 0.6)"; // Red for too far
+  }
+
   return (
     <GlassCard
       key={lift.location}
       backgroundColor="rgba(255, 255, 255, 0.05)"
-      borderColor={shouldShowGreen ? "rgba(34, 197, 94, 0.6)" : "rgba(255, 255, 255, 0.2)"}
+      borderColor={borderColor}
       borderWidth={2}
       padding="$2"
       width={width}
@@ -65,8 +169,8 @@ function renderWheelCard(
           {lift.description.replace(' Wheel', '').replace(' ', '\n')}
         </Text>
 
-        {lift.liftInches <= 0.125 ? (
-          // Level indicator - larger and more prominent
+        {isPerfect ? (
+          // Perfect/Level indicator - green
           <View
             backgroundColor="rgba(34, 197, 94, 0.25)"
             borderRadius="$3"
@@ -108,19 +212,102 @@ function renderWheelCard(
                   No blocks fit
                 </Text>
               </View>
-            ) : (
-              // Simplified block count - large, high contrast
+            ) : isClose ? (
+              // Close - Orange (achievable within tolerance)
               <View
-                backgroundColor="rgba(34, 197, 94, 0.25)"
+                backgroundColor="rgba(249, 115, 22, 0.25)"
                 borderRadius="$3"
                 paddingHorizontal="$2.5"
                 paddingVertical="$1.5"
               >
-                <Text color="#22c55e" fontSize="$5" fontWeight="700" textAlign="center">
+                <Text color="#f97316" fontSize="$5" fontWeight="700" textAlign="center">
                   +{totalBlockCount} blocks
+                </Text>
+                <Text color="#f97316" fontSize="$1" textAlign="center">
+                  ~ Close
+                </Text>
+              </View>
+            ) : (
+              // Too far - Red (blocks don't get close enough)
+              <View
+                backgroundColor="rgba(239, 68, 68, 0.25)"
+                borderRadius="$3"
+                paddingHorizontal="$2.5"
+                paddingVertical="$1.5"
+              >
+                <Text color="#ef4444" fontSize="$4" fontWeight="700" textAlign="center">
+                  {totalBlockCount > 0 ? `+${totalBlockCount} blocks` : 'Too far'}
+                </Text>
+                <Text color="#ef4444" fontSize="$1" textAlign="center">
+                  ⚠ Not close enough
                 </Text>
               </View>
             )}
+          </YStack>
+        )}
+      </YStack>
+    </GlassCard>
+  );
+}
+
+// Helper function to render trailer hitch card with raise/lower instructions
+function renderHitchCard(
+  lift: any,
+  settings: any
+) {
+  const isLevel = Math.abs(lift.liftInches) <= 0.125;
+  const needsRaise = lift.liftInches > 0.125;
+  const needsLower = lift.liftInches < -0.125;
+
+  // Border color: green when level, red when adjustment needed
+  const borderColor = isLevel ? "rgba(34, 197, 94, 0.6)" : "rgba(239, 68, 68, 0.6)";
+
+  return (
+    <GlassCard
+      key={lift.location}
+      backgroundColor="rgba(255, 255, 255, 0.05)"
+      borderColor={borderColor}
+      borderWidth={2}
+      padding="$2"
+      width={140}
+      height={110}
+      justifyContent="center"
+      alignItems="center"
+      blurIntensity={10}
+    >
+      <YStack space="$1.5" alignItems="center">
+        {/* Hitch label - larger, high contrast */}
+        <Text color="white" fontSize="$3" fontWeight="700" textAlign="center">
+          Hitch
+        </Text>
+
+        {isLevel ? (
+          // Level indicator - larger and more prominent
+          <View
+            backgroundColor="rgba(34, 197, 94, 0.25)"
+            borderRadius="$3"
+            paddingHorizontal="$2"
+            paddingVertical="$1.5"
+          >
+            <Text color="#22c55e" fontSize="$4" fontWeight="700" textAlign="center">
+              ✓ Good
+            </Text>
+          </View>
+        ) : (
+          <YStack space="$2" alignItems="center">
+            {/* Arrow and action with measurement */}
+            <XStack alignItems="center" space="$1">
+              {needsRaise && <ArrowUp size={24} color="#3b82f6" />}
+              {needsLower && <ArrowDown size={24} color="#3b82f6" />}
+              <YStack alignItems="center">
+                <Text color="#3b82f6" fontSize="$3" fontWeight="700" textAlign="center">
+                  {needsRaise ? 'Raise' : 'Lower'}
+                </Text>
+                <Text color="#3b82f6" fontSize="$4" fontWeight="700" textAlign="center">
+                  {formatLiftMeasurement(Math.abs(lift.liftInches), settings.measurementUnits)}
+                </Text>
+              </YStack>
+            </XStack>
           </YStack>
         )}
       </YStack>
@@ -137,26 +324,25 @@ function renderSpatialLevelingLayout(levelingPlan: any, activeProfile: any, sett
     const hitchLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'hitch');
     const leftLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'left_wheel');
     const rightLift = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'right_wheel');
-    
+
     return (
-      <YStack alignItems="center" space="$4" paddingVertical="$4">
-        {/* Hitch at top */}
-        {hitchLift && renderWheelCard(
+      <YStack alignItems="center" space="$4" paddingVertical="$4" overflow="visible">
+        {/* Hitch at top - uses dedicated hitch card with raise/lower arrow */}
+        {hitchLift && renderHitchCard(
           hitchLift,
-          levelingPlan.blockStacks[hitchLift.location],
-          activeProfile,
-          settings,
-          'top'
+          settings
         )}
-        
-        {/* Bubble level in center */}
-        <BubbleLevel
-          pitch={physicalReadings.pitchDegrees}
-          roll={physicalReadings.rollDegrees}
-          isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
-          color="#ef4444"
-          size="compact"
-        />
+
+        {/* Bubble level in center - needs extra vertical space */}
+        <View marginVertical="$3" overflow="visible">
+          <BubbleLevel
+            pitch={physicalReadings.pitchDegrees}
+            roll={physicalReadings.rollDegrees}
+            isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
+            color="#ef4444"
+            size="compact"
+          />
+        </View>
         
         {/* Wheels at bottom */}
         <XStack space="$6" justifyContent="center">
@@ -185,7 +371,7 @@ function renderSpatialLevelingLayout(levelingPlan: any, activeProfile: any, sett
     const rearRight = levelingPlan.wheelLifts.find((lift: any) => lift.location === 'rear_right');
     
     return (
-      <YStack alignItems="center" space="$4" paddingVertical="$4">
+      <YStack alignItems="center" space="$4" paddingVertical="$4" overflow="visible">
         {/* Front wheels */}
         <XStack space="$6" justifyContent="center">
           {frontLeft && renderWheelCard(
@@ -203,15 +389,17 @@ function renderSpatialLevelingLayout(levelingPlan: any, activeProfile: any, sett
             'right'
           )}
         </XStack>
-        
-        {/* Bubble level in center */}
-        <BubbleLevel
-          pitch={physicalReadings.pitchDegrees}
-          roll={physicalReadings.rollDegrees}
-          isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
-          color="#ef4444"
-          size="compact"
-        />
+
+        {/* Bubble level in center - needs extra vertical space */}
+        <View marginVertical="$3" overflow="visible">
+          <BubbleLevel
+            pitch={physicalReadings.pitchDegrees}
+            roll={physicalReadings.rollDegrees}
+            isLevel={Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5}
+            color="#ef4444"
+            size="compact"
+          />
+        </View>
         
         {/* Rear wheels */}
         <XStack space="$6" justifyContent="center">
@@ -367,6 +555,16 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const [isCalculating, setIsCalculating] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
   const [calculationError, setCalculationError] = useState<string | null>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+
+  // Handle scroll events to show/hide scroll indicator
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+
+    // Hide indicator when within 100px of bottom
+    setShowScrollIndicator(distanceFromBottom > 100);
+  };
 
   // Force initial calculation on mount
   useEffect(() => {
@@ -378,7 +576,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
     ? applyCalibration({ pitch: pitchDeg, roll: rollDeg }, activeProfile.calibration)
     : { pitch: pitchDeg, roll: rollDeg };
   
-  // Normalize attitude to LevelMate canonical coordinate system
+  // Normalize attitude to FlatFinder canonical coordinate system
   // The sensor readings are already in the correct convention for our math
   const normalizedAttitude = normalizeAttitude(
     { pitch: calibratedReadings.pitch, roll: calibratedReadings.roll },
@@ -450,24 +648,33 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
   return (
     <LevelingAssistantGradient>
-      {/* Compact Header */}
-      <XStack 
-        justifyContent="space-between" 
-        alignItems="center" 
-        padding="$2" 
-        paddingBottom="$1"
+      {/* Header with prominent back button */}
+      <XStack
+        justifyContent="space-between"
+        alignItems="center"
+        padding="$3"
+        paddingBottom="$2"
       >
         {onBack && (
           <Button
-            size="$2"
-            chromeless
+            size="$4"
             onPress={onBack}
             icon={ArrowLeft}
+            backgroundColor="rgba(255, 255, 255, 0.15)"
+            borderColor="rgba(255, 255, 255, 0.3)"
+            borderWidth={1}
             color="white"
-            flexShrink={0}
-          />
+            hoverStyle={{
+              backgroundColor: "rgba(255, 255, 255, 0.25)",
+            }}
+            pressStyle={{
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+            }}
+          >
+            Back
+          </Button>
         )}
-        <H2 color="white" flex={1} textAlign="center" marginRight={onBack ? 40 : 0}>
+        <H2 color="white" flex={1} textAlign="center" marginRight={onBack ? "$4" : 0}>
           Block Instructions
         </H2>
         {!onBack && <View width={40} />}
@@ -475,33 +682,35 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
 
       {/* Scrollable Content */}
-              <ScrollView 
-          flex={1} 
-          padding="$2" 
-          paddingTop="$0" 
+              <ScrollView
+          flex={1}
+          padding="$2"
+          paddingTop="$0"
           showsVerticalScrollIndicator={true}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         >
-        {/* Level Status */}
+        {/* Current Reading - Compact */}
         <GlassCard
           backgroundColor="rgba(255, 255, 255, 0.03)"
           borderColor="rgba(255, 255, 255, 0.1)"
           borderWidth={1}
-          padding="$3"
-          marginBottom="$3"
+          padding="$2"
+          marginBottom="$2"
           blurIntensity={10}
         >
-          <YStack space="$2">
-            <H3 color="white" textAlign="center">Current Reading</H3>
+          <YStack space="$1">
+            <Text color="white" textAlign="center" fontSize="$3" fontWeight="600">Current Reading</Text>
             <XStack justifyContent="space-between" alignItems="center">
-              <Text color="$gray11" fontSize="$3">Pitch:</Text>
-              <Text color="white" fontSize="$4" fontWeight="600">
+              <Text color="$gray11" fontSize="$2">Pitch:</Text>
+              <Text color="white" fontSize="$3" fontWeight="600">
                 {formatMeasurement(Math.abs(physicalReadings.pitchDegrees), 'degrees', settings.measurementUnits)}
                 {physicalReadings.pitchDegrees > 0 ? ' (nose up)' : physicalReadings.pitchDegrees < 0 ? ' (nose down)' : ''}
               </Text>
             </XStack>
             <XStack justifyContent="space-between" alignItems="center">
-              <Text color="$gray11" fontSize="$3">Roll:</Text>
-              <Text color="white" fontSize="$4" fontWeight="600">
+              <Text color="$gray11" fontSize="$2">Roll:</Text>
+              <Text color="white" fontSize="$3" fontWeight="600">
                 {formatMeasurement(Math.abs(physicalReadings.rollDegrees), 'degrees', settings.measurementUnits)}
                 {physicalReadings.rollDegrees > 0 ? ' (right up)' : physicalReadings.rollDegrees < 0 ? ' (left up)' : ''}
               </Text>
@@ -561,23 +770,50 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 marginBottom="$3"
                 blurIntensity={10}
               >
-                <YStack space="$2">
+                <YStack space="$3">
                   <XStack alignItems="center" space="$2">
-                    <AlertCircle size={16} color="#ef4444" />
-                    <Text color="#ef4444" fontSize="$3" fontWeight="600">
-                      Cannot Level with Current Blocks
+                    <AlertCircle size={18} color="#ef4444" />
+                    <Text color="#ef4444" fontSize="$4" fontWeight="700">
+                      Cannot Level with Current Setup
                     </Text>
                   </XStack>
-                  <Text color="#ef4444" fontSize="$3">
-                    {levelingPlan.warnings.join(' ')}
-                  </Text>
+
+                  {/* Display warnings */}
+                  <YStack space="$2">
+                    {levelingPlan.warnings.map((warning: string, index: number) => (
+                      <Text key={index} color="#ef4444" fontSize="$3">
+                        • {warning}
+                      </Text>
+                    ))}
+                  </YStack>
+
+                  {/* Helpful alternatives */}
+                  <YStack space="$2" marginTop="$2">
+                    <Text color="#ef4444" fontSize="$3" fontWeight="600">
+                      Try these alternatives:
+                    </Text>
+                    <YStack space="$1.5" paddingLeft="$2">
+                      <Text color="rgba(239, 68, 68, 0.9)" fontSize="$3">
+                        • Move to a different, flatter spot
+                      </Text>
+                      <Text color="rgba(239, 68, 68, 0.9)" fontSize="$3">
+                        • Add larger block sizes to your profile
+                      </Text>
+                      <Text color="rgba(239, 68, 68, 0.9)" fontSize="$3">
+                        • Use a combination of multiple stacks
+                      </Text>
+                      <Text color="rgba(239, 68, 68, 0.9)" fontSize="$3">
+                        • Re-measure after adjusting position
+                      </Text>
+                    </YStack>
+                  </YStack>
                 </YStack>
               </GlassCard>
             )}
 
             {/* Spatial Leveling Layout - Always show */}
             {renderSpatialLevelingLayout(levelingPlan, activeProfile, settings, physicalReadings)}
-            
+
             {/* Detailed Block Instructions - Only show if not level */}
             {!isNearLevel && renderDetailedBlockInstructions(levelingPlan, activeProfile, settings)}
           </YStack>

@@ -359,14 +359,14 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
     return `Reading ${readings.length + 1} of 3`;
   };
 
-  // Debug sensor state
-  console.log('Calibration Wizard - Sensor State:', {
-    isReliable,
-    isCollecting,
-    pitchDeg,
-    rollDeg,
-    buttonDisabled: (!isReliable || isCollecting)
-  });
+  // Debug sensor state (commented out to reduce console noise)
+  // console.log('Calibration Wizard - Sensor State:', {
+  //   isReliable,
+  //   isCollecting,
+  //   pitchDeg,
+  //   rollDeg,
+  //   buttonDisabled: (!isReliable || isCollecting)
+  // });
 
   // Map pose to rotation angle for RotatingViewport
   const rotationAngle = (pose * 90) as 0 | 90 | 180 | 270;
@@ -398,7 +398,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
           {/* Header with Cancel button - hide on completion */}
           <XStack justifyContent="space-between" alignItems="center">
-            <H2 fontSize="$6" color="white">Calibration</H2>
+            <H2 fontSize={pose === 1 ? "$4" : "$5"} color="white">Calibration</H2>
             {!isComplete && (
               <Button
                 size="$2"
@@ -428,11 +428,11 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                 <Check size={48} color="$green9" />
               </YStack>
               
-              <H2 color="$green9" textAlign="center">
+              <H2 fontSize="$5" color="$green9" textAlign="center">
                 Calibration Complete!
               </H2>
-              
-              <Text fontSize="$4" color="$colorPress" textAlign="center" lineHeight="$5">
+
+              <Text fontSize="$3" color="$colorPress" textAlign="center" lineHeight="$4">
                 Your device has been successfully calibrated for accurate leveling measurements.
               </Text>
               
@@ -501,7 +501,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                           <Text fontSize="$2" color="rgba(255, 255, 255, 0.7)">
                             Pitch
                           </Text>
-                          <Text fontSize="$5" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
+                          <Text fontSize="$4" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
                             {correctedPitch.toFixed(2)}°
                           </Text>
                         </YStack>
@@ -509,7 +509,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                           <Text fontSize="$2" color="rgba(255, 255, 255, 0.7)">
                             Roll
                           </Text>
-                          <Text fontSize="$5" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
+                          <Text fontSize="$4" fontWeight="700" color={isValid ? '#22c55e' : '#ef4444'}>
                             {correctedRoll.toFixed(2)}°
                           </Text>
                         </YStack>
@@ -633,12 +633,12 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               >
                 <IconComponent size={24} color="#3b82f6" />
               </YStack>
-              <H3 fontSize="$5" fontWeight="700" color="white" textAlign="center" flex={1}>
+              <H3 fontSize="$4" fontWeight="700" color="white" textAlign="center" flex={1}>
                 {currentStepData.title}
               </H3>
             </XStack>
 
-            <Text fontSize="$4" color="rgba(255, 255, 255, 0.9)" textAlign="center" lineHeight="$5">
+            <Text fontSize="$3" color="rgba(255, 255, 255, 0.9)" textAlign="center" lineHeight="$4">
               {currentStepData.instruction}
             </Text>
 
@@ -829,7 +829,7 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
               borderWidth={2}
               borderColor={((Platform.OS !== 'web' && !isReliable) || isCollecting) ? "rgba(156, 163, 175, 0.5)" : "rgba(245, 158, 11, 0.6)"}
             >
-              <Text color="white" fontSize="$5" fontWeight="bold">
+              <Text color="white" fontSize={pose === 1 ? "$3" : "$4"} fontWeight="bold">
                 {isCollecting ? '⏱️ Collecting...' : readings.length === 2 ? '📱 Take Final Reading' : `📱 Take Reading ${readings.length + 1}`}
               </Text>
             </Button>

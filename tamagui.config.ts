@@ -44,9 +44,26 @@ const customTokens = {
   },
 }
 
+// Responsive breakpoints for mobile-first design
+const media = {
+  xs: { maxWidth: 660 },      // Small phones (iPhone SE, etc)
+  sm: { maxWidth: 800 },      // Large phones (iPhone 14, etc)
+  md: { minWidth: 801 },      // Tablets (iPad, etc)
+  lg: { minWidth: 1024 },     // Desktop/Large tablets
+  xl: { minWidth: 1280 },     // Large desktop
+  xxl: { minWidth: 1536 },    // Extra large desktop
+
+  // Utility breakpoints
+  gtXs: { minWidth: 661 },    // Greater than xs
+  gtSm: { minWidth: 801 },    // Greater than sm
+  short: { maxHeight: 700 },  // Short screens
+  tall: { minHeight: 800 },   // Tall screens
+}
+
 const tamaguiConfig = createTamagui({
   ...config,
   animations,
+  media,
   tokens: {
     ...config.tokens,
     color: {

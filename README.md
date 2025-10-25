@@ -70,8 +70,8 @@ flatfinder-expo/
 ### Netlify Web App
 The FlatFinder web app is deployed on Netlify for global access:
 
-- **Production URL**: https://levelmate-app-1755829802.netlify.app
-- **Admin Dashboard**: https://app.netlify.com/projects/levelmate-app-1755829802
+- **Production URL**: https://flatfinder-app.netlify.app
+- **Admin Dashboard**: https://app.netlify.com/projects/flatfinder-app
 - **Project ID**: 9d064cb9-3f1e-4f44-9b73-04992d931cb8
 
 #### Deploying to Netlify

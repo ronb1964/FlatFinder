@@ -4,7 +4,7 @@
 
 **Tester Requirements:**
 - Physical mobile device (iPhone or Android phone)
-- Access to app via Netlify URL: https://levelmate-app-1755829802.netlify.app
+- Access to app via Netlify URL: https://flatfinder-app.netlify.app
 - Flat surface (table, countertop, or RV floor)
 - 5-10 minutes testing time
 

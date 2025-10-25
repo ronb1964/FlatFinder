@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { YStack, XStack, Text, Button, H1, H2, Card, ScrollView, useTheme, Switch, Input, Label, Checkbox } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -33,6 +33,7 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const { updateSettings, addProfile, setActiveProfile, settings } = useAppStore();
   const theme = useTheme();
+  const scrollViewRef = useRef<any>(null);
 
   // Setup data collected during onboarding
   const [setupData, setSetupData] = useState({
@@ -52,6 +53,11 @@ export default function OnboardingScreen() {
   // Get typical measurements based on selected units
   const typicalMeasurements = getTypicalMeasurements(setupData.measurementUnits);
   const selectedVehicleType = VEHICLE_TYPES.find(v => v.id === setupData.vehicleType);
+
+  // Reset scroll position when step changes
+  useEffect(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentStep]);
 
   // Define onboarding steps with setup
   const STEPS = [
@@ -420,7 +426,7 @@ export default function OnboardingScreen() {
 
   function renderVehicleDetailsStep() {
     return (
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingTop: 0 }}>
         <YStack space="$4" alignItems="center">
           <Card padding="$6" backgroundColor="$purple9" borderRadius="$8">
             {selectedVehicleType && <selectedVehicleType.icon size={64} color="white" />}
@@ -695,7 +701,7 @@ export default function OnboardingScreen() {
                       checked={setupData.hasLevelingBlocks}
                       onCheckedChange={(checked) => setSetupData(prev => ({ ...prev, hasLevelingBlocks: checked }))}
                     >
-                      <Switch.Thumb animation="quick" />
+                      <Switch.Thumb />
                     </Switch>
                     <Text>I have leveling blocks</Text>
                   </XStack>
@@ -932,8 +938,9 @@ export default function OnboardingScreen() {
         </XStack>
 
         {/* Content */}
-        <ScrollView 
-          flex={1} 
+        <ScrollView
+          ref={scrollViewRef}
+          flex={1}
           showsVerticalScrollIndicator={false}
         >
           <YStack space="$5" paddingBottom="$7">

@@ -26,6 +26,11 @@ import { CalibrationWizard } from '../../src/components/CalibrationWizard';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { ProfilesScreenGradient } from '../../src/components/GradientBackground';
+import {
+  ResponsiveContainer,
+  ResponsiveGrid,
+  ScalableH2,
+} from '../../src/components/responsive';
 
 import { createCalibration, type Calibration } from '../../src/lib/levelingMath';
 
@@ -152,24 +157,26 @@ export default function ProfilesScreen() {
   return (
     <ProfilesScreenGradient>
       <SafeAreaView style={{ flex: 1 }}>
-        <YStack
-          flex={1}
-          padding="$4"
-          space="$4"
-        >
-          <XStack justifyContent="space-between" alignItems="center">
-            <H2 color="white">Vehicle Profiles</H2>
-            <GradientButton
-              gradientType="primary"
-              icon={Plus}
-              onPress={() => setShowSetupWizard(true)}
-            >
-              Add Vehicle
-            </GradientButton>
-          </XStack>
+        <ResponsiveContainer maxWidth="lg">
+          <YStack
+            space="$4"
+            paddingVertical="$4"
+            $md={{ space: '$5', paddingVertical: '$6' }}
+          >
+            <XStack justifyContent="space-between" alignItems="center">
+              <ScalableH2 base="$6" md="$7" color="white">Vehicle Profiles</ScalableH2>
+              <GradientButton
+                gradientType="primary"
+                icon={Plus}
+                onPress={() => setShowSetupWizard(true)}
+              >
+                Add Vehicle
+              </GradientButton>
+            </XStack>
 
-        <ScrollView flex={1} showsVerticalScrollIndicator={false}>
-          <YStack space="$3">
+            <YStack space="$3"
+              $md={{ space: '$4' }}
+            >
             {profiles.length === 0 ? (
               <YStack space="$4">
                 <Card padding="$6" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
@@ -316,9 +323,9 @@ export default function ProfilesScreen() {
                 </GlassCard>
               ))
             )}
+            </YStack>
           </YStack>
-        </ScrollView>
-      </YStack>
+        </ResponsiveContainer>
 
       {/* Vehicle Setup Wizard */}
       <VehicleSetupWizard

@@ -1,5 +1,5 @@
 /**
- * Leveling math utilities for the LevelMate Camper/Trailer Leveling App.
+ * Leveling math utilities for the FlatFinder Camper/Trailer Leveling App.
  * 
  * Angles are in degrees unless specified. Distances are in inches by default.
  * All functions are pure and side-effect-free for easy unit testing.

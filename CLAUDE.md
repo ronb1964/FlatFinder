@@ -3,7 +3,7 @@
 ## Project Overview
 FlatFinder is a React Native/Expo app that helps RV owners level their vehicles using device sensors. Built with TypeScript, Tamagui UI framework, and Zustand state management.
 
-**Production URL:** https://levelmate-app-1755829802.netlify.app
+**Production URL:** https://flatfinder-app.netlify.app (backup/demo only - see Testing Strategy below)
 
 ## Current Status (✅ Recently Completed)
 
@@ -96,11 +96,28 @@ FlatFinder is a React Native/Expo app that helps RV owners level their vehicles 
 
 ### Available Commands
 ```bash
-npm run dev          # Start development server
-npm run web          # Start web development
+npm run dev          # Start Expo development server (PRIMARY)
+npx expo start       # Same as npm run dev
+npm run web          # Start web development (limited - no sensors)
 npx expo export      # Build for production
-npx netlify deploy --dir=dist --prod  # Deploy to Netlify
+npx netlify deploy --dir=dist --prod  # Deploy to Netlify (optional backup)
 ```
+
+### Testing Strategy
+**PRIMARY: Expo Go on iPhone**
+- ✅ Real device sensors (accelerometer, gyroscope) - leveling features work
+- ✅ Accurate mobile layout, safe areas, touch targets
+- ✅ Instant testing with QR code scan
+- ✅ True representation of production app
+- **Workflow:** `npm run dev` → Scan QR code with iPhone Camera app → Tap notification → App opens in Expo Go
+- **Note:** Modern Expo Go doesn't have built-in QR scanner - use native iPhone Camera app instead
+
+**BACKUP: Netlify Web Deployment**
+- ⚠️ NO motion sensors - leveling features don't work
+- ⚠️ Different layout from mobile (web viewport vs native)
+- ✅ Shareable URL for demos/screenshots
+- **Use case:** Only for sharing UI demos or basic navigation testing
+- **Important:** UI that looks good on web may not fit on mobile - always verify on Expo Go
 
 ### Known Issues
 - TypeScript circular reference causing max call stack exceeded (doesn't affect runtime)
@@ -111,22 +128,46 @@ npx netlify deploy --dir=dist --prod  # Deploy to Netlify
 - New components: ErrorBoundary, LoadingSpinner, SimpleProfileWizard
 - Enhanced existing components with better UX and indicators
 
+## User Profile & Communication Style
+**CRITICAL - READ FIRST:**
+- **User is a complete coding novice** - Cannot read code, no programming experience
+- **Has basic Linux terminal experience** - Comfortable with simple commands
+- **Develops conversationally** - Describes features, I implement them
+- **Needs step-by-step instructions** - Assume zero knowledge, explain every step
+- **Mobile-first user** - Testing on iPhone via Expo Go, not a desktop developer
+
+**Communication requirements:**
+1. **Always provide complete, numbered steps** for any actions user needs to take
+2. **Explain terminal commands** before asking user to run them
+3. **Don't assume technical knowledge** - explain what things do and why
+4. **Ask for feedback** if instructions are too detailed (user will say so)
+5. **Focus on outcomes** - user cares about app behavior, not implementation details
+6. **Test instructions** - make sure they're copy-paste ready and will work
+
+**Expo Go QR code scanning:**
+- Modern Expo Go doesn't have built-in QR scanner
+- User scans QR codes with native iPhone Camera app
+- Camera shows notification → User taps it → Opens in Expo Go
+
 ## Session Startup Protocol
 **MANDATORY: Read these key files at the start of every session to understand established procedures:**
-1. `CLAUDE.md` - This file for project overview and procedures
-2. `COLOR_PALETTE.md` - **Official color palette and design system standards**
-3. `FEATURES.md` - Complete feature specification and planned roadmap
-4. `src/components/LevelingAssistant.tsx` - Main leveling UI logic and recent improvements
-5. `src/lib/rvLevelingMath.ts` - Core leveling calculations and block optimization
+1. `DEVELOPMENT_SETUP.md` - **Development workflow, custom dev client setup, and testing strategy**
+2. `CLAUDE.md` - This file for project overview and procedures
+3. `COLOR_PALETTE.md` - **Official color palette and design system standards**
+4. `FEATURES.md` - Complete feature specification and planned roadmap
+5. `src/components/LevelingAssistant.tsx` - Main leveling UI logic and recent improvements
+6. `src/lib/rvLevelingMath.ts` - Core leveling calculations and block optimization
 6. `src/lib/units.ts` - Unit conversion and measurement formatting
 7. `src/state/appStore.ts` - App state management and profile handling
 8. Recent git status to understand current state
 
 **After completing tasks:**
-- ALWAYS build and deploy changes to Netlify after completing tasks
-- Commands: `npx expo export` then `npx netlify deploy --dir=dist --prod`
-- Test changes at: https://levelmate-app-1755829802.netlify.app
+- **PRIMARY:** Test on iPhone via Expo Go - this is the source of truth
+- **OPTIONAL:** Deploy to Netlify only if needed for demos/sharing
+  - Commands: `npx expo export` then `npx netlify deploy --dir=dist --prod`
+  - URL: https://flatfinder-app.netlify.app
 - Review recent git status and current branch before starting work
+- **CRITICAL:** Always ask user to test on Expo Go before considering UI tasks complete
 
 **Key Established Procedures:**
 - **Design**: Follow COLOR_PALETTE.md for all colors, gradients, and glassmorphism patterns
@@ -137,11 +178,18 @@ npx netlify deploy --dir=dist --prod  # Deploy to Netlify
 - **Text standards**: "Raise:" not "Need:", "Setup blocks in profile" not "Setup blocks"
 - **UI components**: Use GlassCard for cards, GradientButton for primary actions
 
-## Testing Limitations
-- **Desktop browser CANNOT test leveling features** - no motion sensors
-- **Onboarding tutorial** can be tested on desktop (no sensors needed)
-- **Block Instructions/Leveling screens** MUST be tested on phone via Netlify
-- **Local development server** useful for: UI layout, navigation, non-sensor features only
+## Testing Requirements
+- ✅ **PRIMARY: Expo Go on iPhone** - ALWAYS test here first
+  - Real sensors work (accelerometer, gyroscope)
+  - Accurate mobile layout and touch targets
+  - True safe areas (notch, rounded corners, home indicator)
+  - All features testable
+
+- ⚠️ **AVOID: Desktop browser/Netlify for development**
+  - NO motion sensors - leveling doesn't work
+  - Different layout than mobile - what fits on web may overflow on mobile
+  - Missing safe area considerations
+  - Only useful for: onboarding tutorial, basic navigation, UI demos for sharing
 
 ## Development Notes
 - Always test profile selection logic with both single and multiple profiles

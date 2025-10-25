@@ -20,7 +20,13 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSMotionUsageDescription": "FlatFinder uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
-        "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"]
+        "UIRequiredDeviceCapabilities": [
+          "accelerometer",
+          "gyroscope",
+          "accelerometer",
+          "gyroscope"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -39,6 +45,16 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0c33edf0-e9d4-4f4f-95ef-0636628dcb28"
+      }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router",
+      "expo-secure-store"
+    ]
   }
 }

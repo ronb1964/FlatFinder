@@ -90,23 +90,68 @@ export class RVLevelingCalculator {
     if (isTrailer) {
       // TRAILER: Only 3 points - Left wheel, Right wheel, Hitch
       // Main wheels (at the axle): only affected by roll
+
+      // DEBUG: Check what measurement contains
+      console.log('🔍 MEASUREMENT INPUT:', {
+        pitch: measurement.pitchDegrees,
+        roll: measurement.rollDegrees,
+        pitchRad,
+        rollRad,
+        halfTrack
+      });
+
+      // DETAILED DEBUGGING - Check every variable
+      const tanValue = Math.tan(rollRad);
+      console.log('🔍 STEP 1 - Input values:', {
+        halfTrack,
+        rollDegrees: measurement.rollDegrees,
+        rollRad,
+        tanValue
+      });
+
+      const leftLift = -halfTrack * tanValue;
+      console.log('🔍 STEP 2 - Left calculation:', {
+        formula: '-halfTrack * tanValue',
+        calculation: `-(${halfTrack}) * ${tanValue}`,
+        result: leftLift
+      });
+
+      const rightLift = halfTrack * tanValue;
+      console.log('🔍 STEP 3 - Right calculation:', {
+        formula: 'halfTrack * tanValue',
+        calculation: `${halfTrack} * ${tanValue}`,
+        result: rightLift,
+        typeofResult: typeof rightLift,
+        isZero: rightLift === 0,
+        isNearZero: Math.abs(rightLift) < 0.001
+      });
+
+      // ALWAYS use -leftLift for right wheel to ensure symmetry
+      const finalRightLift = -leftLift;
+      console.log('🔍 STEP 4 - Using symmetry:', {
+        leftLift,
+        finalRightLift,
+        explanation: 'Using -leftLift to ensure correct symmetry'
+      });
+
+      const hitchLift = -hitchOffsetInches * Math.tan(pitchRad);
+
       lifts.push({
         location: 'left_wheel',
-        liftInches: -halfTrack * Math.tan(rollRad),
+        liftInches: leftLift,
         description: 'Left Wheel'
       });
-      
+
       lifts.push({
-        location: 'right_wheel', 
-        liftInches: halfTrack * Math.tan(rollRad),
+        location: 'right_wheel',
+        liftInches: finalRightLift,
         description: 'Right Wheel'
       });
-      
+
       // Hitch point: behind rear axle, affected by pitch
-      const hitchPitch = -hitchOffsetInches * Math.tan(pitchRad);
       lifts.push({
         location: 'hitch',
-        liftInches: hitchPitch,
+        liftInches: hitchLift,
         description: 'Hitch'
       });
       
@@ -158,13 +203,18 @@ export class RVLevelingCalculator {
     }
     
     // Normalize lifts so minimum lift is 0 (we can only add blocks, not remove ground)
+    console.log('🔍 STEP 5 - BEFORE normalization:', lifts.map(l => ({ location: l.location, liftInches: l.liftInches })));
+
     const minLift = Math.min(...lifts.map(l => l.liftInches));
+    console.log('🔍 STEP 6 - Min lift found:', minLift);
+
     if (minLift < 0) {
       lifts.forEach(lift => {
         lift.liftInches -= minLift;
       });
+      console.log('🔍 STEP 7 - AFTER normalization:', lifts.map(l => ({ location: l.location, liftInches: l.liftInches })));
     }
-    
+
     return lifts;
   }
   

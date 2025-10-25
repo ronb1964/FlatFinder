@@ -23,6 +23,14 @@ import { createCalibration } from '../lib/levelingMath';
 // import { formatMeasurement, getTypicalMeasurements, getCommonBlockHeights, convertToInches, convertForDisplay } from '../lib/units';
 import { useAppStore } from '../state/appStore';
 import { GlassCard } from './GlassCard';
+import {
+  ScrollContainer,
+  StickyActionButtons,
+  ResponsiveContainer,
+  ScalableText,
+  ScalableH2,
+  ScalableH3
+} from './responsive';
 
 interface VehicleSetupWizardProps {
   onComplete: (profile: {
@@ -296,11 +304,9 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
   );
 
   const renderMeasurementsStep = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 20 }}
-    >
-      <YStack space="$4">
+      <YStack space="$4"
+        $md={{ space: '$5' }}
+      >
         <YStack space="$2" alignItems="center">
           <H2 color="$color" textAlign="center">Vehicle Measurements</H2>
           <Text color="$colorPress" textAlign="center" fontSize="$4">
@@ -542,15 +548,12 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
           </XStack>
         </Card>
       </YStack>
-    </ScrollView>
   );
 
   const renderBlocksStep = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 20 }}
-    >
-      <YStack space="$4">
+      <YStack space="$4"
+        $md={{ space: '$5' }}
+      >
         <YStack space="$2" alignItems="center">
           <H2 color="$color" textAlign="center">Leveling Blocks</H2>
           <Text color="$colorPress" textAlign="center" fontSize="$4">
@@ -571,7 +574,7 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
                 checked={hasLevelingBlocks}
                 onCheckedChange={setHasLevelingBlocks}
               >
-                <Switch.Thumb animation="quick" />
+                <Switch.Thumb />
               </Switch>
               <Text>I have leveling blocks</Text>
             </XStack>
@@ -726,7 +729,6 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
           </XStack>
         </Card>
       </YStack>
-    </ScrollView>
   );
 
   const STEPS = [
@@ -762,44 +764,63 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
       shadowOffset={{ width: 0, height: 12 }}
       shadowOpacity={0.4}
       shadowRadius={24}
+      $md={{
+        borderRadius: '$7',
+        top: '$6',
+        left: '$8',
+        right: '$8',
+        bottom: '$6',
+      }}
     >
       <YStack flex={1} height="100%">
-        {/* Fixed header */}
-        <YStack padding="$4" paddingBottom="$2" space="$3">
-          {/* Close button */}
-          <XStack justifyContent="space-between" alignItems="center">
-            <H2>{editingProfile ? 'Edit Vehicle' : 'Vehicle Setup'}</H2>
-            <Button size="$3" backgroundColor="$gray9" onPress={onCancel}>
-              Cancel
-            </Button>
-          </XStack>
-          
-          {/* Progress */}
-          <XStack space="$2" justifyContent="center">
-            {STEPS.map((_, index) => (
-              <Card
-                key={index}
-                width={40}
-                height={4}
-                backgroundColor={index <= step ? '$blue9' : '$gray6'}
-                borderRadius="$2"
-              />
-            ))}
-          </XStack>
+        {/* Scrollable content with header */}
+        <ScrollContainer showFadeIndicator={true}>
+          <ResponsiveContainer maxWidth="md">
+            <YStack space="$4" paddingVertical="$4"
+              $md={{ space: '$5', paddingVertical: '$6' }}
+            >
+              {/* Header */}
+              <XStack justifyContent="space-between" alignItems="center">
+                <ScalableH2 base="$6" md="$7">{editingProfile ? 'Edit Vehicle' : 'Vehicle Setup'}</ScalableH2>
+                <Button size="$3" backgroundColor="$gray9" onPress={onCancel}
+                  $md={{ size: '$4' }}
+                >
+                  Cancel
+                </Button>
+              </XStack>
 
-          {/* Step Title */}
-          <H3 color="$colorPress" textAlign="center">
-            Step {step + 1} of {STEPS.length}: {currentStepData.title}
-          </H3>
-        </YStack>
+              {/* Progress */}
+              <XStack space="$2" justifyContent="center"
+                $md={{ space: '$3' }}
+              >
+                {STEPS.map((_, index) => (
+                  <Card
+                    key={index}
+                    width={40}
+                    height={4}
+                    backgroundColor={index <= step ? '$blue9' : '$gray6'}
+                    borderRadius="$2"
+                    $md={{
+                      width: 60,
+                      height: 6,
+                    }}
+                  />
+                ))}
+              </XStack>
 
-        {/* Scrollable content */}
-        <ScrollView flex={1} paddingHorizontal="$4">
-          {currentStepData.component()}
-        </ScrollView>
+              {/* Step Title */}
+              <ScalableH3 base="$5" md="$6" color="$colorPress" textAlign="center">
+                Step {step + 1} of {STEPS.length}: {currentStepData.title}
+              </ScalableH3>
 
-        {/* Fixed navigation buttons */}
-        <XStack padding="$4" paddingTop="$2" space="$3" backgroundColor="$background">
+              {/* Step content */}
+              {currentStepData.component()}
+            </YStack>
+          </ResponsiveContainer>
+        </ScrollContainer>
+
+        {/* Sticky navigation buttons */}
+        <StickyActionButtons>
           {step > 0 && (
             <Button
               flex={1}
@@ -810,7 +831,7 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
               Back
             </Button>
           )}
-          
+
           <Button
             flex={1}
             size="$5"
@@ -820,7 +841,7 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
           >
             {step < STEPS.length - 1 ? 'Next' : (editingProfile ? 'Update Profile' : 'Create Profile')}
           </Button>
-        </XStack>
+        </StickyActionButtons>
       </YStack>
     </GlassCard>
   );
