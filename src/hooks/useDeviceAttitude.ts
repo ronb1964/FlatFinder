@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import { 
-  createDefaultAttitudeAdapter, 
-  type AttitudeReading, 
+import {
+  createDefaultAttitudeAdapter,
+  type AttitudeReading,
   type AttitudeAdapter,
-  type AttitudeConfig 
+  type AttitudeConfig,
 } from '../sensors/attitudeAdapter';
+import { useDebugStore } from '../state/debugStore';
 
 export interface DeviceAttitudeData {
   pitchDeg: number;
@@ -32,7 +33,7 @@ const DEFAULT_ATTITUDE: DeviceAttitudeData = {
 
 export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): DeviceAttitudeData {
   const [attitude, setAttitude] = useState<DeviceAttitudeData>(DEFAULT_ATTITUDE);
-  
+
   const adapterRef = useRef<AttitudeAdapter | null>(null);
   const configRef = useRef<AttitudeConfig | null>(null);
 
@@ -43,20 +44,20 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
       try {
         // Create adapter and config
         const { adapter, config } = createDefaultAttitudeAdapter();
-        
+
         // Apply custom config if provided
         const finalConfig = customConfig ? { ...config, ...customConfig } : config;
-        
+
         adapterRef.current = adapter;
         configRef.current = finalConfig;
 
         // Check availability
         const isAvailable = await adapter.isAvailable();
-        
+
         if (!mounted) return;
 
         if (!isAvailable) {
-          setAttitude(prev => ({
+          setAttitude((prev) => ({
             ...prev,
             isAvailable: false,
             errorMessage: 'Device orientation sensors not available on this platform',
@@ -65,7 +66,7 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
           return;
         }
 
-        setAttitude(prev => ({
+        setAttitude((prev) => ({
           ...prev,
           isAvailable: true,
         }));
@@ -80,13 +81,13 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
 
         if (!mounted) return;
 
-        setAttitude(prev => ({
+        setAttitude((prev) => ({
           ...prev,
           permissionStatus,
         }));
 
         if (permissionStatus === 'denied') {
-          setAttitude(prev => ({
+          setAttitude((prev) => ({
             ...prev,
             errorMessage: 'Permission denied for device orientation sensors',
           }));
@@ -97,7 +98,7 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
         const handleAttitudeUpdate = (reading: AttitudeReading) => {
           if (!mounted) return;
 
-          setAttitude(prev => ({
+          setAttitude((prev) => ({
             ...prev,
             pitchDeg: reading.pitchDeg,
             rollDeg: reading.rollDeg,
@@ -115,20 +116,19 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
 
         if (!mounted) return;
 
-        setAttitude(prev => ({
+        setAttitude((prev) => ({
           ...prev,
           errorMessage: '',
         }));
-
       } catch (error) {
         console.error('Failed to initialize device attitude sensors:', error);
-        
+
         if (mounted) {
-          setAttitude(prev => ({
+          setAttitude((prev) => ({
             ...prev,
             isAvailable: false,
             isReliable: false,
-            errorMessage: `Sensor initialization failed: ${error}`,
+            errorMessage: `Sensor initialization failed: ${error} `,
           }));
         }
       }
@@ -146,6 +146,25 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
     };
   }, [customConfig]);
 
-  // Return current attitude data
+  // Debug override
+  const { isDebugMode, mockPitch, mockRoll } = useDebugStore();
+
+  // Return current attitude data (with debug override if active)
+  if (isDebugMode) {
+    return {
+      ...attitude,
+      pitchDeg: mockPitch,
+      rollDeg: mockRoll,
+      raw: {
+        pitch: mockPitch,
+        roll: mockRoll,
+        yaw: 0,
+      },
+      isReliable: true,
+      isAvailable: true,
+      errorMessage: '',
+    };
+  }
+
   return attitude;
 }
