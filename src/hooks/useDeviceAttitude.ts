@@ -10,6 +10,7 @@ import { useDebugStore } from '../state/debugStore';
 export interface DeviceAttitudeData {
   pitchDeg: number;
   rollDeg: number;
+  yawDeg: number;
   raw: {
     pitch: number;
     roll: number;
@@ -24,6 +25,7 @@ export interface DeviceAttitudeData {
 const DEFAULT_ATTITUDE: DeviceAttitudeData = {
   pitchDeg: 0,
   rollDeg: 0,
+  yawDeg: 0,
   raw: { pitch: 0, roll: 0, yaw: 0 },
   isReliable: false,
   errorMessage: '',
@@ -102,6 +104,7 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
             ...prev,
             pitchDeg: reading.pitchDeg,
             rollDeg: reading.rollDeg,
+            yawDeg: reading.yawDeg,
             raw: {
               pitch: reading.pitchDeg,
               roll: reading.rollDeg,
@@ -147,7 +150,7 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
   }, [customConfig]);
 
   // Debug override
-  const { isDebugMode, mockPitch, mockRoll } = useDebugStore();
+  const { isDebugMode, mockPitch, mockRoll, mockHeading } = useDebugStore();
 
   // Return current attitude data (with debug override if active)
   if (isDebugMode) {
@@ -155,10 +158,11 @@ export function useDeviceAttitude(customConfig?: Partial<AttitudeConfig>): Devic
       ...attitude,
       pitchDeg: mockPitch,
       rollDeg: mockRoll,
+      yawDeg: mockHeading,
       raw: {
         pitch: mockPitch,
         roll: mockRoll,
-        yaw: 0,
+        yaw: mockHeading,
       },
       isReliable: true,
       isAvailable: true,

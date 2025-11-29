@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, Switch, XStack, YStack, Card, Button, Slider } from 'tamagui';
 import { useDebugStore } from '../state/debugStore';
 import { X } from '@tamagui/lucide-icons';
@@ -12,11 +12,31 @@ export function DebugControls() {
     isDebugMode,
     mockPitch,
     mockRoll,
+    mockHeading,
     setDebugMode,
     setMockPitch,
     setMockRoll,
+    setMockHeading,
     resetMockValues,
   } = useDebugStore();
+
+  // Local state for smooth slider interaction
+  const [localPitch, setLocalPitch] = useState(mockPitch);
+  const [localRoll, setLocalRoll] = useState(mockRoll);
+  const [localHeading, setLocalHeading] = useState(mockHeading);
+
+  // Sync local state when store values change externally (e.g., reset button)
+  useEffect(() => {
+    setLocalPitch(mockPitch);
+  }, [mockPitch]);
+
+  useEffect(() => {
+    setLocalRoll(mockRoll);
+  }, [mockRoll]);
+
+  useEffect(() => {
+    setLocalHeading(mockHeading);
+  }, [mockHeading]);
 
   // Only show in development or on web
   if (!__DEV__ && Platform.OS !== 'web') return null;
@@ -74,19 +94,21 @@ export function DebugControls() {
         <YStack space="$1">
           <XStack justifyContent="space-between">
             <Text fontSize="$2" color="$color">
-              Pitch: {mockPitch.toFixed(1)}°
+              Pitch: {localPitch.toFixed(1)}°
             </Text>
             <Text fontSize="$2" color="$gray10">
               Nose Up/Down
             </Text>
           </XStack>
           <Slider
-            defaultValue={[0]}
-            value={[mockPitch]}
-            onValueChange={(val) => setMockPitch(val[0])}
-            min={-10}
-            max={10}
-            step={0.1}
+            value={[localPitch]}
+            onValueChange={(val) => {
+              setLocalPitch(val[0]);
+              setMockPitch(val[0]);
+            }}
+            min={-90}
+            max={90}
+            step={0.5}
             size="$2"
           >
             <Slider.Track>
@@ -99,23 +121,52 @@ export function DebugControls() {
         <YStack space="$1">
           <XStack justifyContent="space-between">
             <Text fontSize="$2" color="$color">
-              Roll: {mockRoll.toFixed(1)}°
+              Roll: {localRoll.toFixed(1)}°
             </Text>
             <Text fontSize="$2" color="$gray10">
               Left/Right
             </Text>
           </XStack>
           <Slider
-            defaultValue={[0]}
-            value={[mockRoll]}
-            onValueChange={(val) => setMockRoll(val[0])}
-            min={-10}
-            max={10}
-            step={0.1}
+            value={[localRoll]}
+            onValueChange={(val) => {
+              setLocalRoll(val[0]);
+              setMockRoll(val[0]);
+            }}
+            min={-90}
+            max={90}
+            step={0.5}
             size="$2"
           >
             <Slider.Track>
               <Slider.TrackActive backgroundColor="$blue10" />
+            </Slider.Track>
+            <Slider.Thumb index={0} circular size="$2" />
+          </Slider>
+        </YStack>
+
+        <YStack space="$1">
+          <XStack justifyContent="space-between">
+            <Text fontSize="$2" color="$color">
+              Heading: {localHeading.toFixed(0)}°
+            </Text>
+            <Text fontSize="$2" color="$gray10">
+              Compass
+            </Text>
+          </XStack>
+          <Slider
+            value={[localHeading]}
+            onValueChange={(val) => {
+              setLocalHeading(val[0]);
+              setMockHeading(val[0]);
+            }}
+            min={0}
+            max={359}
+            step={1}
+            size="$2"
+          >
+            <Slider.Track>
+              <Slider.TrackActive backgroundColor="$green10" />
             </Slider.Track>
             <Slider.Thumb index={0} circular size="$2" />
           </Slider>

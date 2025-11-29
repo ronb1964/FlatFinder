@@ -1,17 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { YStack, XStack, Text, Button, H2, H3, Card, Progress, styled, ScrollView, View } from 'tamagui';
-import { Target, RotateCw, Check, AlertCircle, Star, Smartphone } from '@tamagui/lucide-icons';
-import { Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { YStack, XStack, Text, Button, H2, Progress, styled, View } from 'tamagui';
+import { Target, RotateCw, Check } from '@tamagui/lucide-icons';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { BubbleLevel } from './BubbleLevel';
-import { 
-  CalibrationReading, 
-  createCalibrationReading, 
+import {
+  CalibrationReading,
+  createCalibrationReading,
   calculateAverageCalibration,
-  assessCalibrationQuality 
 } from '../lib/calibration';
-
 import { Calibration } from '../lib/levelingMath';
+import { THEME } from '../theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 interface CalibrationWizardProps {
   onComplete: (calibration: Calibration) => void;
@@ -19,457 +23,217 @@ interface CalibrationWizardProps {
   isVisible: boolean;
 }
 
-const Container = styled(YStack, {
+const Container = styled(View, {
   flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  backgroundColor: '#1b263b', // Medium slate blue to match new theme
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
 });
 
-const InstructionCard = styled(Card, {
-  padding: '$5',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  borderColor: 'rgba(255, 255, 255, 0.1)',
+const GlassCard = styled(View, {
+  backgroundColor: 'rgba(14, 165, 233, 0.08)', // Teal/cyan tint
+  borderRadius: 24,
+  padding: 24,
+  width: '100%',
+  maxWidth: 400,
   borderWidth: 1,
-  borderRadius: '$4',
+  borderColor: 'rgba(14, 165, 233, 0.3)', // Cyan border
+  shadowColor: '#0ea5e9', // Sky blue shadow
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.3,
+  shadowRadius: 20,
 });
 
 const CALIBRATION_STEPS = [
   {
-    title: 'Position Your Device',
-    instruction: 'Place your phone flat on a stable surface inside your RV. IMPORTANT: The TOP of your phone should be pointing toward the FRONT of your RV.',
-    detailInstruction: 'Screen up, phone flat, top edge facing forward. This orientation is critical for accurate measurements.',
+    title: 'Position Device',
+    instruction: 'Place phone flat, TOP pointing FRONT.',
     icon: Target,
+    rotation: 0,
   },
   {
     title: 'First Reading',
-    instruction: 'Keep your phone perfectly still in this position and press "Take Reading" to capture the first measurement.',
-    detailInstruction: 'Don\'t move or touch the phone while the reading is being taken.',
+    instruction: 'Keep still. Tap to capture.',
     icon: RotateCw,
+    rotation: 0,
   },
   {
-    title: 'Rotate & Read',
-    instruction: 'Rotate your phone 90 degrees clockwise (like turning a steering wheel right) while keeping it flat on the surface.',
-    detailInstruction: 'The phone should still be flat, just facing a different direction. Then take the second reading.',
-    rotationDirection: 'clockwise' as const,
+    title: 'Rotate 90°',
+    instruction: 'Turn phone 90° CLOCKWISE.',
     icon: RotateCw,
+    rotation: -90, // Rotate UI counter-clockwise to match phone rotation
   },
   {
     title: 'Final Reading',
-    instruction: 'Rotate your phone another 90 degrees clockwise and take the third reading. The app will average all readings for the best baseline.',
-    detailInstruction: 'This gives us measurements from 3 different orientations for maximum accuracy.',
-    rotationDirection: 'clockwise' as const,
+    instruction: 'Turn another 90°. Capture.',
     icon: Check,
+    rotation: -180,
   },
 ];
-
-// Rotation Animation Component
-const RotationIndicator = ({ direction }: { direction: 'clockwise' | 'counterclockwise' }) => {
-  const rotateValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const rotation = Animated.loop(
-      Animated.timing(rotateValue, {
-        toValue: direction === 'clockwise' ? 1 : -1,
-        duration: 2000,
-        useNativeDriver: true,
-      })
-    );
-    rotation.start();
-    return () => rotation.stop();
-  }, [direction, rotateValue]);
-
-  const rotate = rotateValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', direction === 'clockwise' ? '90deg' : '-90deg'],
-  });
-
-  return (
-    <View alignItems="center" marginVertical="$3">
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        <Smartphone size={40} color="#3b82f6" />
-      </Animated.View>
-      <Text fontSize="$3" color="#3b82f6" marginTop="$2" fontWeight="600">
-        Rotate {direction === 'clockwise' ? 'clockwise →' : '← counterclockwise'}
-      </Text>
-    </View>
-  );
-};
 
 export function CalibrationWizard({ onComplete, onCancel, isVisible }: CalibrationWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [readings, setReadings] = useState<CalibrationReading[]>([]);
   const [isCollecting, setIsCollecting] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [calibrationQuality, setCalibrationQuality] = useState<ReturnType<typeof assessCalibrationQuality> | null>(null);
-  
-  const { pitchDeg, rollDeg, isReliable, errorMessage } = useDeviceAttitude();
-  const collectingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const progress = ((currentStep + 1) / CALIBRATION_STEPS.length) * 100;
-  const currentStepData = CALIBRATION_STEPS[currentStep];
-  const IconComponent = currentStepData.icon;
+
+  const { pitchDeg, rollDeg, isReliable } = useDeviceAttitude();
+
+  // Animation values
+  const uiRotation = useSharedValue(0);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    if (!isVisible) {
-      // Reset state when wizard is hidden
-      setCurrentStep(0);
-      setReadings([]);
-      setIsCollecting(false);
-      setHasStarted(false);
-      if (collectingTimeoutRef.current) {
-        clearTimeout(collectingTimeoutRef.current);
-      }
+    if (isVisible) {
+      opacity.value = withTiming(1, { duration: 500 });
+    } else {
+      opacity.value = withTiming(0, { duration: 300 });
+      // Reset state after animation
+      globalThis.setTimeout(() => {
+        setCurrentStep(0);
+        setReadings([]);
+        setIsCollecting(false);
+        setHasStarted(false);
+        uiRotation.value = 0;
+      }, 300);
     }
-  }, [isVisible]);
+  }, [isVisible, opacity, uiRotation]);
 
-  const handleStartCalibration = () => {
-    console.log('Starting calibration - sensor state:', { isReliable, pitchDeg, rollDeg });
+  // Update rotation based on step
+  useEffect(() => {
+    const targetRotation = CALIBRATION_STEPS[currentStep]?.rotation || 0;
+    uiRotation.value = withSpring(targetRotation * (Math.PI / 180), {
+      damping: 15,
+      stiffness: 90,
+    });
+  }, [currentStep, uiRotation]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${uiRotation.value} rad` }],
+      opacity: opacity.value,
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
+  });
+
+  const handleStart = () => {
     setHasStarted(true);
-    setCurrentStep(1); // Move to first reading step
+    setCurrentStep(1);
   };
 
   const takeReading = () => {
-    if (!isReliable) {
-      return;
-    }
+    if (!isReliable) return;
 
     setIsCollecting(true);
-    
-    // Collect reading after a short delay to ensure device is stable
-    collectingTimeoutRef.current = setTimeout(() => {
+
+    globalThis.setTimeout(() => {
       const newReading = createCalibrationReading(pitchDeg, rollDeg);
       const updatedReadings = [...readings, newReading];
-      
       setReadings(updatedReadings);
       setIsCollecting(false);
-      
-      // Assess quality after each reading
-      const quality = assessCalibrationQuality(updatedReadings);
-      setCalibrationQuality(quality);
-      
+
       if (updatedReadings.length >= 3) {
-        // Calculate final calibration using enhanced averaging
         const calibration = calculateAverageCalibration(updatedReadings);
-        
-        // Debug logging
-        console.log('=== CALIBRATION DEBUG ===');
-        console.log('Raw readings taken:', updatedReadings);
-        console.log('Calculated calibration offsets:', calibration);
-        console.log('Will apply offsets:', { 
-          pitch: calibration.pitchOffsetDegrees, 
-          roll: calibration.rollOffsetDegrees 
-        });
-        
         onComplete(calibration);
       } else {
-        // Move to next step
-        setCurrentStep(prev => prev + 1);
+        setCurrentStep((prev) => prev + 1);
       }
     }, 1000);
   };
 
-  const getStatusColor = () => {
-    if (!isReliable) return '#ef4444';
-    if (isCollecting) return '#eab308';
-    return '#22c55e';
-  };
+  const currentStepData = CALIBRATION_STEPS[currentStep];
+  const Icon = currentStepData.icon;
+  const progress = ((currentStep + 1) / CALIBRATION_STEPS.length) * 100;
 
-  const getStatusText = () => {
-    if (!isReliable) return 'Waiting for sensor data...';
-    if (isCollecting) return 'Collecting reading...';
-    return `Reading ${readings.length + 1} of 3`;
-  };
-
-  // Debug sensor state
-  console.log('Calibration Wizard - Sensor State:', { 
-    isReliable, 
-    isCollecting, 
-    pitchDeg, 
-    rollDeg,
-    buttonDisabled: (!isReliable || isCollecting)
-  });
-
-  if (!isVisible) return null;
+  if (!isVisible && opacity.value === 0) return null;
 
   return (
     <Container>
-      <ScrollView flex={1} showsVerticalScrollIndicator={false}>
-        <YStack padding="$4" space="$4" paddingBottom="$8">
+      <Animated.View style={animatedStyle}>
+        <GlassCard>
           {/* Header */}
-          <YStack space="$3" alignItems="center">
-            <YStack 
-              backgroundColor="rgba(34, 197, 94, 0.1)" 
-              borderRadius="$10" 
+          <YStack space="$4" alignItems="center">
+            <View
+              backgroundColor="rgba(0, 243, 255, 0.1)"
               padding="$3"
+              borderRadius="$full"
               borderWidth={1}
-              borderColor="rgba(34, 197, 94, 0.2)"
+              borderColor={THEME.colors.primary}
             >
-              <Target size={32} color="#22c55e" />
+              <Icon size={32} color={THEME.colors.primary} />
+            </View>
+
+            <YStack alignItems="center" space="$2">
+              <H2 color="white" fontSize="$7" fontWeight="bold" textAlign="center">
+                {currentStepData.title}
+              </H2>
+              <Text color={THEME.colors.textSecondary} textAlign="center" fontSize="$5">
+                {currentStepData.instruction}
+              </Text>
             </YStack>
-            
-            <H2 fontSize="$8" fontWeight="700" color="#ffffff" textAlign="center">
-              Device Calibration
-            </H2>
-            
-            <Text fontSize="$4" color="#94a3b8" textAlign="center" maxWidth={280}>
-              Calibrate your device for accurate leveling readings
-            </Text>
-          </YStack>
 
-      {/* Progress Bar */}
-      <YStack space="$2">
-        <XStack justifyContent="space-between" alignItems="center">
-          <Text fontSize="$3" color="#94a3b8">
-            Step {currentStep + 1} of {CALIBRATION_STEPS.length}
-          </Text>
-          <Text fontSize="$3" color="#94a3b8">
-            {Math.round(progress)}%
-          </Text>
-        </XStack>
-        
-        <Progress value={progress} backgroundColor="rgba(255, 255, 255, 0.1)">
-          <Progress.Indicator backgroundColor="#22c55e" />
-        </Progress>
-      </YStack>
+            {/* Live Bubble Level */}
+            <View marginVertical="$4">
+              <BubbleLevel
+                pitch={pitchDeg}
+                roll={rollDeg}
+                isLevel={Math.abs(pitchDeg) < 0.5 && Math.abs(rollDeg) < 0.5}
+                color={THEME.colors.primary}
+                size="compact"
+              />
+            </View>
 
-      {/* Current Step Instructions */}
-      <InstructionCard>
-        <YStack space="$4" alignItems="center">
-          <YStack 
-            backgroundColor="rgba(59, 130, 246, 0.1)" 
-            borderRadius="$8" 
-            padding="$3"
-            borderWidth={1}
-            borderColor="rgba(59, 130, 246, 0.2)"
-          >
-            <IconComponent size={24} color="#3b82f6" />
-          </YStack>
-          
-          <H3 fontSize="$6" fontWeight="600" color="#ffffff" textAlign="center">
-            {currentStepData.title}
-          </H3>
-          
-          <Text fontSize="$4" color="#94a3b8" textAlign="center" lineHeight="$5">
-            {currentStepData.instruction}
-          </Text>
-          
-          {currentStepData.detailInstruction && (
-            <Text fontSize="$3" color="#64748b" textAlign="center" lineHeight="$4" fontStyle="italic">
-              {currentStepData.detailInstruction}
-            </Text>
-          )}
-          
-          {/* Phone orientation visual for step 1 */}
-          {currentStep === 0 && (
-            <YStack space="$3" alignItems="center" padding="$3" backgroundColor="rgba(59, 130, 246, 0.05)" borderRadius="$3">
-              <XStack space="$3" alignItems="center">
-                <Smartphone size={24} color="#3b82f6" />
-                <Text fontSize="$3" color="#3b82f6" fontWeight="600">
-                  Phone TOP → RV FRONT
+            {/* Progress */}
+            <YStack width="100%" space="$2">
+              <XStack justifyContent="space-between">
+                <Text color={THEME.colors.textMuted} fontSize="$2">
+                  Step {currentStep + 1}/4
+                </Text>
+                <Text color={THEME.colors.primary} fontSize="$2">
+                  {Math.round(progress)}%
                 </Text>
               </XStack>
-              <Text fontSize="$2" color="#64748b" textAlign="center">
-                The top edge of your phone should point toward the front/nose of your RV
-              </Text>
+              <Progress value={progress} backgroundColor="rgba(255,255,255,0.1)" height={4}>
+                <Progress.Indicator backgroundColor={THEME.colors.primary} />
+              </Progress>
             </YStack>
-          )}
-          
-          {currentStepData.rotationDirection && (
-            <RotationIndicator direction={currentStepData.rotationDirection} />
-          )}
-        </YStack>
-      </InstructionCard>
 
-      {/* Live Preview (only show after starting) */}
-      {hasStarted && (
-        <YStack space="$3" alignItems="center">
-          <Text fontSize="$4" color="#94a3b8" textAlign="center">
-            Live Preview
-          </Text>
-          
-          <BubbleLevel
-            pitch={pitchDeg}
-            roll={rollDeg}
-            isLevel={Math.abs(pitchDeg) < 0.5 && Math.abs(rollDeg) < 0.5}
-            color={getStatusColor()}
-          />
-          
-          <Text fontSize="$3" color={getStatusColor()} textAlign="center" fontWeight="500">
-            {getStatusText()}
-          </Text>
-          
-          {errorMessage && (
-            <XStack space="$2" alignItems="center">
-              <AlertCircle size={16} color="#ef4444" />
-              <Text fontSize="$3" color="#ef4444">
-                {errorMessage}
-              </Text>
-            </XStack>
-          )}
-          
-          {!isReliable && hasStarted && (
-            <XStack space="$2" alignItems="center" justifyContent="center">
-              <AlertCircle size={16} color="#eab308" />
-              <Text fontSize="$3" color="#eab308" textAlign="center">
-                Waiting for device sensors to stabilize...
-              </Text>
-            </XStack>
-          )}
-        </YStack>
-      )}
-
-      {/* Reading History */}
-      {readings.length > 0 && (
-        <Card padding="$3" backgroundColor="rgba(255, 255, 255, 0.02)">
-          <Text fontSize="$3" color="#94a3b8" marginBottom="$2">
-            Collected Readings:
-          </Text>
-          {readings.map((reading, index) => (
-            <Text key={reading.timestamp} fontSize="$2" color="#64748b">
-              Reading {index + 1}: P: {reading.pitch.toFixed(2)}°, R: {reading.roll.toFixed(2)}°
-            </Text>
-          ))}
-        </Card>
-      )}
-
-      {/* Calibration Quality Indicator */}
-      {calibrationQuality && readings.length >= 2 && (
-        <Card 
-          padding="$3" 
-          backgroundColor={
-            calibrationQuality.quality === 'excellent' ? 'rgba(34, 197, 94, 0.1)' :
-            calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.05)' :
-            calibrationQuality.quality === 'fair' ? 'rgba(234, 179, 8, 0.1)' :
-            'rgba(239, 68, 68, 0.1)'
-          }
-          borderColor={
-            calibrationQuality.quality === 'excellent' ? 'rgba(34, 197, 94, 0.3)' :
-            calibrationQuality.quality === 'good' ? 'rgba(34, 197, 94, 0.2)' :
-            calibrationQuality.quality === 'fair' ? 'rgba(234, 179, 8, 0.3)' :
-            'rgba(239, 68, 68, 0.3)'
-          }
-          borderWidth={1}
-        >
-          <XStack space="$2" alignItems="center" marginBottom="$2">
-            <Star 
-              size={16} 
-              color={
-                calibrationQuality.quality === 'excellent' ? '#22c55e' :
-                calibrationQuality.quality === 'good' ? '#22c55e' :
-                calibrationQuality.quality === 'fair' ? '#eab308' :
-                '#ef4444'
+            {/* Action Button */}
+            <Button
+              size="$5"
+              backgroundColor={
+                !isReliable || isCollecting ? 'rgba(255,255,255,0.1)' : THEME.colors.primary
               }
-            />
-            <Text 
-              fontSize="$3" 
-              fontWeight="600"
-              color={
-                calibrationQuality.quality === 'excellent' ? '#22c55e' :
-                calibrationQuality.quality === 'good' ? '#22c55e' :
-                calibrationQuality.quality === 'fair' ? '#eab308' :
-                '#ef4444'
-              }
+              color={!isReliable || isCollecting ? 'rgba(255,255,255,0.3)' : '#000'}
+              fontWeight="bold"
+              onPress={!hasStarted ? handleStart : takeReading}
+              disabled={!isReliable || isCollecting}
+              pressStyle={{ opacity: 0.8, scale: 0.98 }}
+              width="100%"
+              marginTop="$2"
             >
-              Quality: {calibrationQuality.quality} ({Math.round(calibrationQuality.confidence * 100)}%)
-            </Text>
-          </XStack>
-          
-          <Text fontSize="$2" color="#94a3b8">
-            {calibrationQuality.recommendation}
-          </Text>
-          
-          {calibrationQuality.issues.length > 0 && (
-            <YStack marginTop="$2" space="$1">
-              {calibrationQuality.issues.map((issue, index) => (
-                <Text key={index} fontSize="$2" color="#ef4444">
-                  • {issue}
-                </Text>
-              ))}
-            </YStack>
-          )}
-        </Card>
-      )}
-        </YStack>
-      </ScrollView>
+              {isCollecting
+                ? 'Calibrating...'
+                : !hasStarted
+                  ? 'Start Calibration'
+                  : 'Capture Reading'}
+            </Button>
 
-      {/* Action Buttons - Fixed at bottom */}
-      <YStack 
-        padding="$4" 
-        space="$3" 
-        backgroundColor="rgba(0, 0, 0, 0.95)"
-        borderTopWidth={1}
-        borderTopColor="rgba(255, 255, 255, 0.1)"
-      >
-        {!hasStarted ? (
-          <Button
-            size="$5"
-            fontWeight="600"
-            borderRadius="$4"
-            onPress={handleStartCalibration}
-            disabled={!isReliable}
-            backgroundColor={!isReliable ? "#6b7280" : "#22c55e"}
-            color="#ffffff"
-            borderWidth={0}
-            pressStyle={{ 
-              backgroundColor: !isReliable ? "#6b7280" : "rgba(34, 197, 94, 0.8)",
-              scale: 0.98,
-              borderWidth: 0
-            }}
-            style={{
-              backgroundColor: !isReliable ? "#6b7280" : "#22c55e",
-              color: "#ffffff",
-              border: "none",
-              WebkitAppearance: 'none' as any,
-              WebkitTapHighlightColor: 'transparent',
-              WebkitTextFillColor: "#ffffff",
-              fontWeight: "600"
-            }}
-          >
-            Start Calibration
-          </Button>
-        ) : (
-          <Button
-            size="$5"
-            fontWeight="600"
-            borderRadius="$4"
-            onPress={takeReading}
-            disabled={!isReliable || isCollecting}
-            backgroundColor={(!isReliable || isCollecting) ? "#6b7280" : "#3b82f6"}
-            color="#ffffff"
-            borderWidth={0}
-            pressStyle={{ 
-              backgroundColor: (!isReliable || isCollecting) ? "#6b7280" : "rgba(59, 130, 246, 0.8)",
-              scale: 0.98,
-              borderWidth: 0
-            }}
-            style={{
-              backgroundColor: (!isReliable || isCollecting) ? "#6b7280" : "#3b82f6",
-              color: "#ffffff",
-              border: "none",
-              WebkitAppearance: 'none' as any,
-              WebkitTapHighlightColor: 'transparent',
-              WebkitTextFillColor: "#ffffff",
-              fontWeight: "600"
-            }}
-          >
-            {isCollecting ? 'Collecting...' : `Take Reading ${readings.length + 1}`}
-          </Button>
-        )}
-        
-        <Button
-          size="$4"
-          backgroundColor="transparent"
-          color="#94a3b8"
-          borderColor="rgba(255, 255, 255, 0.2)"
-          borderWidth={1}
-          onPress={onCancel}
-          pressStyle={{ 
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            scale: 0.98 
-          }}
-        >
-          Cancel
-        </Button>
-      </YStack>
+            <Button
+              size="$3"
+              chromeless
+              color={THEME.colors.textMuted}
+              onPress={onCancel}
+              marginTop="$2"
+            >
+              Cancel
+            </Button>
+          </YStack>
+        </GlassCard>
+      </Animated.View>
     </Container>
   );
 }
