@@ -637,38 +637,33 @@ export default function OnboardingScreen() {
     );
   }
 
-  // Use ref to track pending updates and ensure every click registers
-  const pendingUpdates = useRef<Record<number, number>>({});
-  const updateTimeoutRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+  // Track last tap time per button to prevent double-fires
+  const lastTapTime = useRef<Record<string, number>>({});
 
-  // Helper function to update block quantity - uses ref to batch rapid clicks correctly
+  // Helper function to update block quantity with debounce to prevent double-fires
   const updateBlockQuantity = useCallback((height: number, delta: number) => {
-    // Accumulate the delta in pending updates
-    pendingUpdates.current[height] = (pendingUpdates.current[height] || 0) + delta;
+    const key = `${height}_${delta}`;
+    const now = Date.now();
+    const lastTap = lastTapTime.current[key] || 0;
 
-    // Clear any existing timeout
-    if (updateTimeoutRef.current) {
-      globalThis.clearTimeout(updateTimeoutRef.current);
+    // Ignore taps within 100ms of the last tap (prevents double-fire)
+    if (now - lastTap < 100) {
+      return;
     }
+    lastTapTime.current[key] = now;
 
-    // Apply all pending updates after a very short delay (allows click events to accumulate)
-    updateTimeoutRef.current = globalThis.setTimeout(() => {
-      const updates = { ...pendingUpdates.current };
-      pendingUpdates.current = {};
-
-      setSetupData((prev) => {
-        const newQuantities = { ...prev.blockQuantities };
-        Object.entries(updates).forEach(([h, d]) => {
-          const heightNum = parseFloat(h);
-          const currentQty = newQuantities[heightNum] || 0;
-          newQuantities[heightNum] = Math.max(0, Math.min(20, currentQty + d));
-        });
-        return {
-          ...prev,
-          blockQuantities: newQuantities,
-        };
-      });
-    }, 50); // 50ms batching window - fast enough to feel instant, long enough to catch rapid clicks
+    // Direct state update - one tap = one increment
+    setSetupData((prev) => {
+      const currentQty = prev.blockQuantities[height] || 0;
+      const newQty = Math.max(0, Math.min(20, currentQty + delta));
+      return {
+        ...prev,
+        blockQuantities: {
+          ...prev.blockQuantities,
+          [height]: newQty,
+        },
+      };
+    });
   }, []);
 
   function renderBlocksStep() {
