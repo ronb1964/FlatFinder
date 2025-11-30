@@ -37,20 +37,15 @@ export default function ProfilesScreen() {
 
   const handleDeleteProfile = (profileId: string, profileName: string) => {
     try {
-      console.log('ProfilesScreen - Deleting profile:', profileId, profileName);
-
       if (Platform.OS === 'web') {
-        // Use window.confirm for web
-        const confirmed = window.confirm(
+        // Use window.confirm for web (globalThis works in all JS environments)
+        const confirmed = globalThis.confirm(
           `Are you sure you want to delete "${profileName}"? This action cannot be undone.`
         );
         if (!confirmed) {
-          console.log('ProfilesScreen - Profile deletion cancelled by user');
           return;
         }
-        console.log('ProfilesScreen - Proceeding with profile deletion');
         deleteProfile(profileId);
-        console.log('ProfilesScreen - Profile deleted successfully');
       } else {
         // Use Alert for native
         Alert.alert(
@@ -61,10 +56,7 @@ export default function ProfilesScreen() {
             {
               text: 'Delete',
               style: 'destructive',
-              onPress: () => {
-                deleteProfile(profileId);
-                console.log('ProfilesScreen - Profile deleted successfully');
-              },
+              onPress: () => deleteProfile(profileId),
             },
           ]
         );
@@ -76,7 +68,7 @@ export default function ProfilesScreen() {
 
   useEffect(() => {
     loadProfiles();
-  }, []);
+  }, [loadProfiles]);
 
   const handleAddProfile = (profileData: {
     name: string;
@@ -87,33 +79,24 @@ export default function ProfilesScreen() {
     blockInventory: BlockInventory[];
   }) => {
     try {
-      console.log('ProfilesScreen - Received profile data:', profileData);
-
       const calibration = createCalibration();
-      console.log('ProfilesScreen - Created calibration:', calibration);
 
       if (editingProfile) {
         const updateData = {
           ...profileData,
           calibration: editingProfile.calibration || calibration,
         };
-
-        console.log('ProfilesScreen - Updating existing profile:', editingProfile.id, updateData);
         updateProfile(editingProfile.id, updateData);
-        console.log('ProfilesScreen - Profile updated successfully');
       } else {
         const finalProfileData = {
           ...profileData,
           calibration,
         };
-
-        console.log('ProfilesScreen - Final profile data before addProfile:', finalProfileData);
         addProfile(finalProfileData);
-        console.log('ProfilesScreen - Profile added successfully');
       }
 
-      setTimeout(() => {
-        console.log('ProfilesScreen - Closing setup wizard');
+      // Small delay to ensure state updates complete before closing wizard
+      globalThis.setTimeout(() => {
         setShowSetupWizard(false);
         setEditingProfile(null);
       }, 100);
@@ -142,10 +125,7 @@ export default function ProfilesScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Vehicle Profiles</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowSetupWizard(true)}
-          >
+          <TouchableOpacity style={styles.addButton} onPress={() => setShowSetupWizard(true)}>
             <Plus size={18} color="#fff" />
             <Text style={styles.addButtonText}>Add Vehicle</Text>
           </TouchableOpacity>
@@ -160,12 +140,10 @@ export default function ProfilesScreen() {
                   <View style={styles.welcomeContent}>
                     <Car size={48} color="#3b82f6" />
                     <View style={styles.welcomeTextContainer}>
-                      <Text style={styles.welcomeTitle}>
-                        Welcome to FlatFinder!
-                      </Text>
+                      <Text style={styles.welcomeTitle}>Welcome to FlatFinder!</Text>
                       <Text style={styles.welcomeDescription}>
-                        To get started, you'll need to set up a profile for your RV, trailer, or
-                        van.
+                        To get started, you&apos;ll need to set up a profile for your RV, trailer,
+                        or van.
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -185,9 +163,9 @@ export default function ProfilesScreen() {
                     <View style={styles.helpTextContainer}>
                       <Text style={styles.helpTitle}>Need help?</Text>
                       <Text style={styles.helpDescription}>
-                        Don't worry if you don't know your exact vehicle measurements. Our setup
-                        wizard will guide you through the process and provide typical values for
-                        your vehicle type.
+                        Don&apos;t worry if you don&apos;t know your exact vehicle measurements. Our
+                        setup wizard will guide you through the process and provide typical values
+                        for your vehicle type.
                       </Text>
                     </View>
                   </View>
@@ -210,13 +188,12 @@ export default function ProfilesScreen() {
                       <View style={styles.profileInfo}>
                         <View style={styles.profileNameRow}>
                           <Text style={styles.profileName}>{profile.name}</Text>
-                          {activeProfileId === profile.id && (
-                            <Check size={16} color="#22c55e" />
-                          )}
+                          {activeProfileId === profile.id && <Check size={16} color="#22c55e" />}
                         </View>
                         <Text style={styles.profileDetails}>
-                          {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} • Wheelbase:{' '}
-                          {profile.wheelbaseInches}" • Track: {profile.trackWidthInches}"
+                          {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} •
+                          Wheelbase: {profile.wheelbaseInches}&quot; • Track:{' '}
+                          {profile.trackWidthInches}&quot;
                         </Text>
                       </View>
                     </View>
