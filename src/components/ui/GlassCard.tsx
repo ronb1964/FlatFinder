@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 16,
     overflow: 'hidden',
+    width: '100%',
   },
   blur: {
     flex: 1,

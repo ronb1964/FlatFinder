@@ -6,6 +6,7 @@ import {
   Switch,
   TouchableOpacity,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react-native';
 
 import { useAppStore } from '../../src/state/appStore';
+import { THEME } from '../../src/theme';
 
 export default function SettingsScreen() {
   const { settings, updateSettings, loadSettings, resetOnboarding } = useAppStore();
@@ -40,14 +42,14 @@ export default function SettingsScreen() {
     description?: string;
     children: React.ReactNode;
   }) => (
-    <View className="p-4 bg-card rounded-xl">
-      <View className="flex-row justify-between items-center gap-3">
-        <View className="flex-row gap-3 items-center flex-1">
+    <View style={styles.settingRow}>
+      <View style={styles.settingRowContent}>
+        <View style={styles.settingRowLeft}>
           {icon}
-          <View className="flex-1">
-            <Text className="text-base font-semibold text-foreground">{title}</Text>
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingTitle}>{title}</Text>
             {description && (
-              <Text className="text-xs text-muted-foreground">{description}</Text>
+              <Text style={styles.settingDescription}>{description}</Text>
             )}
           </View>
         </View>
@@ -57,16 +59,14 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1">
-        <View className="p-4 gap-4">
-          <Text className="text-2xl font-bold text-foreground">Settings</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.pageTitle}>Settings</Text>
 
           {/* Feedback Settings */}
-          <View className="gap-3">
-            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
-              FEEDBACK
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>FEEDBACK</Text>
 
             <SettingRow
               icon={
@@ -81,7 +81,7 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.hapticsEnabled}
                 onValueChange={(checked) => updateSettings({ hapticsEnabled: checked })}
-                trackColor={{ false: '#333', true: '#10b981' }}
+                trackColor={{ false: '#555', true: '#10b981' }}
                 thumbColor="#fff"
               />
             </SettingRow>
@@ -99,20 +99,18 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.audioEnabled}
                 onValueChange={(checked) => updateSettings({ audioEnabled: checked })}
-                trackColor={{ false: '#333', true: '#3b82f6' }}
+                trackColor={{ false: '#555', true: '#3b82f6' }}
                 thumbColor="#fff"
               />
             </SettingRow>
           </View>
 
           {/* Divider */}
-          <View className="h-[1px] bg-border" />
+          <View style={styles.divider} />
 
           {/* Display Settings */}
-          <View className="gap-3">
-            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
-              DISPLAY
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>DISPLAY</Text>
 
             <SettingRow
               icon={
@@ -128,7 +126,7 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.nightMode}
                 onValueChange={(checked) => updateSettings({ nightMode: checked })}
-                trackColor={{ false: '#333', true: '#6366f1' }}
+                trackColor={{ false: '#555', true: '#6366f1' }}
                 thumbColor="#fff"
               />
             </SettingRow>
@@ -146,72 +144,66 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.keepAwake}
                 onValueChange={(checked) => updateSettings({ keepAwake: checked })}
-                trackColor={{ false: '#333', true: '#f97316' }}
+                trackColor={{ false: '#555', true: '#f97316' }}
                 thumbColor="#fff"
               />
             </SettingRow>
           </View>
 
           {/* Divider */}
-          <View className="h-[1px] bg-border" />
+          <View style={styles.divider} />
 
           {/* Measurement Settings */}
-          <View className="gap-3">
-            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
-              MEASUREMENTS
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>MEASUREMENTS</Text>
 
             <SettingRow
               icon={<Ruler size={20} color="#a3a3a3" />}
               title="Units"
               description="Imperial (inches/feet) or Metric (cm/meters)"
             >
-              <View className="flex-row gap-3">
+              <View style={styles.unitsRow}>
                 <TouchableOpacity
-                  className={`flex-row items-center gap-2 px-3 py-1.5 rounded-lg ${
-                    settings.measurementUnits === 'imperial'
-                      ? 'bg-primary'
-                      : 'bg-muted'
-                  }`}
+                  style={[
+                    styles.unitButton,
+                    settings.measurementUnits === 'imperial' && styles.unitButtonActive,
+                  ]}
                   onPress={() => updateSettings({ measurementUnits: 'imperial' })}
                 >
                   <View
-                    className={`w-3 h-3 rounded-full border-2 ${
-                      settings.measurementUnits === 'imperial'
-                        ? 'border-white bg-white'
-                        : 'border-muted-foreground'
-                    }`}
+                    style={[
+                      styles.unitRadio,
+                      settings.measurementUnits === 'imperial' && styles.unitRadioActive,
+                    ]}
                   />
                   <Text
-                    className={`text-sm ${
-                      settings.measurementUnits === 'imperial'
-                        ? 'text-primary-foreground'
-                        : 'text-muted-foreground'
-                    }`}
+                    style={[
+                      styles.unitText,
+                      settings.measurementUnits === 'imperial' && styles.unitTextActive,
+                    ]}
                   >
                     Imperial
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  className={`flex-row items-center gap-2 px-3 py-1.5 rounded-lg ${
-                    settings.measurementUnits === 'metric' ? 'bg-primary' : 'bg-muted'
-                  }`}
+                  style={[
+                    styles.unitButton,
+                    settings.measurementUnits === 'metric' && styles.unitButtonActive,
+                  ]}
                   onPress={() => updateSettings({ measurementUnits: 'metric' })}
                 >
                   <View
-                    className={`w-3 h-3 rounded-full border-2 ${
-                      settings.measurementUnits === 'metric'
-                        ? 'border-white bg-white'
-                        : 'border-muted-foreground'
-                    }`}
+                    style={[
+                      styles.unitRadio,
+                      settings.measurementUnits === 'metric' && styles.unitRadioActive,
+                    ]}
                   />
                   <Text
-                    className={`text-sm ${
-                      settings.measurementUnits === 'metric'
-                        ? 'text-primary-foreground'
-                        : 'text-muted-foreground'
-                    }`}
+                    style={[
+                      styles.unitText,
+                      settings.measurementUnits === 'metric' && styles.unitTextActive,
+                    ]}
                   >
                     Metric
                   </Text>
@@ -219,19 +211,17 @@ export default function SettingsScreen() {
               </View>
             </SettingRow>
 
-            <View className="p-4 bg-card rounded-xl gap-3">
-              <View className="flex-row justify-between items-center">
-                <View className="flex-row gap-3 items-center">
+            <View style={styles.sliderCard}>
+              <View style={styles.sliderHeader}>
+                <View style={styles.sliderHeaderLeft}>
                   <Gauge size={20} color="#a3a3a3" />
-                  <Text className="text-base font-semibold text-foreground">
-                    Level Threshold
-                  </Text>
+                  <Text style={styles.settingTitle}>Level Threshold</Text>
                 </View>
-                <Text className="text-base font-bold text-green-500">
+                <Text style={styles.thresholdValue}>
                   {settings.levelThreshold.toFixed(1)}°
                 </Text>
               </View>
-              <Text className="text-xs text-muted-foreground">
+              <Text style={styles.sliderDescription}>
                 Tolerance for considering the vehicle level
               </Text>
               <Slider
@@ -248,27 +238,23 @@ export default function SettingsScreen() {
           </View>
 
           {/* Divider */}
-          <View className="h-[1px] bg-border" />
+          <View style={styles.divider} />
 
           {/* Developer Section */}
-          <View className="gap-3">
-            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
-              DEVELOPER
-            </Text>
-            <View className="p-4 bg-card rounded-xl border border-red-500/30 gap-3">
-              <View className="flex-row gap-3 items-center">
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>DEVELOPER</Text>
+            <View style={styles.resetCard}>
+              <View style={styles.resetHeader}>
                 <RotateCcw size={20} color="#ef4444" />
-                <View className="flex-1">
-                  <Text className="text-base font-semibold text-foreground">
-                    Reset Onboarding
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
+                <View style={styles.resetTextContainer}>
+                  <Text style={styles.settingTitle}>Reset Onboarding</Text>
+                  <Text style={styles.settingDescription}>
                     Show the onboarding tutorial again for testing
                   </Text>
                 </View>
               </View>
               <TouchableOpacity
-                className="flex-row items-center justify-center gap-2 bg-red-500 py-3 rounded-lg"
+                style={styles.resetButton}
                 onPress={() => {
                   resetOnboarding();
                   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -277,34 +263,28 @@ export default function SettingsScreen() {
                 }}
               >
                 <RotateCcw size={16} color="#fff" />
-                <Text className="text-white font-semibold">Reset & Restart</Text>
+                <Text style={styles.resetButtonText}>Reset & Restart</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Divider */}
-          <View className="h-[1px] bg-border" />
+          <View style={styles.divider} />
 
           {/* About Section */}
-          <View className="gap-3">
-            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
-              ABOUT
-            </Text>
-            <View className="p-6 bg-card rounded-2xl border border-primary/30">
-              <View className="gap-3 items-center">
-                <View className="gap-2 items-center">
-                  <Text className="text-2xl font-bold text-primary">FlatFinder</Text>
-                  <Text className="text-base text-primary/80 font-semibold">
-                    Version 1.0.0
-                  </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ABOUT</Text>
+            <View style={styles.aboutCard}>
+              <View style={styles.aboutContent}>
+                <View style={styles.aboutHeader}>
+                  <Text style={styles.aboutTitle}>FlatFinder</Text>
+                  <Text style={styles.aboutVersion}>Version 1.0.0</Text>
                 </View>
-                <Text className="text-sm text-muted-foreground text-center leading-5">
+                <Text style={styles.aboutDescription}>
                   Professional RV and trailer leveling app with precision sensors and
                   intelligent guidance
                 </Text>
-                <Text className="text-xs text-muted-foreground/70">
-                  Made with love for RV enthusiasts
-                </Text>
+                <Text style={styles.aboutFooter}>Made with love for RV enthusiasts</Text>
               </View>
             </View>
           </View>
@@ -313,3 +293,187 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: THEME.colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    gap: 16,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.colors.textSecondary,
+    letterSpacing: 1,
+  },
+  settingRow: {
+    padding: 16,
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 12,
+  },
+  settingRowContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingRowLeft: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingTextContainer: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.text,
+  },
+  settingDescription: {
+    fontSize: 12,
+    color: THEME.colors.textSecondary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: THEME.colors.border,
+  },
+  unitsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  unitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: THEME.colors.secondary,
+  },
+  unitButtonActive: {
+    backgroundColor: THEME.colors.primary,
+  },
+  unitRadio: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: THEME.colors.textSecondary,
+  },
+  unitRadioActive: {
+    borderColor: '#fff',
+    backgroundColor: '#fff',
+  },
+  unitText: {
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+  },
+  unitTextActive: {
+    color: '#fff',
+  },
+  sliderCard: {
+    padding: 16,
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 12,
+    gap: 12,
+  },
+  sliderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sliderHeaderLeft: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  sliderDescription: {
+    fontSize: 12,
+    color: THEME.colors.textSecondary,
+  },
+  thresholdValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.colors.success,
+  },
+  resetCard: {
+    padding: 16,
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    gap: 12,
+  },
+  resetHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  resetTextContainer: {
+    flex: 1,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: THEME.colors.danger,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  aboutCard: {
+    padding: 24,
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  aboutContent: {
+    gap: 12,
+    alignItems: 'center',
+  },
+  aboutHeader: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  aboutTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: THEME.colors.primary,
+  },
+  aboutVersion: {
+    fontSize: 16,
+    color: 'rgba(59, 130, 246, 0.8)',
+    fontWeight: '600',
+  },
+  aboutDescription: {
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  aboutFooter: {
+    fontSize: 12,
+    color: 'rgba(115, 115, 115, 0.7)',
+  },
+});

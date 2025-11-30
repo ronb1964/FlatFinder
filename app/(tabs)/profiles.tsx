@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Alert,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Check, Car, Truck, Home, HelpCircle } from 'lucide-react-native';
@@ -14,6 +14,7 @@ import { useAppStore, VehicleProfile } from '../../src/state/appStore';
 import { BlockInventory } from '../../src/lib/rvLevelingMath';
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
 import { createCalibration } from '../../src/lib/levelingMath';
+import { THEME } from '../../src/theme';
 
 export default function ProfilesScreen() {
   const {
@@ -136,54 +137,54 @@ export default function ProfilesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 p-4 gap-4">
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
         {/* Header */}
-        <View className="flex-row justify-between items-center">
-          <Text className="text-2xl font-bold text-foreground">Vehicle Profiles</Text>
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>Vehicle Profiles</Text>
           <TouchableOpacity
-            className="flex-row items-center gap-2 bg-primary px-4 py-3 rounded-lg"
+            style={styles.addButton}
             onPress={() => setShowSetupWizard(true)}
           >
             <Plus size={18} color="#fff" />
-            <Text className="text-primary-foreground font-semibold">Add Vehicle</Text>
+            <Text style={styles.addButtonText}>Add Vehicle</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          <View className="gap-3">
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.profileList}>
             {profiles.length === 0 ? (
-              <View className="gap-4">
+              <View style={styles.emptyState}>
                 {/* Welcome Card */}
-                <View className="p-6 bg-primary/10 border border-primary rounded-xl">
-                  <View className="items-center gap-4">
+                <View style={styles.welcomeCard}>
+                  <View style={styles.welcomeContent}>
                     <Car size={48} color="#3b82f6" />
-                    <View className="gap-2 items-center">
-                      <Text className="text-foreground text-center text-lg font-bold">
+                    <View style={styles.welcomeTextContainer}>
+                      <Text style={styles.welcomeTitle}>
                         Welcome to FlatFinder!
                       </Text>
-                      <Text className="text-muted-foreground text-center">
+                      <Text style={styles.welcomeDescription}>
                         To get started, you'll need to set up a profile for your RV, trailer, or
                         van.
                       </Text>
                     </View>
                     <TouchableOpacity
-                      className="flex-row items-center gap-2 bg-primary px-5 py-3 rounded-lg"
+                      style={styles.setupButton}
                       onPress={() => setShowSetupWizard(true)}
                     >
                       <Plus size={18} color="#fff" />
-                      <Text className="text-primary-foreground font-semibold">Set Up My Vehicle</Text>
+                      <Text style={styles.setupButtonText}>Set Up My Vehicle</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Help Card */}
-                <View className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl">
-                  <View className="flex-row gap-3 items-start">
+                <View style={styles.helpCard}>
+                  <View style={styles.helpContent}>
                     <HelpCircle size={20} color="#eab308" />
-                    <View className="flex-1 gap-2">
-                      <Text className="text-yellow-500 font-bold">Need help?</Text>
-                      <Text className="text-yellow-500/80 text-sm">
+                    <View style={styles.helpTextContainer}>
+                      <Text style={styles.helpTitle}>Need help?</Text>
+                      <Text style={styles.helpDescription}>
                         Don't worry if you don't know your exact vehicle measurements. Our setup
                         wizard will guide you through the process and provide typical values for
                         your vehicle type.
@@ -196,39 +197,38 @@ export default function ProfilesScreen() {
               profiles.map((profile) => (
                 <TouchableOpacity
                   key={profile.id}
-                  className={`p-4 rounded-xl border-2 ${
-                    activeProfileId === profile.id
-                      ? 'bg-green-500/10 border-green-500'
-                      : 'bg-card border-border'
-                  }`}
+                  style={[
+                    styles.profileCard,
+                    activeProfileId === profile.id && styles.profileCardActive,
+                  ]}
                   onPress={() => setActiveProfile(profile.id)}
                   activeOpacity={0.7}
                 >
-                  <View className="flex-row justify-between items-center">
-                    <View className="flex-row gap-3 items-center flex-1">
+                  <View style={styles.profileRow}>
+                    <View style={styles.profileLeft}>
                       {getVehicleIcon(profile.type)}
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-2">
-                          <Text className="text-lg font-bold text-foreground">{profile.name}</Text>
+                      <View style={styles.profileInfo}>
+                        <View style={styles.profileNameRow}>
+                          <Text style={styles.profileName}>{profile.name}</Text>
                           {activeProfileId === profile.id && (
                             <Check size={16} color="#22c55e" />
                           )}
                         </View>
-                        <Text className="text-muted-foreground text-xs">
+                        <Text style={styles.profileDetails}>
                           {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} • Wheelbase:{' '}
                           {profile.wheelbaseInches}" • Track: {profile.trackWidthInches}"
                         </Text>
                       </View>
                     </View>
-                    <View className="flex-row gap-2">
+                    <View style={styles.profileActions}>
                       <TouchableOpacity
-                        className="px-3 py-2"
+                        style={styles.editButton}
                         onPress={() => handleEditProfile(profile)}
                       >
-                        <Text className="text-primary font-bold">Edit</Text>
+                        <Text style={styles.editButtonText}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        className="p-2"
+                        style={styles.deleteButton}
                         onPress={() => handleDeleteProfile(profile.id, profile.name)}
                       >
                         <Trash2 size={20} color="#ef4444" />
@@ -255,3 +255,163 @@ export default function ProfilesScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: THEME.colors.background,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+    gap: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: THEME.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  profileList: {
+    gap: 12,
+  },
+  emptyState: {
+    gap: 16,
+  },
+  welcomeCard: {
+    padding: 24,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderWidth: 1,
+    borderColor: THEME.colors.primary,
+    borderRadius: 12,
+  },
+  welcomeContent: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  welcomeTextContainer: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+    textAlign: 'center',
+  },
+  welcomeDescription: {
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+  },
+  setupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: THEME.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  setupButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  helpCard: {
+    padding: 16,
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.5)',
+    borderRadius: 12,
+  },
+  helpContent: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  helpTextContainer: {
+    flex: 1,
+    gap: 8,
+  },
+  helpTitle: {
+    color: '#eab308',
+    fontWeight: 'bold',
+  },
+  helpDescription: {
+    color: 'rgba(234, 179, 8, 0.8)',
+    fontSize: 14,
+  },
+  profileCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: THEME.colors.surface,
+    borderColor: THEME.colors.border,
+  },
+  profileCardActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: THEME.colors.success,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileLeft: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+  },
+  profileDetails: {
+    color: THEME.colors.textSecondary,
+    fontSize: 12,
+  },
+  profileActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  editButtonText: {
+    color: THEME.colors.primary,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    padding: 8,
+  },
+});
