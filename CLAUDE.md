@@ -77,18 +77,21 @@ This keeps the app simple, minimal dependencies, and consistent.
 
 ## NEXT TASK - START HERE
 
-### Ready for Next Feature
+### Calibration Routine
 
-The onboarding UI is fully functional and tested on real device:
+Ron wants to work on the **calibration routine** next session. This is the process where users calibrate their phone's sensors to ensure accurate leveling readings.
 
+**Context:**
+
+- The app already has `createCalibration()` in `src/lib/levelingMath.ts`
+- Calibration is stored per-profile in `appStore`
+- Need to review current implementation and determine what improvements/UI Ron wants
+
+**Previous work completed:**
+
+- Onboarding UI fully functional and tested on real device
 - Keyboard handling works properly - input fields scroll into view
 - Block inventory management simplified with delete/add functionality
-- All measurement inputs auto-scroll when focused
-
-**Potential next tasks:**
-
-1. VehicleSetupWizard still uses className (Tailwind) - convert to StyleSheet if needed
-2. Add any new features Ron requests
 
 **Dev server:** `npx expo start --clear`
 **Web testing:** Firefox via Playwright MCP at `http://localhost:8081`
