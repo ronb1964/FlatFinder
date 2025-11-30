@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   TextInput,
   Switch,
@@ -27,12 +28,7 @@ import {
 import { useAppStore } from '../src/state/appStore';
 import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
-import {
-  formatMeasurement,
-  getTypicalMeasurements,
-  getCommonBlockHeights,
-  convertToInches,
-} from '../src/lib/units';
+import { getTypicalMeasurements, getCommonBlockHeights, convertToInches } from '../src/lib/units';
 import { THEME } from '../src/theme';
 import { GlassCard } from '../src/components/ui/GlassCard';
 import { GlassButton } from '../src/components/ui/GlassButton';
@@ -197,7 +193,7 @@ export default function OnboardingScreen() {
       measurementUnits: setupData.measurementUnits,
     });
 
-    setTimeout(() => {
+    globalThis.setTimeout(() => {
       const state = useAppStore.getState();
       if (state.profiles.length > 0) {
         setActiveProfile(state.profiles[state.profiles.length - 1].id);
@@ -223,15 +219,17 @@ export default function OnboardingScreen() {
         return !!setupData.vehicleType;
       case 5:
         return !!setupData.vehicleName.trim();
-      case 6:
+      case 6: {
         if (!setupData.hasLevelingBlocks) return true;
         // Check if at least one block type has quantity > 0
-        const hasStandardBlocks = Object.values(setupData.blockQuantities).some(qty => qty > 0);
-        const hasCustomBlock = setupData.showCustomBlockInput &&
+        const hasStandardBlocks = Object.values(setupData.blockQuantities).some((qty) => qty > 0);
+        const hasCustomBlock =
+          setupData.showCustomBlockInput &&
           setupData.customBlockHeight.trim() !== '' &&
           !isNaN(parseFloat(setupData.customBlockHeight)) &&
           setupData.customBlockQuantity > 0;
         return hasStandardBlocks || hasCustomBlock;
+      }
       default:
         return true;
     }
@@ -252,12 +250,12 @@ export default function OnboardingScreen() {
         <GlassCard variant="default">
           <View style={styles.cardContent}>
             <Text style={styles.cardText}>
-              FlatFinder transforms your phone into a precision leveling tool for RVs,
-              trailers, and motorhomes.
+              FlatFinder transforms your phone into a precision leveling tool for RVs, trailers, and
+              motorhomes.
             </Text>
             <Text style={styles.cardText}>
-              Whether you're a weekend warrior or full-time RVer, proper leveling is
-              essential for:
+              Whether you&apos;re a weekend warrior or full-time RVer, proper leveling is essential
+              for:
             </Text>
             <Text style={styles.bulletList}>
               {'\u2022'} Comfort - Sleep better on a level bed{'\n'}
@@ -291,11 +289,11 @@ export default function OnboardingScreen() {
               {'\u2022'} ROLL: Side-to-side (left/right high)
             </Text>
             <Text style={styles.cardText}>
-              FlatFinder measures both angles using your phone's built-in motion sensors.
+              FlatFinder measures both angles using your phone&apos;s built-in motion sensors.
             </Text>
             <Text style={styles.cardText}>
-              The goal is to get both pitch and roll as close to 0° as possible. Most RV
-              appliances work fine within ±1° of level.
+              The goal is to get both pitch and roll as close to 0° as possible. Most RV appliances
+              work fine within ±1° of level.
             </Text>
           </View>
         </GlassCard>
@@ -357,9 +355,7 @@ export default function OnboardingScreen() {
                   styles.optionCard,
                   setupData.measurementUnits === 'imperial' && styles.optionCardSelected,
                 ]}
-                onPress={() =>
-                  setSetupData((prev) => ({ ...prev, measurementUnits: 'imperial' }))
-                }
+                onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'imperial' }))}
               >
                 <View style={styles.optionRow}>
                   <View
@@ -384,9 +380,7 @@ export default function OnboardingScreen() {
                   styles.optionCard,
                   setupData.measurementUnits === 'metric' && styles.optionCardSelected,
                 ]}
-                onPress={() =>
-                  setSetupData((prev) => ({ ...prev, measurementUnits: 'metric' }))
-                }
+                onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'metric' }))}
               >
                 <View style={styles.optionRow}>
                   <View
@@ -395,13 +389,13 @@ export default function OnboardingScreen() {
                       setupData.measurementUnits === 'metric' && styles.radioSelected,
                     ]}
                   >
-                    {setupData.measurementUnits === 'metric' && (
-                      <View style={styles.radioInner} />
-                    )}
+                    {setupData.measurementUnits === 'metric' && <View style={styles.radioInner} />}
                   </View>
                   <View style={styles.optionText}>
                     <Text style={styles.optionTitle}>Metric</Text>
-                    <Text style={styles.optionDescription}>Centimeters, meters (International)</Text>
+                    <Text style={styles.optionDescription}>
+                      Centimeters, meters (International)
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -427,8 +421,7 @@ export default function OnboardingScreen() {
         <GlassCard variant="default">
           <View style={styles.cardContent}>
             <Text style={styles.cardText}>
-              This helps us provide accurate measurements and setup defaults for your
-              vehicle type.
+              This helps us provide accurate measurements and setup defaults for your vehicle type.
             </Text>
 
             <View style={styles.optionsContainer}>
@@ -439,10 +432,7 @@ export default function OnboardingScreen() {
                 return (
                   <TouchableOpacity
                     key={vehicleType.id}
-                    style={[
-                      styles.optionCard,
-                      isSelected && styles.optionCardSelected,
-                    ]}
+                    style={[styles.optionCard, isSelected && styles.optionCardSelected]}
                     onPress={() =>
                       setSetupData((prev) => ({
                         ...prev,
@@ -475,24 +465,19 @@ export default function OnboardingScreen() {
   }
 
   function renderVehicleDetailsStep() {
-    const typical =
-      typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
+    const typical = typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
     const unitLabel = setupData.measurementUnits === 'imperial' ? 'inches' : 'cm';
 
     return (
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.stepContent}>
           <IconBox variant="purple">
-            {selectedVehicleType && (
-              <selectedVehicleType.Icon size={48} color="#a855f7" />
-            )}
+            {selectedVehicleType && <selectedVehicleType.Icon size={48} color="#a855f7" />}
           </IconBox>
 
           <View style={styles.titleContainer}>
             <Text style={styles.stepTitle}>Vehicle Details</Text>
-            <Text style={styles.stepSubtitle}>
-              Tell us about your {selectedVehicleType?.name}
-            </Text>
+            <Text style={styles.stepSubtitle}>Tell us about your {selectedVehicleType?.name}</Text>
           </View>
 
           <GlassCard variant="default">
@@ -508,9 +493,7 @@ export default function OnboardingScreen() {
                   placeholder={`Enter a name (e.g., "Big Blue")`}
                   placeholderTextColor="#737373"
                   value={setupData.vehicleName}
-                  onChangeText={(text) =>
-                    setSetupData((prev) => ({ ...prev, vehicleName: text }))
-                  }
+                  onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
                   autoFocus={true}
                 />
               </View>
@@ -547,21 +530,20 @@ export default function OnboardingScreen() {
                   <Text style={styles.measurementsSummaryTitle}>Default measurements:</Text>
                   <Text style={styles.measurementsSummaryText}>
                     {'\u2022'} Wheelbase:{' '}
-                    {formatMeasurement(
-                      convertToInches(typical.wheelbase, setupData.measurementUnits),
-                      setupData.measurementUnits
-                    )}
+                    {setupData.measurementUnits === 'imperial'
+                      ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
+                      : `${typical.wheelbase} cm`}
                     {'\n'}
                     {'\u2022'} Track Width:{' '}
-                    {formatMeasurement(
-                      convertToInches(typical.track, setupData.measurementUnits),
-                      setupData.measurementUnits
-                    )}
+                    {setupData.measurementUnits === 'imperial'
+                      ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
+                      : `${typical.track} cm`}
                     {setupData.vehicleType === 'trailer' && typical.hitch
-                      ? `\n\u2022 Hitch Offset: ${formatMeasurement(
-                          convertToInches(typical.hitch, setupData.measurementUnits),
-                          setupData.measurementUnits
-                        )}`
+                      ? `\n\u2022 Hitch Offset: ${
+                          setupData.measurementUnits === 'imperial'
+                            ? `${convertToInches(typical.hitch, setupData.measurementUnits)}"`
+                            : `${typical.hitch} cm`
+                        }`
                       : ''}
                   </Text>
                 </View>
@@ -586,9 +568,8 @@ export default function OnboardingScreen() {
                         )}
                         onChangeText={(text) => {
                           const value = parseFloat(text) || 0;
-                          const inches = setupData.measurementUnits === 'imperial'
-                            ? value
-                            : value / 2.54;
+                          const inches =
+                            setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                           setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
                         }}
                       />
@@ -612,9 +593,8 @@ export default function OnboardingScreen() {
                         )}
                         onChangeText={(text) => {
                           const value = parseFloat(text) || 0;
-                          const inches = setupData.measurementUnits === 'imperial'
-                            ? value
-                            : value / 2.54;
+                          const inches =
+                            setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                           setSetupData((prev) => ({ ...prev, trackWidthInches: inches }));
                         }}
                       />
@@ -639,9 +619,8 @@ export default function OnboardingScreen() {
                           )}
                           onChangeText={(text) => {
                             const value = parseFloat(text) || 0;
-                            const inches = setupData.measurementUnits === 'imperial'
-                              ? value
-                              : value / 2.54;
+                            const inches =
+                              setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                             setSetupData((prev) => ({ ...prev, hitchOffsetInches: inches }));
                           }}
                         />
@@ -658,26 +637,46 @@ export default function OnboardingScreen() {
     );
   }
 
-  // Helper function to update block quantity
-  const updateBlockQuantity = (height: number, delta: number) => {
-    setSetupData((prev) => {
-      const currentQty = prev.blockQuantities[height] || 0;
-      const newQty = Math.max(0, Math.min(20, currentQty + delta)); // Clamp 0-20
-      return {
-        ...prev,
-        blockQuantities: {
-          ...prev.blockQuantities,
-          [height]: newQty,
-        },
-      };
-    });
-  };
+  // Use ref to track pending updates and ensure every click registers
+  const pendingUpdates = useRef<Record<number, number>>({});
+  const updateTimeoutRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+
+  // Helper function to update block quantity - uses ref to batch rapid clicks correctly
+  const updateBlockQuantity = useCallback((height: number, delta: number) => {
+    // Accumulate the delta in pending updates
+    pendingUpdates.current[height] = (pendingUpdates.current[height] || 0) + delta;
+
+    // Clear any existing timeout
+    if (updateTimeoutRef.current) {
+      globalThis.clearTimeout(updateTimeoutRef.current);
+    }
+
+    // Apply all pending updates after a very short delay (allows click events to accumulate)
+    updateTimeoutRef.current = globalThis.setTimeout(() => {
+      const updates = { ...pendingUpdates.current };
+      pendingUpdates.current = {};
+
+      setSetupData((prev) => {
+        const newQuantities = { ...prev.blockQuantities };
+        Object.entries(updates).forEach(([h, d]) => {
+          const heightNum = parseFloat(h);
+          const currentQty = newQuantities[heightNum] || 0;
+          newQuantities[heightNum] = Math.max(0, Math.min(20, currentQty + d));
+        });
+        return {
+          ...prev,
+          blockQuantities: newQuantities,
+        };
+      });
+    }, 50); // 50ms batching window - fast enough to feel instant, long enough to catch rapid clicks
+  }, []);
 
   function renderBlocksStep() {
     const blockHeights = getCommonBlockHeights(setupData.measurementUnits);
 
     // Calculate total blocks in inventory
-    const totalBlocks = Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
+    const totalBlocks =
+      Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
       (setupData.showCustomBlockInput ? setupData.customBlockQuantity : 0);
 
     return (
@@ -714,16 +713,14 @@ export default function OnboardingScreen() {
                   <Text style={styles.infoCardText}>
                     {setupData.hasLevelingBlocks
                       ? 'Enter how many of each size block you have. This helps calculate the best leveling solution.'
-                      : "No problem! The app will show you exact measurements instead."}
+                      : 'No problem! The app will show you exact measurements instead.'}
                   </Text>
                 </View>
               </View>
 
               {setupData.hasLevelingBlocks && (
                 <View style={styles.blocksSection}>
-                  <Text style={styles.blocksSectionTitle}>
-                    How many blocks of each size?
-                  </Text>
+                  <Text style={styles.blocksSectionTitle}>How many blocks of each size?</Text>
 
                   <View style={styles.optionsContainer}>
                     {blockHeights.map((block) => {
@@ -733,10 +730,7 @@ export default function OnboardingScreen() {
                       return (
                         <View
                           key={block.value}
-                          style={[
-                            styles.blockOption,
-                            hasBlocks && styles.blockOptionSelected,
-                          ]}
+                          style={[styles.blockOption, hasBlocks && styles.blockOptionSelected]}
                         >
                           <View style={styles.blockQuantityRow}>
                             <View style={styles.blockInfoSection}>
@@ -744,28 +738,34 @@ export default function OnboardingScreen() {
                               <Text style={styles.optionDescription}>{block.description}</Text>
                             </View>
                             <View style={styles.quantityControls}>
-                              <TouchableOpacity
-                                style={[
+                              <Pressable
+                                style={({ pressed }) => [
                                   styles.quantityButton,
                                   quantity === 0 && styles.quantityButtonDisabled,
+                                  pressed && styles.quantityButtonPressed,
                                 ]}
                                 onPress={() => updateBlockQuantity(block.value, -1)}
                                 disabled={quantity === 0}
                               >
                                 <Text style={styles.quantityButtonText}>−</Text>
-                              </TouchableOpacity>
-                              <Text style={[
-                                styles.quantityValue,
-                                hasBlocks && styles.quantityValueActive,
-                              ]}>
+                              </Pressable>
+                              <Text
+                                style={[
+                                  styles.quantityValue,
+                                  hasBlocks && styles.quantityValueActive,
+                                ]}
+                              >
                                 {quantity}
                               </Text>
-                              <TouchableOpacity
-                                style={styles.quantityButton}
+                              <Pressable
+                                style={({ pressed }) => [
+                                  styles.quantityButton,
+                                  pressed && styles.quantityButtonPressed,
+                                ]}
                                 onPress={() => updateBlockQuantity(block.value, 1)}
                               >
                                 <Text style={styles.quantityButtonText}>+</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </View>
                         </View>
@@ -801,9 +801,7 @@ export default function OnboardingScreen() {
                           setupData.showCustomBlockInput && styles.checkboxSelected,
                         ]}
                       >
-                        {setupData.showCustomBlockInput && (
-                          <Text style={styles.checkmark}>✓</Text>
-                        )}
+                        {setupData.showCustomBlockInput && <Text style={styles.checkmark}>✓</Text>}
                       </View>
                       <View style={styles.optionText}>
                         <Text style={styles.optionTitle}>Custom Size</Text>
@@ -824,9 +822,7 @@ export default function OnboardingScreen() {
                           <TextInput
                             style={styles.textInput}
                             placeholder={
-                              setupData.measurementUnits === 'imperial'
-                                ? 'e.g., 3.5'
-                                : 'e.g., 8'
+                              setupData.measurementUnits === 'imperial' ? 'e.g., 3.5' : 'e.g., 8'
                             }
                             placeholderTextColor="#737373"
                             keyboardType="decimal-pad"
@@ -839,10 +835,12 @@ export default function OnboardingScreen() {
                         <View style={styles.customBlockQuantityInput}>
                           <Text style={styles.inputLabel}>Quantity</Text>
                           <View style={styles.quantityControls}>
-                            <TouchableOpacity
-                              style={[
+                            <Pressable
+                              style={({ pressed }) => [
                                 styles.quantityButton,
-                                setupData.customBlockQuantity === 0 && styles.quantityButtonDisabled,
+                                setupData.customBlockQuantity === 0 &&
+                                  styles.quantityButtonDisabled,
+                                pressed && styles.quantityButtonPressed,
                               ]}
                               onPress={() =>
                                 setSetupData((prev) => ({
@@ -853,15 +851,20 @@ export default function OnboardingScreen() {
                               disabled={setupData.customBlockQuantity === 0}
                             >
                               <Text style={styles.quantityButtonText}>−</Text>
-                            </TouchableOpacity>
-                            <Text style={[
-                              styles.quantityValue,
-                              setupData.customBlockQuantity > 0 && styles.quantityValueActive,
-                            ]}>
+                            </Pressable>
+                            <Text
+                              style={[
+                                styles.quantityValue,
+                                setupData.customBlockQuantity > 0 && styles.quantityValueActive,
+                              ]}
+                            >
                               {setupData.customBlockQuantity}
                             </Text>
-                            <TouchableOpacity
-                              style={styles.quantityButton}
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.quantityButton,
+                                pressed && styles.quantityButtonPressed,
+                              ]}
                               onPress={() =>
                                 setSetupData((prev) => ({
                                   ...prev,
@@ -870,7 +873,7 @@ export default function OnboardingScreen() {
                               }
                             >
                               <Text style={styles.quantityButtonText}>+</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           </View>
                         </View>
                       </View>
@@ -900,7 +903,7 @@ export default function OnboardingScreen() {
         <GlassCard variant="default">
           <View style={styles.cardContent}>
             <Text style={styles.cardText}>
-              Perfect! We've set up FlatFinder with your preferences:
+              Perfect! We&apos;ve set up FlatFinder with your preferences:
             </Text>
 
             <View style={styles.summaryList}>
@@ -918,11 +921,12 @@ export default function OnboardingScreen() {
                 📦 <Text style={styles.summaryBold}>Blocks:</Text>{' '}
                 {(() => {
                   if (!setupData.hasLevelingBlocks) return 'Measurement mode';
-                  const totalBlocks = Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
+                  const totalBlocks =
+                    Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
                     (setupData.showCustomBlockInput ? setupData.customBlockQuantity : 0);
-                  const sizes = Object.entries(setupData.blockQuantities)
-                    .filter(([_, qty]) => qty > 0)
-                    .length + (setupData.showCustomBlockInput && setupData.customBlockQuantity > 0 ? 1 : 0);
+                  const sizes =
+                    Object.entries(setupData.blockQuantities).filter(([_, qty]) => qty > 0).length +
+                    (setupData.showCustomBlockInput && setupData.customBlockQuantity > 0 ? 1 : 0);
                   return `${totalBlocks} blocks (${sizes} size${sizes !== 1 ? 's' : ''})`;
                 })()}
               </Text>
@@ -930,7 +934,7 @@ export default function OnboardingScreen() {
 
             <View style={styles.successCard}>
               <Text style={styles.successText}>
-                You're all set! Tap "Get Started" to begin leveling.
+                You&apos;re all set! Tap &quot;Get Started&quot; to begin leveling.
               </Text>
             </View>
           </View>
@@ -947,10 +951,7 @@ export default function OnboardingScreen() {
           {STEPS.map((_, index) => (
             <View
               key={index}
-              style={[
-                styles.progressDot,
-                index <= currentStep && styles.progressDotActive,
-              ]}
+              style={[styles.progressDot, index <= currentStep && styles.progressDotActive]}
             />
           ))}
         </View>
@@ -979,7 +980,9 @@ export default function OnboardingScreen() {
               style={styles.navButton}
             >
               <View style={styles.buttonContent}>
-                <Text style={[styles.nextButtonText, !canProceed() && styles.nextButtonTextDisabled]}>
+                <Text
+                  style={[styles.nextButtonText, !canProceed() && styles.nextButtonTextDisabled]}
+                >
                   {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
                 </Text>
                 {currentStep < STEPS.length - 1 ? (
@@ -1368,6 +1371,10 @@ const styles = StyleSheet.create({
   },
   quantityButtonDisabled: {
     opacity: 0.4,
+  },
+  quantityButtonPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.95 }],
   },
   quantityButtonText: {
     color: THEME.colors.text,
