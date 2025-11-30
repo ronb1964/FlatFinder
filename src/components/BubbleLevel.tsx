@@ -90,7 +90,9 @@ export const BubbleLevel = memo(function BubbleLevel({
   }, [size]);
 
   const { PADDING, VIEWBOX_SIZE, center, rimRadius, bubbleRadius, maxOffset } = dimensions;
-  const maxAngle = 90; // Match slider range
+  // Sensitivity: bubble hits edge at this angle. Lower = more sensitive.
+  // For RV leveling, 5-10 degrees is typical. 5° means bubble reaches edge at 5° tilt.
+  const maxAngle = 5;
   const maxDist = maxOffset;
 
   // Animated values - store offset from center (not absolute position)
