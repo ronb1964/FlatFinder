@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Switch,
   StyleSheet,
   Platform,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -24,11 +26,13 @@ import {
   Home,
   Ruler,
   Package,
+  Trash2,
+  Plus,
 } from 'lucide-react-native';
 import { useAppStore } from '../src/state/appStore';
 import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
-import { getTypicalMeasurements, getCommonBlockHeights, convertToInches } from '../src/lib/units';
+import { getTypicalMeasurements, convertToInches } from '../src/lib/units';
 import { THEME } from '../src/theme';
 import { GlassCard } from '../src/components/ui/GlassCard';
 import { GlassButton } from '../src/components/ui/GlassButton';
@@ -81,10 +85,13 @@ const VEHICLE_TYPES = [
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const { updateSettings, addProfile, setActiveProfile } = useAppStore();
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Block inventory tracks quantity for each block height
   // Key is the block height in inches, value is quantity
+  // Default blocks are 1", 2", 3", 4" (most common stackable sizes)
   const [setupData, setSetupData] = useState({
     measurementUnits: 'imperial' as 'imperial' | 'metric',
     vehicleType: '' as 'trailer' | 'motorhome' | 'van' | '',
@@ -94,14 +101,35 @@ export default function OnboardingScreen() {
     trackWidthInches: 96,
     hitchOffsetInches: 120,
     hasLevelingBlocks: true,
-    blockQuantities: { 2: 4, 4: 4 } as Record<number, number>, // height -> quantity
-    customBlockHeight: '',
-    customBlockQuantity: 4,
-    showCustomBlockInput: false,
+    blockQuantities: { 1: 4, 2: 4, 3: 2, 4: 2 } as Record<number, number>, // height -> quantity
+    showAddBlockInput: false,
+    newBlockHeight: '',
   });
 
   const typicalMeasurements = getTypicalMeasurements(setupData.measurementUnits);
   const selectedVehicleType = VEHICLE_TYPES.find((v) => v.id === setupData.vehicleType);
+
+  // Track keyboard visibility to hide navigation when keyboard is shown
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+      // When keyboard hides on blocks step with add input showing, scroll to bottom
+      // so the Add button stays visible
+      if (currentStep === 6 && setupData.showAddBlockInput) {
+        globalThis.setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [currentStep, setupData.showAddBlockInput]);
 
   const STEPS = [
     { title: 'Welcome', component: renderWelcomeStep },
@@ -132,6 +160,8 @@ export default function OnboardingScreen() {
 
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
+      // Reset scroll position when moving to next screen
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     } else {
       completeOnboarding();
     }
@@ -140,6 +170,8 @@ export default function OnboardingScreen() {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      // Reset scroll position when going back
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }
   };
 
@@ -157,20 +189,6 @@ export default function OnboardingScreen() {
           });
         }
       });
-
-      // Add custom block if specified
-      if (setupData.showCustomBlockInput && setupData.customBlockHeight.trim()) {
-        const customHeight = convertToInches(
-          parseFloat(setupData.customBlockHeight),
-          setupData.measurementUnits
-        );
-        if (customHeight > 0 && setupData.customBlockQuantity > 0) {
-          blockInventory.push({
-            thickness: customHeight,
-            quantity: setupData.customBlockQuantity,
-          });
-        }
-      }
 
       // Sort by thickness descending (largest first) for the algorithm
       blockInventory.sort((a, b) => b.thickness - a.thickness);
@@ -222,13 +240,7 @@ export default function OnboardingScreen() {
       case 6: {
         if (!setupData.hasLevelingBlocks) return true;
         // Check if at least one block type has quantity > 0
-        const hasStandardBlocks = Object.values(setupData.blockQuantities).some((qty) => qty > 0);
-        const hasCustomBlock =
-          setupData.showCustomBlockInput &&
-          setupData.customBlockHeight.trim() !== '' &&
-          !isNaN(parseFloat(setupData.customBlockHeight)) &&
-          setupData.customBlockQuantity > 0;
-        return hasStandardBlocks || hasCustomBlock;
+        return Object.values(setupData.blockQuantities).some((qty) => qty > 0);
       }
       default:
         return true;
@@ -239,7 +251,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="primary">
-          <Target size={48} color="#3b82f6" />
+          <Target size={36} color="#3b82f6" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -273,7 +285,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="warning">
-          <AlertTriangle size={48} color="#f97316" />
+          <AlertTriangle size={36} color="#f97316" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -305,7 +317,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="danger">
-          <AlertTriangle size={48} color="#ef4444" />
+          <AlertTriangle size={36} color="#ef4444" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -335,7 +347,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="purple">
-          <Ruler size={48} color="#a855f7" />
+          <Ruler size={36} color="#a855f7" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -410,7 +422,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="success">
-          <Zap size={48} color="#22c55e" />
+          <Zap size={36} color="#22c55e" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -447,7 +459,7 @@ export default function OnboardingScreen() {
                           isSelected && styles.vehicleIconContainerSelected,
                         ]}
                       >
-                        <VehicleIcon size={32} color={isSelected ? '#fff' : '#a3a3a3'} />
+                        <VehicleIcon size={26} color={isSelected ? '#fff' : '#a3a3a3'} />
                       </View>
                       <View style={styles.optionText}>
                         <Text style={styles.optionTitle}>{vehicleType.name}</Text>
@@ -472,7 +484,7 @@ export default function OnboardingScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.stepContent}>
           <IconBox variant="purple">
-            {selectedVehicleType && <selectedVehicleType.Icon size={48} color="#a855f7" />}
+            {selectedVehicleType && <selectedVehicleType.Icon size={36} color="#a855f7" />}
           </IconBox>
 
           <View style={styles.titleContainer}>
@@ -490,11 +502,10 @@ export default function OnboardingScreen() {
                 </View>
                 <TextInput
                   style={styles.vehicleNameInput}
-                  placeholder={`Enter a name (e.g., "Big Blue")`}
+                  placeholder={`e.g., "Big Blue"`}
                   placeholderTextColor="#737373"
                   value={setupData.vehicleName}
                   onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
-                  autoFocus={true}
                 />
               </View>
 
@@ -572,6 +583,11 @@ export default function OnboardingScreen() {
                             setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                           setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
                         }}
+                        onFocus={() => {
+                          globalThis.setTimeout(() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                          }, 300);
+                        }}
                       />
                       <Text style={styles.inputHint}>Distance between axles</Text>
                     </View>
@@ -596,6 +612,11 @@ export default function OnboardingScreen() {
                           const inches =
                             setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                           setSetupData((prev) => ({ ...prev, trackWidthInches: inches }));
+                        }}
+                        onFocus={() => {
+                          globalThis.setTimeout(() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                          }, 300);
                         }}
                       />
                       <Text style={styles.inputHint}>Distance between wheels (side to side)</Text>
@@ -622,6 +643,11 @@ export default function OnboardingScreen() {
                             const inches =
                               setupData.measurementUnits === 'imperial' ? value : value / 2.54;
                             setSetupData((prev) => ({ ...prev, hitchOffsetInches: inches }));
+                          }}
+                          onFocus={() => {
+                            globalThis.setTimeout(() => {
+                              scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 300);
                           }}
                         />
                         <Text style={styles.inputHint}>Distance from hitch to front axle</Text>
@@ -666,19 +692,79 @@ export default function OnboardingScreen() {
     });
   }, []);
 
+  // Delete a block size from inventory
+  const deleteBlockSize = useCallback((height: number) => {
+    setSetupData((prev) => {
+      const newQuantities = { ...prev.blockQuantities };
+      delete newQuantities[height];
+      return {
+        ...prev,
+        blockQuantities: newQuantities,
+      };
+    });
+  }, []);
+
+  // Add a new block size to inventory
+  const addBlockSize = useCallback(() => {
+    const heightStr = setupData.newBlockHeight.trim();
+    if (!heightStr) return;
+
+    let heightInches = parseFloat(heightStr);
+    if (isNaN(heightInches) || heightInches <= 0) return;
+
+    // Convert to inches if metric
+    if (setupData.measurementUnits === 'metric') {
+      heightInches = heightInches / 2.54; // cm to inches
+    }
+
+    // Round to 1 decimal place for cleaner values
+    heightInches = Math.round(heightInches * 10) / 10;
+
+    // Don't add if already exists
+    if (setupData.blockQuantities[heightInches] !== undefined) {
+      return;
+    }
+
+    setSetupData((prev) => ({
+      ...prev,
+      blockQuantities: {
+        ...prev.blockQuantities,
+        [heightInches]: 4, // Default quantity of 4
+      },
+      showAddBlockInput: false,
+      newBlockHeight: '',
+    }));
+  }, [setupData.newBlockHeight, setupData.measurementUnits, setupData.blockQuantities]);
+
   function renderBlocksStep() {
-    const blockHeights = getCommonBlockHeights(setupData.measurementUnits);
+    // Get sorted block heights from current inventory
+    const sortedHeights = Object.keys(setupData.blockQuantities)
+      .map((h) => parseFloat(h))
+      .sort((a, b) => a - b);
 
     // Calculate total blocks in inventory
-    const totalBlocks =
-      Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
-      (setupData.showCustomBlockInput ? setupData.customBlockQuantity : 0);
+    const totalBlocks = Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0);
+
+    // Format height for display
+    const formatHeight = (inches: number) => {
+      if (setupData.measurementUnits === 'metric') {
+        const cm = Math.round(inches * 2.54);
+        return `${cm} cm`;
+      }
+      // Show as fraction if it's a common fraction, otherwise decimal
+      if (inches === 0.5) return '½"';
+      if (inches === 1.5) return '1½"';
+      if (inches === 2.5) return '2½"';
+      if (inches === 3.5) return '3½"';
+      if (Number.isInteger(inches)) return `${inches}"`;
+      return `${inches}"`;
+    };
 
     return (
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.stepContent}>
           <IconBox variant="success">
-            <Package size={48} color="#22c55e" />
+            <Package size={36} color="#22c55e" />
           </IconBox>
 
           <View style={styles.titleContainer}>
@@ -707,7 +793,7 @@ export default function OnboardingScreen() {
                   </View>
                   <Text style={styles.infoCardText}>
                     {setupData.hasLevelingBlocks
-                      ? 'Enter how many of each size block you have. This helps calculate the best leveling solution.'
+                      ? "Tap the trash icon to remove sizes you don't have. Add custom sizes with the button below."
                       : 'No problem! The app will show you exact measurements instead.'}
                   </Text>
                 </View>
@@ -715,22 +801,27 @@ export default function OnboardingScreen() {
 
               {setupData.hasLevelingBlocks && (
                 <View style={styles.blocksSection}>
-                  <Text style={styles.blocksSectionTitle}>How many blocks of each size?</Text>
+                  <Text style={styles.blocksSectionTitle}>Your block sizes:</Text>
 
                   <View style={styles.optionsContainer}>
-                    {blockHeights.map((block) => {
-                      const quantity = setupData.blockQuantities[block.value] || 0;
+                    {sortedHeights.map((height) => {
+                      const quantity = setupData.blockQuantities[height] || 0;
                       const hasBlocks = quantity > 0;
 
                       return (
                         <View
-                          key={block.value}
+                          key={height}
                           style={[styles.blockOption, hasBlocks && styles.blockOptionSelected]}
                         >
                           <View style={styles.blockQuantityRow}>
+                            <Pressable
+                              style={styles.deleteBlockButton}
+                              onPress={() => deleteBlockSize(height)}
+                            >
+                              <Trash2 size={18} color="#ef4444" />
+                            </Pressable>
                             <View style={styles.blockInfoSection}>
-                              <Text style={styles.optionTitle}>{block.label}</Text>
-                              <Text style={styles.optionDescription}>{block.description}</Text>
+                              <Text style={styles.optionTitle}>{formatHeight(height)}</Text>
                             </View>
                             <View style={styles.quantityControls}>
                               <Pressable
@@ -739,7 +830,7 @@ export default function OnboardingScreen() {
                                   quantity === 0 && styles.quantityButtonDisabled,
                                   pressed && styles.quantityButtonPressed,
                                 ]}
-                                onPress={() => updateBlockQuantity(block.value, -1)}
+                                onPress={() => updateBlockQuantity(height, -1)}
                                 disabled={quantity === 0}
                               >
                                 <Text style={styles.quantityButtonText}>−</Text>
@@ -757,7 +848,7 @@ export default function OnboardingScreen() {
                                   styles.quantityButton,
                                   pressed && styles.quantityButtonPressed,
                                 ]}
-                                onPress={() => updateBlockQuantity(block.value, 1)}
+                                onPress={() => updateBlockQuantity(height, 1)}
                               >
                                 <Text style={styles.quantityButtonText}>+</Text>
                               </Pressable>
@@ -771,106 +862,66 @@ export default function OnboardingScreen() {
                   {totalBlocks > 0 && (
                     <View style={styles.selectedBlocksCard}>
                       <Text style={styles.selectedBlocksText}>
-                        ✓ Total inventory: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''}
+                        ✓ Total inventory: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} (
+                        {sortedHeights.length} size{sortedHeights.length !== 1 ? 's' : ''})
                       </Text>
                     </View>
                   )}
 
-                  {/* Custom Block Option */}
-                  <TouchableOpacity
-                    style={[
-                      styles.blockOption,
-                      setupData.showCustomBlockInput && styles.blockOptionSelected,
-                    ]}
-                    onPress={() =>
-                      setSetupData((prev) => ({
-                        ...prev,
-                        showCustomBlockInput: !prev.showCustomBlockInput,
-                      }))
-                    }
-                  >
-                    <View style={styles.blockOptionRow}>
-                      <View
-                        style={[
-                          styles.checkbox,
-                          setupData.showCustomBlockInput && styles.checkboxSelected,
-                        ]}
-                      >
-                        {setupData.showCustomBlockInput && <Text style={styles.checkmark}>✓</Text>}
-                      </View>
-                      <View style={styles.optionText}>
-                        <Text style={styles.optionTitle}>Custom Size</Text>
-                        <Text style={styles.optionDescription}>
-                          I have a different block height
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {setupData.showCustomBlockInput && (
-                    <View style={styles.customBlockInput}>
-                      <View style={styles.customBlockRow}>
-                        <View style={styles.customBlockHeightInput}>
-                          <Text style={styles.inputLabel}>
-                            Height ({setupData.measurementUnits === 'imperial' ? 'in' : 'cm'})
-                          </Text>
-                          <TextInput
-                            style={styles.textInput}
-                            placeholder={
-                              setupData.measurementUnits === 'imperial' ? 'e.g., 3.5' : 'e.g., 8'
-                            }
-                            placeholderTextColor="#737373"
-                            keyboardType="decimal-pad"
-                            value={setupData.customBlockHeight}
-                            onChangeText={(text) =>
-                              setSetupData((prev) => ({ ...prev, customBlockHeight: text }))
-                            }
-                          />
-                        </View>
-                        <View style={styles.customBlockQuantityInput}>
-                          <Text style={styles.inputLabel}>Quantity</Text>
-                          <View style={styles.quantityControls}>
-                            <Pressable
-                              style={({ pressed }) => [
-                                styles.quantityButton,
-                                setupData.customBlockQuantity === 0 &&
-                                  styles.quantityButtonDisabled,
-                                pressed && styles.quantityButtonPressed,
-                              ]}
-                              onPress={() =>
-                                setSetupData((prev) => ({
-                                  ...prev,
-                                  customBlockQuantity: Math.max(0, prev.customBlockQuantity - 1),
-                                }))
-                              }
-                              disabled={setupData.customBlockQuantity === 0}
-                            >
-                              <Text style={styles.quantityButtonText}>−</Text>
-                            </Pressable>
-                            <Text
-                              style={[
-                                styles.quantityValue,
-                                setupData.customBlockQuantity > 0 && styles.quantityValueActive,
-                              ]}
-                            >
-                              {setupData.customBlockQuantity}
-                            </Text>
-                            <Pressable
-                              style={({ pressed }) => [
-                                styles.quantityButton,
-                                pressed && styles.quantityButtonPressed,
-                              ]}
-                              onPress={() =>
-                                setSetupData((prev) => ({
-                                  ...prev,
-                                  customBlockQuantity: Math.min(20, prev.customBlockQuantity + 1),
-                                }))
-                              }
-                            >
-                              <Text style={styles.quantityButtonText}>+</Text>
-                            </Pressable>
-                          </View>
-                        </View>
+                  {/* Add Block Size Button/Input */}
+                  {!setupData.showAddBlockInput ? (
+                    <TouchableOpacity
+                      style={styles.addBlockButton}
+                      onPress={() => setSetupData((prev) => ({ ...prev, showAddBlockInput: true }))}
+                    >
+                      <Plus size={20} color="#3b82f6" />
+                      <Text style={styles.addBlockButtonText}>Add Block Size</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.addBlockInputContainer}>
+                      <Text style={styles.addBlockInputLabel}>
+                        Enter height ({setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}
+                        ):
+                      </Text>
+                      <View style={styles.addBlockInputRow}>
+                        <TextInput
+                          style={styles.addBlockTextInput}
+                          placeholder={
+                            setupData.measurementUnits === 'imperial'
+                              ? 'e.g., 5 or 1.5'
+                              : 'e.g., 12'
+                          }
+                          placeholderTextColor="#737373"
+                          keyboardType="decimal-pad"
+                          value={setupData.newBlockHeight}
+                          onChangeText={(text) =>
+                            setSetupData((prev) => ({ ...prev, newBlockHeight: text }))
+                          }
+                          onFocus={() => {
+                            globalThis.setTimeout(() => {
+                              scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 300);
+                          }}
+                          autoFocus
+                        />
+                        <TouchableOpacity
+                          style={styles.addBlockConfirmButton}
+                          onPress={addBlockSize}
+                        >
+                          <Text style={styles.addBlockConfirmText}>Add</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.addBlockCancelButton}
+                          onPress={() =>
+                            setSetupData((prev) => ({
+                              ...prev,
+                              showAddBlockInput: false,
+                              newBlockHeight: '',
+                            }))
+                          }
+                        >
+                          <Text style={styles.addBlockCancelText}>Cancel</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   )}
@@ -887,7 +938,7 @@ export default function OnboardingScreen() {
     return (
       <View style={styles.stepContent}>
         <IconBox variant="success">
-          <CheckCircle size={48} color="#22c55e" />
+          <CheckCircle size={36} color="#22c55e" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -916,12 +967,13 @@ export default function OnboardingScreen() {
                 📦 <Text style={styles.summaryBold}>Blocks:</Text>{' '}
                 {(() => {
                   if (!setupData.hasLevelingBlocks) return 'Measurement mode';
-                  const totalBlocks =
-                    Object.values(setupData.blockQuantities).reduce((sum, qty) => sum + qty, 0) +
-                    (setupData.showCustomBlockInput ? setupData.customBlockQuantity : 0);
-                  const sizes =
-                    Object.entries(setupData.blockQuantities).filter(([_, qty]) => qty > 0).length +
-                    (setupData.showCustomBlockInput && setupData.customBlockQuantity > 0 ? 1 : 0);
+                  const totalBlocks = Object.values(setupData.blockQuantities).reduce(
+                    (sum, qty) => sum + qty,
+                    0
+                  );
+                  const sizes = Object.entries(setupData.blockQuantities).filter(
+                    ([, qty]) => qty > 0
+                  ).length;
                   return `${totalBlocks} blocks (${sizes} size${sizes !== 1 ? 's' : ''})`;
                 })()}
               </Text>
@@ -939,67 +991,86 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.mainContent}>
-        {/* Progress Indicator */}
-        <View style={styles.progressRow}>
-          {STEPS.map((_, index) => (
-            <View
-              key={index}
-              style={[styles.progressDot, index <= currentStep && styles.progressDotActive]}
-            />
-          ))}
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.mainContent}>
+          {/* Progress Indicator - compact at top */}
+          {!keyboardVisible && (
+            <View style={styles.progressRow}>
+              {STEPS.map((_, index) => (
+                <View
+                  key={index}
+                  style={[styles.progressDot, index <= currentStep && styles.progressDotActive]}
+                />
+              ))}
+            </View>
+          )}
 
-        {/* Content */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.scrollContent}>{currentStepData.component()}</View>
-        </ScrollView>
+          {/* Content - fills available space */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContentContainer}
+          >
+            <View style={styles.scrollContent}>{currentStepData.component()}</View>
+          </ScrollView>
 
-        {/* Navigation */}
-        <View style={styles.navigation}>
-          <View style={styles.navButtonsRow}>
-            {currentStep > 0 && (
-              <GlassButton variant="ghost" onPress={handleBack} style={styles.navButton}>
-                <View style={styles.buttonContent}>
-                  <ArrowLeft size={20} color="#a3a3a3" />
-                  <Text style={styles.backButtonText}>Back</Text>
-                </View>
-              </GlassButton>
-            )}
-
-            <GlassButton
-              onPress={handleNext}
-              disabled={!canProceed()}
-              variant={canProceed() ? 'primary' : 'ghost'}
-              style={styles.navButton}
-            >
-              <View style={styles.buttonContent}>
-                <Text
-                  style={[styles.nextButtonText, !canProceed() && styles.nextButtonTextDisabled]}
-                >
-                  {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
-                </Text>
-                {currentStep < STEPS.length - 1 ? (
-                  <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
-                ) : (
-                  <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+          {/* Navigation - hidden when keyboard is visible */}
+          {!keyboardVisible && (
+            <View style={styles.navigation}>
+              <View style={styles.navButtonsRow}>
+                {currentStep > 0 && (
+                  <GlassButton variant="ghost" onPress={handleBack} style={styles.navButton}>
+                    <View style={styles.buttonContent}>
+                      <ArrowLeft size={20} color="#a3a3a3" />
+                      <Text style={styles.backButtonText}>Back</Text>
+                    </View>
+                  </GlassButton>
                 )}
+
+                <GlassButton
+                  onPress={handleNext}
+                  disabled={!canProceed()}
+                  variant={canProceed() ? 'primary' : 'ghost'}
+                  style={styles.navButton}
+                >
+                  <View style={styles.buttonContent}>
+                    <Text
+                      style={[
+                        styles.nextButtonText,
+                        !canProceed() && styles.nextButtonTextDisabled,
+                      ]}
+                    >
+                      {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
+                    </Text>
+                    {currentStep < STEPS.length - 1 ? (
+                      <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                    ) : (
+                      <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                    )}
+                  </View>
+                </GlassButton>
               </View>
-            </GlassButton>
-          </View>
 
-          {/* Skip Option */}
-          <TouchableOpacity style={styles.skipButton} onPress={skipOnboarding}>
-            <Text style={styles.skipButtonText}>Skip Tutorial</Text>
-          </TouchableOpacity>
+              {/* Skip Option - with border */}
+              <TouchableOpacity style={styles.skipButton} onPress={skipOnboarding}>
+                <Text style={styles.skipButtonText}>Skip Tutorial</Text>
+              </TouchableOpacity>
+
+              {/* Step Counter */}
+              <Text style={styles.stepCounter}>
+                {currentStep + 1} of {STEPS.length}
+              </Text>
+            </View>
+          )}
         </View>
-
-        {/* Step Counter */}
-        <Text style={styles.stepCounter}>
-          {currentStep + 1} of {STEPS.length}
-        </Text>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1009,21 +1080,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.colors.background,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   mainContent: {
     flex: 1,
-    padding: 12,
-    gap: 16,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   progressRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 8,
   },
   progressDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: THEME.colors.secondary,
   },
   progressDotActive: {
@@ -1047,9 +1123,12 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContentContainer: {
+    flexGrow: 1,
+  },
   scrollContent: {
-    gap: 20,
-    paddingBottom: 28,
+    gap: 16,
+    paddingBottom: 16,
   },
   stepContent: {
     gap: 16,
@@ -1060,17 +1139,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   titleContainer: {
-    gap: 8,
+    gap: 4,
     alignItems: 'center',
   },
   stepTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: THEME.colors.text,
     textAlign: 'center',
   },
   stepSubtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: THEME.colors.textSecondary,
     textAlign: 'center',
   },
@@ -1099,7 +1178,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionCard: {
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 2,
     backgroundColor: THEME.colors.surface,
@@ -1152,8 +1231,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vehicleIconContainer: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: THEME.colors.secondary,
   },
   vehicleIconContainerSelected: {
@@ -1262,11 +1341,14 @@ const styles = StyleSheet.create({
   },
   switchRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     alignItems: 'center',
   },
   switchLabel: {
     color: THEME.colors.text,
+    flex: 1,
+    flexWrap: 'wrap',
+    fontSize: 14,
   },
   blocksSection: {
     gap: 16,
@@ -1386,6 +1468,72 @@ const styles = StyleSheet.create({
   quantityValueActive: {
     color: THEME.colors.success,
   },
+  // Delete block button
+  deleteBlockButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  // Add block button and input
+  addBlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: THEME.colors.primary,
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+  },
+  addBlockButtonText: {
+    color: THEME.colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addBlockInputContainer: {
+    padding: 16,
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.primary,
+    gap: 12,
+  },
+  addBlockInputLabel: {
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+    fontWeight: '500',
+  },
+  addBlockInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  addBlockTextInput: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: THEME.colors.secondary,
+    borderRadius: 8,
+    color: THEME.colors.text,
+    fontSize: 16,
+  },
+  addBlockConfirmButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: THEME.colors.primary,
+    borderRadius: 8,
+  },
+  addBlockConfirmText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  addBlockCancelButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  addBlockCancelText: {
+    color: THEME.colors.textSecondary,
+  },
   summaryList: {
     gap: 8,
   },
@@ -1410,7 +1558,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   navigation: {
-    gap: 12,
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: THEME.colors.border,
   },
   navButtonsRow: {
     flexDirection: 'row',
@@ -1451,22 +1602,28 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
   },
   skipButton: {
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    borderRadius: 8,
+    alignSelf: 'center',
   },
   skipButtonText: {
     color: THEME.colors.textSecondary,
     textAlign: 'center',
+    fontSize: 14,
   },
   stepCounter: {
     color: THEME.colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
     textAlign: 'center',
   },
 
   // Simple icon box - matches level screen style
   iconBox: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
