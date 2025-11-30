@@ -67,20 +67,28 @@ This keeps the app simple, minimal dependencies, and consistent.
 - Custom vehicle measurements option in onboarding
 - Switch visibility improved (track color #555 instead of #333)
 - GlassCard fixed with width: '100%' to prevent content overflow
+- Measurement display fixed: shows inches (144") instead of feet (12')
+- Block counter rapid-click fixed: uses ref-based batching to register all clicks
+- ESLint errors fixed in both profiles.tsx and onboarding.tsx
+- Keyboard handling improved: input fields auto-scroll into view when keyboard appears
+- Block inventory UI simplified: delete/add block sizes, better navigation visibility
 - Branch: `ui-overhaul-checkpoint`
-- Last commit: `09b7762` - refactor: convert onboarding, settings, profiles to StyleSheet
+- Last commit: `96a496e` - fix: improve onboarding keyboard handling and input field visibility
 
 ## NEXT TASK - START HERE
 
 ### Ready for Next Feature
 
-The UI overhaul is complete! All screens use StyleSheet.create() and match the liquid glass theme.
+The onboarding UI is fully functional and tested on real device:
+
+- Keyboard handling works properly - input fields scroll into view
+- Block inventory management simplified with delete/add functionality
+- All measurement inputs auto-scroll when focused
 
 **Potential next tasks:**
 
-1. Fix pre-existing ESLint errors in profiles.tsx (window not defined, setTimeout, etc.)
-2. Test the complete onboarding flow on a real device
-3. Add any new features Ron requests
+1. VehicleSetupWizard still uses className (Tailwind) - convert to StyleSheet if needed
+2. Add any new features Ron requests
 
 **Dev server:** `npx expo start --clear`
 **Web testing:** Firefox via Playwright MCP at `http://localhost:8081`
