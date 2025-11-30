@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Text, Switch, XStack, YStack, Card, Button, Slider } from 'tamagui';
+import { View, Text, Switch, TouchableOpacity, Platform } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useDebugStore } from '../state/debugStore';
-import { X } from '@tamagui/lucide-icons';
-import { Platform } from 'react-native';
+import { X } from 'lucide-react-native';
 
-// Declare global __DEV__ for TypeScript if needed, though usually it's available in RN projects
+// Declare global __DEV__ for TypeScript if needed
 declare const __DEV__: boolean;
 
 export function DebugControls() {
@@ -43,139 +43,109 @@ export function DebugControls() {
 
   if (!isDebugMode) {
     return (
-      <Button
-        position="absolute"
-        bottom="$4"
-        right="$4"
-        size="$3"
-        circular
-        backgroundColor="$red10"
+      <TouchableOpacity
+        className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-destructive items-center justify-center z-50"
+        style={{ elevation: 5 }}
         onPress={() => setDebugMode(true)}
-        elevation={5}
-        zIndex={9999}
       >
-        <Text fontSize={10} color="white">
-          DBG
-        </Text>
-      </Button>
+        <Text className="text-[10px] text-white font-bold">DBG</Text>
+      </TouchableOpacity>
     );
   }
 
   return (
-    <Card
-      position="absolute"
-      bottom="$4"
-      right="$4"
-      width={300}
-      backgroundColor="$gray2"
-      borderColor="$gray6"
-      borderWidth={1}
-      elevation={10}
-      zIndex={9999}
-      padding="$3"
+    <View
+      className="absolute bottom-4 right-4 w-[300px] bg-card border border-border rounded-lg p-3 z-50"
+      style={{ elevation: 10 }}
     >
-      <XStack justifyContent="space-between" alignItems="center" marginBottom="$2">
-        <Text fontWeight="bold" color="$color">
-          Virtual Device
-        </Text>
-        <Button size="$2" circular chromeless icon={X} onPress={() => setDebugMode(false)} />
-      </XStack>
+      <View className="flex-row justify-between items-center mb-2">
+        <Text className="font-bold text-foreground">Virtual Device</Text>
+        <TouchableOpacity onPress={() => setDebugMode(false)} className="p-1">
+          <X size={20} color="#a3a3a3" />
+        </TouchableOpacity>
+      </View>
 
-      <YStack space="$3">
-        <XStack justifyContent="space-between" alignItems="center">
-          <Text fontSize="$2" color="$color">
-            Simulate Sensors
-          </Text>
-          <Switch checked={isDebugMode} onCheckedChange={setDebugMode} size="$2">
-            <Switch.Thumb animation="quick" />
-          </Switch>
-        </XStack>
+      <View className="gap-3">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-sm text-foreground">Simulate Sensors</Text>
+          <Switch
+            value={isDebugMode}
+            onValueChange={setDebugMode}
+            trackColor={{ false: '#333', true: '#3b82f6' }}
+            thumbColor="#fff"
+          />
+        </View>
 
-        <YStack space="$1">
-          <XStack justifyContent="space-between">
-            <Text fontSize="$2" color="$color">
-              Pitch: {localPitch.toFixed(1)}°
-            </Text>
-            <Text fontSize="$2" color="$gray10">
-              Nose Up/Down
-            </Text>
-          </XStack>
+        {/* Pitch Slider */}
+        <View className="gap-1">
+          <View className="flex-row justify-between">
+            <Text className="text-sm text-foreground">Pitch: {localPitch.toFixed(1)}°</Text>
+            <Text className="text-sm text-muted-foreground">Nose Up/Down</Text>
+          </View>
           <Slider
-            value={[localPitch]}
+            value={localPitch}
             onValueChange={(val) => {
-              setLocalPitch(val[0]);
-              setMockPitch(val[0]);
+              setLocalPitch(val);
+              setMockPitch(val);
             }}
-            min={-90}
-            max={90}
+            minimumValue={-90}
+            maximumValue={90}
             step={0.5}
-            size="$2"
-          >
-            <Slider.Track>
-              <Slider.TrackActive backgroundColor="$red10" />
-            </Slider.Track>
-            <Slider.Thumb index={0} circular size="$2" />
-          </Slider>
-        </YStack>
+            minimumTrackTintColor="#ef4444"
+            maximumTrackTintColor="#333"
+            thumbTintColor="#fff"
+          />
+        </View>
 
-        <YStack space="$1">
-          <XStack justifyContent="space-between">
-            <Text fontSize="$2" color="$color">
-              Roll: {localRoll.toFixed(1)}°
-            </Text>
-            <Text fontSize="$2" color="$gray10">
-              Left/Right
-            </Text>
-          </XStack>
+        {/* Roll Slider */}
+        <View className="gap-1">
+          <View className="flex-row justify-between">
+            <Text className="text-sm text-foreground">Roll: {localRoll.toFixed(1)}°</Text>
+            <Text className="text-sm text-muted-foreground">Left/Right</Text>
+          </View>
           <Slider
-            value={[localRoll]}
+            value={localRoll}
             onValueChange={(val) => {
-              setLocalRoll(val[0]);
-              setMockRoll(val[0]);
+              setLocalRoll(val);
+              setMockRoll(val);
             }}
-            min={-90}
-            max={90}
+            minimumValue={-90}
+            maximumValue={90}
             step={0.5}
-            size="$2"
-          >
-            <Slider.Track>
-              <Slider.TrackActive backgroundColor="$blue10" />
-            </Slider.Track>
-            <Slider.Thumb index={0} circular size="$2" />
-          </Slider>
-        </YStack>
+            minimumTrackTintColor="#3b82f6"
+            maximumTrackTintColor="#333"
+            thumbTintColor="#fff"
+          />
+        </View>
 
-        <YStack space="$1">
-          <XStack justifyContent="space-between">
-            <Text fontSize="$2" color="$color">
-              Heading: {localHeading.toFixed(0)}°
-            </Text>
-            <Text fontSize="$2" color="$gray10">
-              Compass
-            </Text>
-          </XStack>
+        {/* Heading Slider */}
+        <View className="gap-1">
+          <View className="flex-row justify-between">
+            <Text className="text-sm text-foreground">Heading: {localHeading.toFixed(0)}°</Text>
+            <Text className="text-sm text-muted-foreground">Compass</Text>
+          </View>
           <Slider
-            value={[localHeading]}
+            value={localHeading}
             onValueChange={(val) => {
-              setLocalHeading(val[0]);
-              setMockHeading(val[0]);
+              setLocalHeading(val);
+              setMockHeading(val);
             }}
-            min={0}
-            max={359}
+            minimumValue={0}
+            maximumValue={359}
             step={1}
-            size="$2"
-          >
-            <Slider.Track>
-              <Slider.TrackActive backgroundColor="$green10" />
-            </Slider.Track>
-            <Slider.Thumb index={0} circular size="$2" />
-          </Slider>
-        </YStack>
+            minimumTrackTintColor="#22c55e"
+            maximumTrackTintColor="#333"
+            thumbTintColor="#fff"
+          />
+        </View>
 
-        <Button size="$2" theme="active" onPress={resetMockValues}>
-          Reset to Level (0°)
-        </Button>
-      </YStack>
-    </Card>
+        <TouchableOpacity
+          className="bg-primary py-2 px-4 rounded-lg items-center"
+          onPress={resetMockValues}
+        >
+          <Text className="text-primary-foreground font-semibold">Reset to Level (0°)</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }

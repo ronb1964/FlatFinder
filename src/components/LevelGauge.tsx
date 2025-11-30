@@ -1,95 +1,67 @@
-import React from 'react'
-import { YStack, XStack, Text, View } from 'tamagui'
+import React from 'react';
+import { View, Text } from 'react-native';
 
 interface LevelGaugeProps {
-  pitch: number
-  roll: number
+  pitch: number;
+  roll: number;
 }
 
 export function LevelGauge({ pitch, roll }: LevelGaugeProps) {
   return (
-    <YStack space="$4" alignItems="center">
+    <View className="items-center gap-4">
       {/* Bubble Level Visualization */}
-      <View
-        width={200}
-        height={200}
-        backgroundColor="$backgroundStrong"
-        borderColor="$borderColor"
-        borderWidth={2}
-        borderRadius="$4"
-        position="relative"
-        overflow="hidden"
-      >
+      <View className="w-[200px] h-[200px] bg-secondary rounded-lg border-2 border-border relative overflow-hidden">
         {/* Center crosshair */}
         <View
-          position="absolute"
-          left="50%"
-          top="50%"
-          width={2}
-          height={2}
-          backgroundColor="$color"
-          transform={[{ translateX: -1 }, { translateY: -1 }]}
+          className="absolute w-[2px] h-[2px] bg-foreground"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: [{ translateX: -1 }, { translateY: -1 }],
+          }}
         />
-        
+
         {/* Horizontal line */}
         <View
-          position="absolute"
-          left={0}
-          top="50%"
-          width="100%"
-          height={1}
-          backgroundColor="$borderColor"
-          opacity={0.3}
+          className="absolute left-0 w-full h-[1px] bg-border opacity-30"
+          style={{ top: '50%' }}
         />
-        
+
         {/* Vertical line */}
         <View
-          position="absolute"
-          left="50%"
-          top={0}
-          width={1}
-          height="100%"
-          backgroundColor="$borderColor"
-          opacity={0.3}
+          className="absolute top-0 h-full w-[1px] bg-border opacity-30"
+          style={{ left: '50%' }}
         />
-        
+
         {/* Bubble indicator */}
         <View
-          position="absolute"
-          left="50%"
-          top="50%"
-          width={20}
-          height={20}
-          backgroundColor="$blue10"
-          borderRadius="$10"
-          transform={[
-            { translateX: -10 + (roll * 5) },
-            { translateY: -10 + (pitch * 5) }
-          ]}
+          className="absolute w-5 h-5 bg-primary rounded-full"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: [{ translateX: -10 + roll * 5 }, { translateY: -10 + pitch * 5 }],
+          }}
         />
       </View>
 
       {/* Numeric readouts */}
-      <XStack space="$6">
-        <YStack alignItems="center">
-          <Text fontSize="$3" color="$colorSecondary" opacity={0.8}>
-            Pitch
+      <View className="flex-row gap-6">
+        <View className="items-center">
+          <Text className="text-sm text-muted-foreground opacity-80">Pitch</Text>
+          <Text className="text-xl font-semibold text-foreground">
+            {pitch > 0 ? '+' : ''}
+            {pitch.toFixed(1)}°
           </Text>
-          <Text fontSize="$6" fontWeight="600" color="$color">
-            {pitch > 0 ? '+' : ''}{pitch.toFixed(1)}°
-          </Text>
-        </YStack>
-        
-        <YStack alignItems="center">
-          <Text fontSize="$3" color="$colorSecondary" opacity={0.8}>
-            Roll
-          </Text>
-          <Text fontSize="$6" fontWeight="600" color="$color">
-            {roll > 0 ? '+' : ''}{roll.toFixed(1)}°
-          </Text>
-        </YStack>
-      </XStack>
-    </YStack>
-  )
-}
+        </View>
 
+        <View className="items-center">
+          <Text className="text-sm text-muted-foreground opacity-80">Roll</Text>
+          <Text className="text-xl font-semibold text-foreground">
+            {roll > 0 ? '+' : ''}
+            {roll.toFixed(1)}°
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}

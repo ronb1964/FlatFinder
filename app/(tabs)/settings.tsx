@@ -1,18 +1,13 @@
 import React, { useEffect } from 'react';
 import {
-  YStack,
-  XStack,
+  View,
   Text,
-  H2,
-  Card,
   ScrollView,
   Switch,
-  Slider,
-  useTheme,
-  Separator,
-  RadioGroup,
-  Button,
-} from 'tamagui';
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
+import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Vibrate,
@@ -23,50 +18,16 @@ import {
   Gauge,
   RotateCcw,
   Ruler,
-} from '@tamagui/lucide-icons';
+} from 'lucide-react-native';
 
 import { useAppStore } from '../../src/state/appStore';
-import { useColorScheme } from 'react-native';
 
 export default function SettingsScreen() {
-  const theme = useTheme();
-  const colorScheme = useColorScheme();
   const { settings, updateSettings, loadSettings, resetOnboarding } = useAppStore();
 
   useEffect(() => {
     loadSettings();
   }, []);
-
-  // Enhanced switch component with colors
-  const ColoredSwitch = ({ 
-    checked, 
-    onCheckedChange, 
-    color = '$green9',
-    size = '$4' 
-  }: { 
-    checked: boolean; 
-    onCheckedChange: (checked: boolean) => void;
-    color?: string;
-    size?: '$3' | '$4' | '$5';
-  }) => (
-    <Switch
-      size={size}
-      checked={checked}
-      onCheckedChange={onCheckedChange}
-      backgroundColor={checked ? color : '$gray6'}
-      borderColor={checked ? color : '$gray8'}
-      borderWidth={2}
-    >
-      <Switch.Thumb 
-        animation="quick" 
-        backgroundColor={checked ? 'white' : '$gray10'}
-        shadowColor={checked ? color : '$gray8'}
-        shadowOffset={{ width: 0, height: 2 }}
-        shadowOpacity={0.3}
-        shadowRadius={4}
-      />
-    </Switch>
-  );
 
   const SettingRow = ({
     icon,
@@ -79,75 +40,77 @@ export default function SettingsScreen() {
     description?: string;
     children: React.ReactNode;
   }) => (
-    <Card padding="$4" backgroundColor="$background">
-      <XStack justifyContent="space-between" alignItems="center" space="$3">
-        <XStack space="$3" alignItems="center" flex={1}>
+    <View className="p-4 bg-card rounded-xl">
+      <View className="flex-row justify-between items-center gap-3">
+        <View className="flex-row gap-3 items-center flex-1">
           {icon}
-          <YStack flex={1}>
-            <Text fontSize="$4" fontWeight="600">
-              {title}
-            </Text>
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-foreground">{title}</Text>
             {description && (
-              <Text fontSize="$2" color="$gray10">
-                {description}
-              </Text>
+              <Text className="text-xs text-muted-foreground">{description}</Text>
             )}
-          </YStack>
-        </XStack>
+          </View>
+        </View>
         {children}
-      </XStack>
-    </Card>
+      </View>
+    </View>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.val || '#000' }}>
-      <ScrollView>
-        <YStack 
-          padding="$4" 
-          space="$4"
-        >
-          <H2>Settings</H2>
+    <SafeAreaView className="flex-1 bg-background">
+      <ScrollView className="flex-1">
+        <View className="p-4 gap-4">
+          <Text className="text-2xl font-bold text-foreground">Settings</Text>
 
           {/* Feedback Settings */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+          <View className="gap-3">
+            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
               FEEDBACK
             </Text>
 
             <SettingRow
-              icon={<Vibrate size={20} color={settings.hapticsEnabled ? '#10b981' : theme.color?.val || '#fff'} />}
+              icon={
+                <Vibrate
+                  size={20}
+                  color={settings.hapticsEnabled ? '#10b981' : '#a3a3a3'}
+                />
+              }
               title="Haptic Feedback"
               description="Vibrate when level changes"
             >
-              <ColoredSwitch
-                checked={settings.hapticsEnabled}
-                onCheckedChange={(checked: boolean) =>
-                  updateSettings({ hapticsEnabled: checked })
-                }
-                color="$emerald9"
+              <Switch
+                value={settings.hapticsEnabled}
+                onValueChange={(checked) => updateSettings({ hapticsEnabled: checked })}
+                trackColor={{ false: '#333', true: '#10b981' }}
+                thumbColor="#fff"
               />
             </SettingRow>
 
             <SettingRow
-              icon={<Volume2 size={20} color={settings.audioEnabled ? '#3b82f6' : theme.color?.val || '#fff'} />}
+              icon={
+                <Volume2
+                  size={20}
+                  color={settings.audioEnabled ? '#3b82f6' : '#a3a3a3'}
+                />
+              }
               title="Audio Feedback"
               description="Play sounds when near level"
             >
-              <ColoredSwitch
-                checked={settings.audioEnabled}
-                onCheckedChange={(checked: boolean) =>
-                  updateSettings({ audioEnabled: checked })
-                }
-                color="$blue9"
+              <Switch
+                value={settings.audioEnabled}
+                onValueChange={(checked) => updateSettings({ audioEnabled: checked })}
+                trackColor={{ false: '#333', true: '#3b82f6' }}
+                thumbColor="#fff"
               />
             </SettingRow>
-          </YStack>
+          </View>
 
-          <Separator />
+          {/* Divider */}
+          <View className="h-[1px] bg-border" />
 
           {/* Display Settings */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+          <View className="gap-3">
+            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
               DISPLAY
             </Text>
 
@@ -162,178 +125,190 @@ export default function SettingsScreen() {
               title="Night Mode"
               description="Dark theme for night use"
             >
-              <ColoredSwitch
-                checked={settings.nightMode}
-                onCheckedChange={(checked: boolean) =>
-                  updateSettings({ nightMode: checked })
-                }
-                color="$indigo9"
+              <Switch
+                value={settings.nightMode}
+                onValueChange={(checked) => updateSettings({ nightMode: checked })}
+                trackColor={{ false: '#333', true: '#6366f1' }}
+                thumbColor="#fff"
               />
             </SettingRow>
 
             <SettingRow
-              icon={<Activity size={20} color={settings.keepAwake ? '#f97316' : theme.color?.val || '#fff'} />}
+              icon={
+                <Activity
+                  size={20}
+                  color={settings.keepAwake ? '#f97316' : '#a3a3a3'}
+                />
+              }
               title="Keep Screen Awake"
               description="Prevent screen from sleeping"
             >
-              <ColoredSwitch
-                checked={settings.keepAwake}
-                onCheckedChange={(checked: boolean) =>
-                  updateSettings({ keepAwake: checked })
-                }
-                color="$orange9"
+              <Switch
+                value={settings.keepAwake}
+                onValueChange={(checked) => updateSettings({ keepAwake: checked })}
+                trackColor={{ false: '#333', true: '#f97316' }}
+                thumbColor="#fff"
               />
             </SettingRow>
-          </YStack>
+          </View>
 
-          <Separator />
+          {/* Divider */}
+          <View className="h-[1px] bg-border" />
 
           {/* Measurement Settings */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+          <View className="gap-3">
+            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
               MEASUREMENTS
             </Text>
 
             <SettingRow
-              icon={<Ruler size={20} color={theme.color?.val || '#fff'} />}
+              icon={<Ruler size={20} color="#a3a3a3" />}
               title="Units"
               description="Imperial (inches/feet) or Metric (cm/meters)"
             >
-              <RadioGroup
-                value={settings.measurementUnits}
-                onValueChange={(value: string) =>
-                  updateSettings({ measurementUnits: value as 'imperial' | 'metric' })
-                }
-              >
-                <XStack space="$3">
-                  <XStack alignItems="center" space="$2">
-                    <RadioGroup.Item value="imperial" id="imperial">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Text fontSize="$3">Imperial</Text>
-                  </XStack>
-                  <XStack alignItems="center" space="$2">
-                    <RadioGroup.Item value="metric" id="metric">
-                      <RadioGroup.Indicator />
-                    </RadioGroup.Item>
-                    <Text fontSize="$3">Metric</Text>
-                  </XStack>
-                </XStack>
-              </RadioGroup>
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  className={`flex-row items-center gap-2 px-3 py-1.5 rounded-lg ${
+                    settings.measurementUnits === 'imperial'
+                      ? 'bg-primary'
+                      : 'bg-muted'
+                  }`}
+                  onPress={() => updateSettings({ measurementUnits: 'imperial' })}
+                >
+                  <View
+                    className={`w-3 h-3 rounded-full border-2 ${
+                      settings.measurementUnits === 'imperial'
+                        ? 'border-white bg-white'
+                        : 'border-muted-foreground'
+                    }`}
+                  />
+                  <Text
+                    className={`text-sm ${
+                      settings.measurementUnits === 'imperial'
+                        ? 'text-primary-foreground'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Imperial
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className={`flex-row items-center gap-2 px-3 py-1.5 rounded-lg ${
+                    settings.measurementUnits === 'metric' ? 'bg-primary' : 'bg-muted'
+                  }`}
+                  onPress={() => updateSettings({ measurementUnits: 'metric' })}
+                >
+                  <View
+                    className={`w-3 h-3 rounded-full border-2 ${
+                      settings.measurementUnits === 'metric'
+                        ? 'border-white bg-white'
+                        : 'border-muted-foreground'
+                    }`}
+                  />
+                  <Text
+                    className={`text-sm ${
+                      settings.measurementUnits === 'metric'
+                        ? 'text-primary-foreground'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Metric
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </SettingRow>
 
-            <Card padding="$4" backgroundColor="$background">
-              <YStack space="$3">
-                <XStack justifyContent="space-between" alignItems="center">
-                  <XStack space="$3" alignItems="center">
-                    <Gauge size={20} color={theme.color?.val || '#fff'} />
-                    <Text fontSize="$4" fontWeight="600">
-                      Level Threshold
-                    </Text>
-                  </XStack>
-                  <Text fontSize="$4" fontWeight="bold" color="$green9">
-                    {settings.levelThreshold.toFixed(1)}°
+            <View className="p-4 bg-card rounded-xl gap-3">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-row gap-3 items-center">
+                  <Gauge size={20} color="#a3a3a3" />
+                  <Text className="text-base font-semibold text-foreground">
+                    Level Threshold
                   </Text>
-                </XStack>
-                <Text fontSize="$2" color="$gray10">
-                  Tolerance for considering the vehicle level
+                </View>
+                <Text className="text-base font-bold text-green-500">
+                  {settings.levelThreshold.toFixed(1)}°
                 </Text>
-                <Slider
-                  size="$4"
-                  value={[settings.levelThreshold]}
-                  max={2}
-                  min={0.1}
-                  step={0.1}
-                  onValueChange={([value]) =>
-                    updateSettings({ levelThreshold: value })
-                  }
-                >
-                  <Slider.Track>
-                    <Slider.TrackActive />
-                  </Slider.Track>
-                  <Slider.Thumb index={0} circular />
-                </Slider>
-              </YStack>
-            </Card>
-          </YStack>
+              </View>
+              <Text className="text-xs text-muted-foreground">
+                Tolerance for considering the vehicle level
+              </Text>
+              <Slider
+                value={settings.levelThreshold}
+                onValueChange={(value) => updateSettings({ levelThreshold: value })}
+                minimumValue={0.1}
+                maximumValue={2}
+                step={0.1}
+                minimumTrackTintColor="#22c55e"
+                maximumTrackTintColor="#333"
+                thumbTintColor="#fff"
+              />
+            </View>
+          </View>
 
-          <Separator />
+          {/* Divider */}
+          <View className="h-[1px] bg-border" />
 
-          {/* Developer Section - Temporary */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+          {/* Developer Section */}
+          <View className="gap-3">
+            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
               DEVELOPER
             </Text>
-            <Card padding="$4" backgroundColor="$background" borderColor="$red5" borderWidth={1}>
-              <YStack space="$3">
-                <XStack space="$3" alignItems="center">
-                  <RotateCcw size={20} color="#ef4444" />
-                  <YStack flex={1}>
-                    <Text fontSize="$4" fontWeight="600">
-                      Reset Onboarding
-                    </Text>
-                    <Text fontSize="$2" color="$gray10">
-                      Show the onboarding tutorial again for testing
-                    </Text>
-                  </YStack>
-                </XStack>
-                <Button
-                  size="$3"
-                  backgroundColor="$red9"
-                  color="white"
-                  pressStyle={{ backgroundColor: '$red10', scale: 0.95 }}
-                  borderRadius="$4"
-                  fontWeight="600"
-                  icon={<RotateCcw size={16} color="white" />}
-                  onPress={() => {
-                    resetOnboarding();
-                    // Force reload the app by reloading the page
-                    if (typeof window !== 'undefined') {
-                      window.location.reload();
-                    }
-                  }}
-                >
-                  Reset & Restart
-                </Button>
-              </YStack>
-            </Card>
-          </YStack>
+            <View className="p-4 bg-card rounded-xl border border-red-500/30 gap-3">
+              <View className="flex-row gap-3 items-center">
+                <RotateCcw size={20} color="#ef4444" />
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-foreground">
+                    Reset Onboarding
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    Show the onboarding tutorial again for testing
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                className="flex-row items-center justify-center gap-2 bg-red-500 py-3 rounded-lg"
+                onPress={() => {
+                  resetOnboarding();
+                  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }}
+              >
+                <RotateCcw size={16} color="#fff" />
+                <Text className="text-white font-semibold">Reset & Restart</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <Separator />
+          {/* Divider */}
+          <View className="h-[1px] bg-border" />
 
           {/* About Section */}
-          <YStack space="$3">
-            <Text fontSize="$3" fontWeight="600" color="$gray10">
+          <View className="gap-3">
+            <Text className="text-xs font-semibold text-muted-foreground tracking-wide">
               ABOUT
             </Text>
-            <Card 
-              padding="$6" 
-              backgroundColor="$background"
-              borderColor="$blue5"
-              borderWidth={1}
-              borderRadius="$6"
-            >
-              <YStack space="$3" alignItems="center">
-                <YStack space="$2" alignItems="center">
-                  <Text fontSize="$6" fontWeight="bold" color="$blue9">
-                    🎯 LevelMate
-                  </Text>
-                  <Text fontSize="$4" color="$blue8" fontWeight="600">
+            <View className="p-6 bg-card rounded-2xl border border-primary/30">
+              <View className="gap-3 items-center">
+                <View className="gap-2 items-center">
+                  <Text className="text-2xl font-bold text-primary">FlatFinder</Text>
+                  <Text className="text-base text-primary/80 font-semibold">
                     Version 1.0.0
                   </Text>
-                </YStack>
-                <Text fontSize="$3" color="$gray10" textAlign="center" lineHeight="$4">
-                  Professional RV and trailer leveling app with precision sensors and intelligent guidance
+                </View>
+                <Text className="text-sm text-muted-foreground text-center leading-5">
+                  Professional RV and trailer leveling app with precision sensors and
+                  intelligent guidance
                 </Text>
-                <XStack space="$2" opacity={0.7}>
-                  <Text fontSize="$2" color="$gray9">
-                    Made with ❤️ for RV enthusiasts
-                  </Text>
-                </XStack>
-              </YStack>
-            </Card>
-          </YStack>
-        </YStack>
+                <Text className="text-xs text-muted-foreground/70">
+                  Made with love for RV enthusiasts
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

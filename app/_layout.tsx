@@ -1,21 +1,12 @@
 import { Stack } from 'expo-router';
-import { TamaguiProvider } from 'tamagui';
-import { useFonts } from 'expo-font';
-import tamaguiConfig from '../tamagui.config';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, Platform } from 'react-native';
+import { useColorScheme, Platform, View, StyleSheet } from 'react-native';
 import { OnboardingGate } from '../src/components/OnboardingGate';
 import { DebugControls } from '../src/components/DebugControls';
 import { useEffect } from 'react';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
-  });
 
   // Proper mobile viewport setup
   useEffect(() => {
@@ -37,12 +28,8 @@ export default function RootLayout() {
     }
   }, []);
 
-  if (!loaded) {
-    return null;
-  }
-
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme || 'light'}>
+    <View style={styles.container}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <OnboardingGate>
         <Stack
@@ -52,6 +39,13 @@ export default function RootLayout() {
         />
         <DebugControls />
       </OnboardingGate>
-    </TamaguiProvider>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#111111',
+  },
+});

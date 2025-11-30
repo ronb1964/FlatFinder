@@ -1,13 +1,19 @@
 {
   "expo": {
-    "name": "LevelMate",
-    "slug": "levelmate-rv-leveling",
+    "name": "FlatFinder",
+    "slug": "flatfinder-rv-leveling",
+    "owner": "ronb1964",
+    "extra": {
+      "eas": {
+        "projectId": "0c33edf0-e9d4-4f4f-95ef-0636628dcb28"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
-    "scheme": "levelmate",
+    "scheme": "flatfinder",
     "primaryColor": "#22c55e",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -16,11 +22,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.levelmate.rvleveling",
+      "bundleIdentifier": "com.flatfinder.rvleveling",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMotionUsageDescription": "LevelMate uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
-        "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"]
+        "NSMotionUsageDescription": "FlatFinder uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
+        "UIRequiredDeviceCapabilities": [
+          "accelerometer",
+          "gyroscope"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -29,7 +39,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.levelmate.rvleveling",
+      "package": "com.flatfinder.rvleveling",
       "versionCode": 1,
       "permissions": [
         "android.permission.WAKE_LOCK"
@@ -39,6 +49,21 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": false
+          },
+          "android": {
+            "newArchEnabled": false
+          }
+        }
+      ],
+      "./plugins/withFollyFix"
+    ]
   }
 }

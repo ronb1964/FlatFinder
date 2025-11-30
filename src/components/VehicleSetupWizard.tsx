@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import {
-  YStack,
-  XStack,
+  View,
   Text,
-  Button,
-  H2,
-  H3,
-  Card,
+  TouchableOpacity,
   ScrollView,
-  Input,
-  Label,
-  RadioGroup,
-  useTheme,
+  TextInput,
   Switch,
-  Checkbox,
-} from 'tamagui';
-// Temporarily removing icons to isolate the undefined component issue
-// import { ArrowRight, ArrowLeft, Car, Truck, Home, Ruler, Info, Package } from '@tamagui/lucide-icons';
+  Modal,
+} from 'react-native';
+import { Car, Truck, Home } from 'lucide-react-native';
 import { StandardBlockSets, BlockInventory } from '../lib/rvLevelingMath';
-import { createCalibration } from '../lib/levelingMath';
-// Temporarily commenting out units to debug undefined component issue
-// import { formatMeasurement, getTypicalMeasurements, getCommonBlockHeights, convertToInches, convertForDisplay } from '../lib/units';
 import { useAppStore } from '../state/appStore';
+import {
+  formatMeasurement,
+  getTypicalMeasurements,
+  getCommonBlockHeights,
+  convertToInches,
+  convertForDisplay,
+} from '../lib/units';
 
 interface VehicleSetupWizardProps {
   onComplete: (profile: {
@@ -34,7 +30,14 @@ interface VehicleSetupWizardProps {
   }) => void;
   onCancel: () => void;
   isVisible: boolean;
-  editingProfile?: any; // VehicleProfile or null
+  editingProfile?: {
+    name: string;
+    type: 'trailer' | 'motorhome' | 'van';
+    wheelbaseInches: number;
+    trackWidthInches: number;
+    hitchOffsetInches?: number;
+    blockInventory: BlockInventory[];
+  } | null;
 }
 
 const VEHICLE_TYPES = [
@@ -42,82 +45,50 @@ const VEHICLE_TYPES = [
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    icon: () => null // Temporary placeholder
+    Icon: Car,
   },
   {
     id: 'motorhome',
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
-    icon: () => null // Temporary placeholder
+    Icon: Truck,
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
-    icon: () => null // Temporary placeholder
-  }
+    Icon: Home,
+  },
 ];
 
-const MEASUREMENT_INFO = {
-  wheelbase: {
-    title: "Wheelbase Length",
-    description: "Distance from front axle to rear axle",
-    howToMeasure: "Measure from the center of your front wheel to the center of your rear wheel on the same side.",
-    typical: "Most travel trailers: 20-22 feet (240-264 inches)",
-    tips: [
-      "Look for axle centerlines - usually marked on RV specs or owner's manual",
-      "If unsure, measure from wheel center to wheel center",
-      "This measurement affects front-to-back leveling calculations"
-    ]
-  },
-  track: {
-    title: "Track Width", 
-    description: "Distance between left and right wheels",
-    howToMeasure: "Measure from the center of your left wheel to the center of your right wheel on the same axle.",
-    typical: "Most RVs: 6-8 feet (72-96 inches)",
-    tips: [
-      "Measure across the same axle (front or rear - they're usually the same)",
-      "Use the center of each tire, not the outside edge",
-      "This measurement affects side-to-side leveling calculations"
-    ]
-  },
-  hitch: {
-    title: "Hitch Offset",
-    description: "Distance from rear axle to hitch ball",
-    howToMeasure: "Measure from the center of your rear axle to the center of your hitch ball.",
-    typical: "Most travel trailers: 8-12 feet (96-144 inches)",
-    tips: [
-      "Only needed for travel trailers (not motorhomes)",
-      "Affects weight distribution calculations",
-      "If you don't know, estimate based on your trailer length"
-    ]
-  }
-};
-
-export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingProfile }: VehicleSetupWizardProps) {
+export function VehicleSetupWizard({
+  onComplete,
+  onCancel,
+  isVisible,
+  editingProfile,
+}: VehicleSetupWizardProps) {
   const { settings } = useAppStore();
   const [step, setStep] = useState(0);
-  
-  // Get typical measurements based on user's unit preference
-  // Temporarily disable getTypicalMeasurements
-  const typicalMeasurements = { trailer: { wheelbase: 240, track: 96, hitch: 120 }, motorhome: { wheelbase: 300, track: 100 }, van: { wheelbase: 180, track: 80 } };
-  
+
+  const typicalMeasurements = getTypicalMeasurements(settings.measurementUnits);
+
   const [profile, setProfile] = useState({
     name: editingProfile?.name || '',
     type: (editingProfile?.type || 'trailer') as 'trailer' | 'motorhome' | 'van',
     wheelbaseInches: editingProfile?.wheelbaseInches || 240,
     trackWidthInches: editingProfile?.trackWidthInches || 96,
     hitchOffsetInches: editingProfile?.hitchOffsetInches || 120,
-    blockInventory: editingProfile?.blockInventory || StandardBlockSets.basic()
+    blockInventory: editingProfile?.blockInventory || StandardBlockSets.basic(),
   });
   const [useTypicalMeasurements, setUseTypicalMeasurements] = useState(true);
-  const [hasLevelingBlocks, setHasLevelingBlocks] = useState(editingProfile?.blockInventory?.length > 0 ?? true);
+  const [hasLevelingBlocks, setHasLevelingBlocks] = useState(
+    editingProfile?.blockInventory?.length ? editingProfile.blockInventory.length > 0 : true
+  );
   const [selectedBlockHeights, setSelectedBlockHeights] = useState<number[]>(
-    editingProfile?.blockInventory?.map((block: any) => block.thickness) || [2, 4]
+    editingProfile?.blockInventory?.map((block) => block.thickness) || [2, 4]
   );
   const [customBlockInput, setCustomBlockInput] = useState('');
 
-  // Reset state when editingProfile changes (including when opening/closing)
   useEffect(() => {
     if (isVisible) {
       setStep(0);
@@ -127,28 +98,31 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
         wheelbaseInches: editingProfile?.wheelbaseInches || 240,
         trackWidthInches: editingProfile?.trackWidthInches || 96,
         hitchOffsetInches: editingProfile?.hitchOffsetInches || 120,
-        blockInventory: editingProfile?.blockInventory || StandardBlockSets.basic()
+        blockInventory: editingProfile?.blockInventory || StandardBlockSets.basic(),
       });
-      setHasLevelingBlocks(editingProfile?.blockInventory?.length > 0 ?? true);
+      setHasLevelingBlocks(
+        editingProfile?.blockInventory?.length ? editingProfile.blockInventory.length > 0 : true
+      );
       setSelectedBlockHeights(
-        editingProfile?.blockInventory?.map((block: any) => block.thickness) || [2, 4]
+        editingProfile?.blockInventory?.map((block) => block.thickness) || [2, 4]
       );
       setCustomBlockInput('');
     }
   }, [editingProfile, isVisible]);
 
-  const selectedVehicleType = VEHICLE_TYPES.find(v => v.id === profile.type);
+  const selectedVehicleType = VEHICLE_TYPES.find((v) => v.id === profile.type);
 
   const handleNext = () => {
     if (step === 0 && selectedVehicleType && !editingProfile) {
-      // Only apply typical measurements when creating a new profile (not editing)
       const typical = typicalMeasurements[profile.type];
-      setProfile(prev => ({
-        ...prev,
-        wheelbaseInches: typical.wheelbase, // convertToInches disabled
-        trackWidthInches: typical.track, // convertToInches disabled
-        hitchOffsetInches: typical.hitch // convertToInches disabled
-      }));
+      if (typical) {
+        setProfile((prev) => ({
+          ...prev,
+          wheelbaseInches: convertToInches(typical.wheelbase, settings.measurementUnits),
+          trackWidthInches: convertToInches(typical.track, settings.measurementUnits),
+          hitchOffsetInches: convertToInches(typical.hitch || 0, settings.measurementUnits),
+        }));
+      }
     }
     setStep(step + 1);
   };
@@ -160,22 +134,25 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
   const handleComplete = () => {
     try {
       console.log('VehicleSetupWizard - Starting completion...');
-      
-      // Add any custom block input to selected heights before building inventory
+
       const allSelectedHeights = [...selectedBlockHeights];
       if (customBlockInput.trim()) {
         const customValue = parseFloat(customBlockInput);
-        if (customValue && customValue > 0 && customValue <= 12 && !allSelectedHeights.includes(customValue)) {
+        if (
+          customValue &&
+          customValue > 0 &&
+          customValue <= 12 &&
+          !allSelectedHeights.includes(customValue)
+        ) {
           allSelectedHeights.push(customValue);
           allSelectedHeights.sort((a, b) => a - b);
         }
       }
-      
-      // Build block inventory based on user selections
-      const blockInventory: BlockInventory[] = hasLevelingBlocks 
-        ? allSelectedHeights.map(height => ({
+
+      const blockInventory: BlockInventory[] = hasLevelingBlocks
+        ? allSelectedHeights.map((height) => ({
             thickness: height,
-            quantity: 4 // Default to 4 blocks per height
+            quantity: 4,
           }))
         : [];
 
@@ -185,13 +162,13 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
       const profileData = {
         ...profile,
         hitchOffsetInches: profile.type === 'trailer' ? profile.hitchOffsetInches : undefined,
-        blockInventory
+        blockInventory,
       };
 
       console.log('VehicleSetupWizard - Final profile data:', profileData);
-      
+
       onComplete(profileData);
-      
+
       console.log('VehicleSetupWizard - onComplete called successfully');
     } catch (error) {
       console.error('VehicleSetupWizard - Error during completion:', error);
@@ -199,623 +176,599 @@ export function VehicleSetupWizard({ onComplete, onCancel, isVisible, editingPro
   };
 
   const renderVehicleTypeStep = () => (
-    <YStack space="$4">
-      <YStack space="$2" alignItems="center">
-        <H2 color="$color" textAlign="center">What type of vehicle do you have?</H2>
-        <Text color="$colorPress" textAlign="center" fontSize="$4">
+    <View className="gap-4">
+      <View className="gap-2 items-center">
+        <Text className="text-foreground text-center text-xl font-bold">
+          What type of vehicle do you have?
+        </Text>
+        <Text className="text-muted-foreground text-center text-base">
           This helps us set up realistic measurements for your vehicle.
         </Text>
-      </YStack>
+      </View>
 
-      <YStack space="$3">
+      <View className="gap-3">
         {VEHICLE_TYPES.map((vehicleType) => {
-          const Icon = vehicleType.icon;
           const isSelected = profile.type === vehicleType.id;
-          
+          const VehicleIcon = vehicleType.Icon;
+
           return (
-            <Card
+            <TouchableOpacity
               key={vehicleType.id}
-              padding="$4"
-              backgroundColor={isSelected ? '$blue3' : '$background'}
-              borderColor={isSelected ? '$blue9' : '$borderColor'}
-              borderWidth={2}
-              pressStyle={{ scale: 0.98 }}
+              className={`p-4 rounded-xl border-2 ${
+                isSelected ? 'bg-primary/10 border-primary' : 'bg-card border-border'
+              }`}
               onPress={() => {
-                setProfile(prev => {
-                  const newType = vehicleType.id as any;
+                setProfile((prev) => {
+                  const newType = vehicleType.id as 'trailer' | 'motorhome' | 'van';
                   const newProfile = { ...prev, type: newType };
-                  
-                  // If "Use Typical Values" is selected, apply typical measurements for new vehicle type
+
                   if (useTypicalMeasurements) {
                     const typical = typicalMeasurements[newType];
-                    return {
-                      ...newProfile,
-                      wheelbaseInches: typical.wheelbase,
-                      trackWidthInches: typical.track,
-                      hitchOffsetInches: typical.hitch
-                    };
+                    if (typical) {
+                      return {
+                        ...newProfile,
+                        wheelbaseInches: convertToInches(
+                          typical.wheelbase,
+                          settings.measurementUnits
+                        ),
+                        trackWidthInches: convertToInches(typical.track, settings.measurementUnits),
+                        hitchOffsetInches: convertToInches(
+                          typical.hitch || 0,
+                          settings.measurementUnits
+                        ),
+                      };
+                    }
                   }
-                  
+
                   return newProfile;
                 });
               }}
             >
-              <XStack space="$3" alignItems="center">
-                <Card padding="$3" backgroundColor={isSelected ? '$blue9' : '$gray6'}>
-                  <Icon size={32} color={isSelected ? 'white' : '$color'} />
-                </Card>
-                <YStack flex={1} space="$1">
-                  <Text fontSize="$6" fontWeight="bold" color="$color">
-                    {vehicleType.name}
-                  </Text>
-                  <Text fontSize="$4" color="$colorPress">
-                    {vehicleType.description}
-                  </Text>
-                </YStack>
-              </XStack>
-            </Card>
+              <View className="flex-row gap-3 items-center">
+                <View className={`p-3 rounded-xl ${isSelected ? 'bg-primary' : 'bg-muted'}`}>
+                  <VehicleIcon size={32} color={isSelected ? '#fff' : '#a3a3a3'} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <Text className="text-lg font-bold text-foreground">{vehicleType.name}</Text>
+                  <Text className="text-base text-muted-foreground">{vehicleType.description}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           );
         })}
-      </YStack>
-    </YStack>
+      </View>
+    </View>
   );
 
   const renderNameStep = () => (
-    <YStack space="$4">
-      <YStack space="$2" alignItems="center">
-        <H2 color="$color" textAlign="center">Give your {selectedVehicleType?.name} a name</H2>
-        <Text color="$colorPress" textAlign="center" fontSize="$4">
+    <View className="gap-4">
+      <View className="gap-2 items-center">
+        <Text className="text-foreground text-center text-xl font-bold">
+          Give your {selectedVehicleType?.name} a name
+        </Text>
+        <Text className="text-muted-foreground text-center text-base">
           This helps you identify it if you have multiple vehicles.
         </Text>
-      </YStack>
+      </View>
 
-      <YStack space="$3">
-        <Label htmlFor="vehicle-name">Vehicle Name</Label>
-        <Input
-          id="vehicle-name"
-          size="$5"
+      <View className="gap-3">
+        <Text className="text-foreground font-semibold">Vehicle Name</Text>
+        <TextInput
+          className="p-4 bg-muted rounded-xl text-foreground text-base"
           placeholder={`My ${selectedVehicleType?.name}`}
+          placeholderTextColor="#737373"
           value={profile.name}
-          onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
+          onChangeText={(text) => setProfile((prev) => ({ ...prev, name: text }))}
         />
-        <Card padding="$3" backgroundColor="$purple1" borderColor="$purple6" borderWidth={1}>
-          <Text color="$purple11" fontSize="$3" fontWeight="600" marginBottom="$2">💡 Naming Tips:</Text>
-          <Text color="$purple11" fontSize="$3" marginBottom="$1">
-            • Use something memorable and descriptive
+        <View className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+          <Text className="text-purple-400 text-sm font-semibold mb-2">Naming Tips:</Text>
+          <Text className="text-purple-400/80 text-sm">
+            {'\u2022'} Use something memorable and descriptive{'\n'}
+            {'\u2022'} Consider color, size, or brand (e.g., "Big Blue", "Little Winnebago"){'\n'}
+            {'\u2022'} Helpful if you have multiple RVs or share the app
           </Text>
-          <Text color="$purple11" fontSize="$3" marginBottom="$1">
-            • Consider color, size, or brand (e.g., "Big Blue", "Little Winnebago")
-          </Text>
-          <Text color="$purple11" fontSize="$3">
-            • Helpful if you have multiple RVs or share the app
-          </Text>
-        </Card>
-      </YStack>
-    </YStack>
+        </View>
+      </View>
+    </View>
   );
 
-  const renderMeasurementsStep = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 20 }}
-    >
-      <YStack space="$4">
-        <YStack space="$2" alignItems="center">
-          <H2 color="$color" textAlign="center">Vehicle Measurements</H2>
-          <Text color="$colorPress" textAlign="center" fontSize="$4">
-            We need a few measurements to calculate leveling accurately.
-          </Text>
-        </YStack>
+  const renderMeasurementsStep = () => {
+    const typical = typicalMeasurements[profile.type];
 
-        {/* Simplified radio button selection */}
-        <YStack space="$2">
-          <Card 
-            padding="$3" 
-            backgroundColor={useTypicalMeasurements ? "$blue2" : "$background"}
-            borderColor={useTypicalMeasurements ? "$blue9" : "$borderColor"}
-            borderWidth={1}
-            pressStyle={{ scale: 0.98 }}
-            onPress={() => {
-              setUseTypicalMeasurements(true);
-              // Apply typical measurements when "Use Typical Values" is selected
-              const typical = typicalMeasurements[profile.type];
-              setProfile(prev => ({
-                ...prev,
-                wheelbaseInches: typical.wheelbase,
-                trackWidthInches: typical.track,
-                hitchOffsetInches: typical.hitch
-              }));
-            }}
-          >
-            <XStack space="$3" alignItems="center">
-              <Card
-                width={20}
-                height={20}
-                borderRadius={10}
-                backgroundColor={useTypicalMeasurements ? "$blue9" : "$background"}
-                borderColor={useTypicalMeasurements ? "$blue9" : "$borderColor"}
-                borderWidth={2}
-                justifyContent="center"
-                alignItems="center"
-              >
-                {useTypicalMeasurements && (
-                  <Card
-                    width={8}
-                    height={8}
-                    borderRadius={4}
-                    backgroundColor="white"
-                  />
-                )}
-              </Card>
-              <YStack flex={1}>
-                <Text fontSize="$5" fontWeight="600">Use Typical Values</Text>
-                <Text fontSize="$3" color="$colorPress">Quick setup with standard measurements</Text>
-              </YStack>
-            </XStack>
-          </Card>
-          
-          <Card 
-            padding="$3" 
-            backgroundColor={!useTypicalMeasurements ? "$blue2" : "$background"}
-            borderColor={!useTypicalMeasurements ? "$blue9" : "$borderColor"}
-            borderWidth={1}
-            pressStyle={{ scale: 0.98 }}
-            onPress={() => setUseTypicalMeasurements(false)}
-          >
-            <XStack space="$3" alignItems="center">
-              <Card
-                width={20}
-                height={20}
-                borderRadius={10}
-                backgroundColor={!useTypicalMeasurements ? "$blue9" : "$background"}
-                borderColor={!useTypicalMeasurements ? "$blue9" : "$borderColor"}
-                borderWidth={2}
-                justifyContent="center"
-                alignItems="center"
-              >
-                {!useTypicalMeasurements && (
-                  <Card
-                    width={8}
-                    height={8}
-                    borderRadius={4}
-                    backgroundColor="white"
-                  />
-                )}
-              </Card>
-              <YStack flex={1}>
-                <Text fontSize="$5" fontWeight="600">Enter Custom Values</Text>
-                <Text fontSize="$3" color="$colorPress">Most accurate for your specific vehicle</Text>
-              </YStack>
-            </XStack>
-          </Card>
-        </YStack>
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <View className="gap-4 pb-4">
+          <View className="gap-2 items-center">
+            <Text className="text-foreground text-center text-xl font-bold">
+              Vehicle Measurements
+            </Text>
+            <Text className="text-muted-foreground text-center text-base">
+              We need a few measurements to calculate leveling accurately.
+            </Text>
+          </View>
 
-        {/* Measurements */}
-        <YStack space="$4">
-          {/* Wheelbase */}
-          <YStack space="$2">
-            <XStack space="$2" alignItems="center">
-              {/* <Ruler size={20} color="$blue10" /> */}
-              <Text fontSize="$5" fontWeight="600" color="$blue11">
+          {/* Measurement Type Selection */}
+          <View className="gap-2">
+            <TouchableOpacity
+              className={`p-3 rounded-xl border ${
+                useTypicalMeasurements ? 'bg-primary/10 border-primary' : 'bg-card border-border'
+              }`}
+              onPress={() => {
+                setUseTypicalMeasurements(true);
+                if (typical) {
+                  setProfile((prev) => ({
+                    ...prev,
+                    wheelbaseInches: convertToInches(typical.wheelbase, settings.measurementUnits),
+                    trackWidthInches: convertToInches(typical.track, settings.measurementUnits),
+                    hitchOffsetInches: convertToInches(
+                      typical.hitch || 0,
+                      settings.measurementUnits
+                    ),
+                  }));
+                }
+              }}
+            >
+              <View className="flex-row gap-3 items-center">
+                <View
+                  className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
+                    useTypicalMeasurements ? 'border-primary bg-primary' : 'border-muted-foreground'
+                  }`}
+                >
+                  {useTypicalMeasurements && (
+                    <View className="w-2 h-2 rounded-full bg-white" />
+                  )}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-lg font-semibold text-foreground">Use Typical Values</Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Quick setup with standard measurements
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className={`p-3 rounded-xl border ${
+                !useTypicalMeasurements ? 'bg-primary/10 border-primary' : 'bg-card border-border'
+              }`}
+              onPress={() => setUseTypicalMeasurements(false)}
+            >
+              <View className="flex-row gap-3 items-center">
+                <View
+                  className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
+                    !useTypicalMeasurements
+                      ? 'border-primary bg-primary'
+                      : 'border-muted-foreground'
+                  }`}
+                >
+                  {!useTypicalMeasurements && (
+                    <View className="w-2 h-2 rounded-full bg-white" />
+                  )}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-lg font-semibold text-foreground">Enter Custom Values</Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Most accurate for your specific vehicle
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Measurements */}
+          <View className="gap-4">
+            {/* Wheelbase */}
+            <View className="gap-2">
+              <Text className="text-lg font-semibold text-primary">
                 Wheelbase Length ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
               </Text>
-            </XStack>
-            
-            {useTypicalMeasurements ? (
-              <Card padding="$3" backgroundColor="$gray2">
-                <Text fontSize="$4" fontWeight="500">
-                  {settings.measurementUnits === 'metric' 
-                    ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
-                    : `${profile.wheelbaseInches}"`
-                  }
-                </Text>
-                <Text fontSize="$3" color="$colorPress">
-                  Standard for {selectedVehicleType?.name}
-                </Text>
-              </Card>
-            ) : (
-              <YStack space="$2">
-                <Input
-                  size="$5"
-                  placeholder={`e.g., 240 inches`} // convertForDisplay disabled
-                  value={profile.wheelbaseInches.toString()} // convertForDisplay disabled
-                  onChangeText={(text) => {
-                    const num = parseFloat(text) || 0;
-                    setProfile(prev => ({ 
-                      ...prev, 
-                      wheelbaseInches: num // convertToInches disabled 
-                    }));
-                  }}
-                  keyboardType="decimal-pad"
-                />
-                <Text color="$colorPress" fontSize="$3">
-                  Measure center-to-center between front and rear wheels
-                </Text>
-              </YStack>
-            )}
-          </YStack>
 
-          {/* Track Width */}
-          <YStack space="$2">
-            <XStack space="$2" alignItems="center">
-              {/* <Ruler size={20} color="$green10" /> */}
-              <Text fontSize="$5" fontWeight="600" color="$green11">
-                Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
-              </Text>
-            </XStack>
-            
-            {useTypicalMeasurements ? (
-              <Card padding="$3" backgroundColor="$gray2">
-                <Text fontSize="$4" fontWeight="500">
-                  {settings.measurementUnits === 'metric' 
-                    ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
-                    : `${profile.trackWidthInches}"`
-                  }
-                </Text>
-                <Text fontSize="$3" color="$colorPress">
-                  Standard for {selectedVehicleType?.name}
-                </Text>
-              </Card>
-            ) : (
-              <YStack space="$2">
-                <Input
-                  size="$5"
-                  placeholder={`e.g., 96 inches`} // convertForDisplay disabled
-                  value={profile.trackWidthInches.toString()} // convertForDisplay disabled
-                  onChangeText={(text) => {
-                    const num = parseFloat(text) || 0;
-                    setProfile(prev => ({ 
-                      ...prev, 
-                      trackWidthInches: num // convertToInches disabled 
-                    }));
-                  }}
-                  keyboardType="decimal-pad"
-                />
-                <Text color="$colorPress" fontSize="$3">
-                  Measure center-to-center between left and right wheels
-                </Text>
-              </YStack>
-            )}
-          </YStack>
-
-          {/* Hitch Offset (only for trailers) */}
-          {profile.type === 'trailer' && (
-            <YStack space="$2">
-              <XStack space="$2" alignItems="center">
-                {/* <Ruler size={20} color="$orange10" /> */}
-                <Text fontSize="$5" fontWeight="600" color="$orange11">
-                  Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
-                </Text>
-              </XStack>
-              
               {useTypicalMeasurements ? (
-                <Card padding="$3" backgroundColor="$gray2">
-                  <Text fontSize="$4" fontWeight="500">
-                    {settings.measurementUnits === 'metric' 
-                      ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
-                      : `${profile.hitchOffsetInches}"`
-                    }
+                <View className="p-3 bg-muted rounded-xl">
+                  <Text className="text-base font-medium text-foreground">
+                    {settings.measurementUnits === 'metric'
+                      ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
+                      : `${profile.wheelbaseInches}"`}
                   </Text>
-                  <Text fontSize="$3" color="$colorPress">
-                    Standard for travel trailers
+                  <Text className="text-sm text-muted-foreground">
+                    Standard for {selectedVehicleType?.name}
                   </Text>
-                </Card>
+                </View>
               ) : (
-                <YStack space="$2">
-                  <Input
-                    size="$5"
-                    placeholder={`e.g., 120 inches`} // convertForDisplay disabled
-                    value={profile.hitchOffsetInches.toString()} // convertForDisplay disabled
+                <View className="gap-2">
+                  <TextInput
+                    className="p-4 bg-muted rounded-xl text-foreground text-base"
+                    placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)}`}
+                    placeholderTextColor="#737373"
+                    value={convertForDisplay(
+                      profile.wheelbaseInches,
+                      settings.measurementUnits
+                    ).toString()}
                     onChangeText={(text) => {
                       const num = parseFloat(text) || 0;
-                      setProfile(prev => ({ 
-                        ...prev, 
-                        hitchOffsetInches: num // convertToInches disabled 
+                      setProfile((prev) => ({
+                        ...prev,
+                        wheelbaseInches: convertToInches(num, settings.measurementUnits),
                       }));
                     }}
                     keyboardType="decimal-pad"
                   />
-                  <Text color="$colorPress" fontSize="$3">
-                    Measure from rear axle center to hitch ball
+                  <Text className="text-sm text-muted-foreground">
+                    Measure center-to-center between front and rear wheels
                   </Text>
-                </YStack>
+                </View>
               )}
-            </YStack>
-          )}
-        </YStack>
+            </View>
 
-        {/* Single help section at the bottom */}
-        <Card padding="$3" backgroundColor="$blue1" borderColor="$blue6" borderWidth={1}>
-          <XStack space="$2" alignItems="flex-start">
-            {/* <Info size={18} color="$blue11" marginTop="$1" /> */}
-            <YStack flex={1} space="$1">
-              <Text color="$blue11" fontSize="$3" fontWeight="600">
-                {useTypicalMeasurements ? "Using Standard Values" : "Measurement Tips"}
+            {/* Track Width */}
+            <View className="gap-2">
+              <Text className="text-lg font-semibold text-green-500">
+                Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
               </Text>
-              <Text color="$blue11" fontSize="$3">
-                {useTypicalMeasurements 
-                  ? "These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed."
-                  : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
-              </Text>
-            </YStack>
-          </XStack>
-        </Card>
-      </YStack>
-    </ScrollView>
-  );
 
-  const renderBlocksStep = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 20 }}
-    >
-      <YStack space="$4">
-        <YStack space="$2" alignItems="center">
-          <H2 color="$color" textAlign="center">Leveling Blocks</H2>
-          <Text color="$colorPress" textAlign="center" fontSize="$4">
-            Do you have leveling blocks to help level your {selectedVehicleType?.name}?
-          </Text>
-        </YStack>
+              {useTypicalMeasurements ? (
+                <View className="p-3 bg-muted rounded-xl">
+                  <Text className="text-base font-medium text-foreground">
+                    {settings.measurementUnits === 'metric'
+                      ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
+                      : `${profile.trackWidthInches}"`}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Standard for {selectedVehicleType?.name}
+                  </Text>
+                </View>
+              ) : (
+                <View className="gap-2">
+                  <TextInput
+                    className="p-4 bg-muted rounded-xl text-foreground text-base"
+                    placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)}`}
+                    placeholderTextColor="#737373"
+                    value={convertForDisplay(
+                      profile.trackWidthInches,
+                      settings.measurementUnits
+                    ).toString()}
+                    onChangeText={(text) => {
+                      const num = parseFloat(text) || 0;
+                      setProfile((prev) => ({
+                        ...prev,
+                        trackWidthInches: convertToInches(num, settings.measurementUnits),
+                      }));
+                    }}
+                    keyboardType="decimal-pad"
+                  />
+                  <Text className="text-sm text-muted-foreground">
+                    Measure center-to-center between left and right wheels
+                  </Text>
+                </View>
+              )}
+            </View>
 
-        {/* Do you have blocks? */}
-        <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-          <YStack space="$3">
-            <XStack space="$2" alignItems="center">
-              {/* <Package size={20} color="$blue9" /> */}
-              <Text fontWeight="bold">Leveling Block Inventory</Text>
-            </XStack>
-            <XStack space="$2" alignItems="center">
-              <Switch
-                size="$4"
-                checked={hasLevelingBlocks}
-                onCheckedChange={setHasLevelingBlocks}
-              >
-                <Switch.Thumb animation="quick" />
-              </Switch>
-              <Text>I have leveling blocks</Text>
-            </XStack>
-            <Text color="$colorPress" fontSize="$3">
-              {hasLevelingBlocks 
-                ? "Great! This will help you get precise leveling instructions with block counts."
-                : "No problem! The app will show you exact measurements instead of block counts."
-              }
-            </Text>
-          </YStack>
-        </Card>
-
-        {/* Block selection if they have blocks */}
-        {hasLevelingBlocks && (
-          <YStack space="$4">
-            <Text fontWeight="bold" textAlign="center">
-              What block heights do you have?
-            </Text>
-            <Card padding="$3" backgroundColor="$cyan1" borderColor="$cyan6" borderWidth={1}>
-              <Text color="$cyan11" fontSize="$3" fontWeight="600" marginBottom="$2">💡 Block Selection Tips:</Text>
-              <Text color="$cyan11" fontSize="$3" marginBottom="$1">
-                • Select all heights you own - the app will optimize which to use
-              </Text>
-              <Text color="$cyan11" fontSize="$3" marginBottom="$1">
-                • Common heights: 1", 2", 4" blocks work for most situations
-              </Text>
-              <Text color="$cyan11" fontSize="$3">
-                • Check your block packaging or measure with a ruler if unsure
-              </Text>
-            </Card>
-            
-            <YStack space="$3">
-              {(() => {
-                // Create list of all block heights (standard + any custom from current selection)
-                const standardHeights = [1, 1.5, 2, 2.5, 3, 4, 6];
-                const customHeights = selectedBlockHeights.filter(h => !standardHeights.includes(h));
-                const allHeights = [...standardHeights, ...customHeights].sort((a, b) => a - b);
-                
-                return allHeights.map((height) => ({ 
-                  value: height, 
-                  label: `${height}" Block`, 
-                  description: `${height} inch leveling block` 
-                }));
-              })().map((block) => ( // getCommonBlockHeights disabled
-                <Card
-                  key={block.value}
-                  padding="$3"
-                  backgroundColor={selectedBlockHeights.includes(block.value) ? '$green2' : '$background'}
-                  borderColor={selectedBlockHeights.includes(block.value) ? '$green9' : '$borderColor'}
-                  borderWidth={1}
-                >
-                  <XStack space="$3" alignItems="center">
-                    <Checkbox
-                      size="$5"
-                      checked={selectedBlockHeights.includes(block.value)}
-                      onCheckedChange={() => {
-                        setSelectedBlockHeights(prev => 
-                          prev.includes(block.value)
-                            ? prev.filter(h => h !== block.value)
-                            : [...prev, block.value].sort((a, b) => a - b)
-                        );
-                      }}
-                    >
-                      <Checkbox.Indicator>
-                        {selectedBlockHeights.includes(block.value) ? <Text>✓</Text> : null}
-                      </Checkbox.Indicator>
-                    </Checkbox>
-                    <YStack flex={1}>
-                      <Text fontSize="$5" fontWeight="bold">
-                        {block.label}
-                      </Text>
-                      <Text fontSize="$3" color="$colorPress">
-                        {block.description}
-                      </Text>
-                    </YStack>
-                  </XStack>
-                </Card>
-              ))}
-            </YStack>
-
-            {/* Custom block size input */}
-            <Card padding="$4" backgroundColor="$gray2" borderColor="$borderColor" borderWidth={1}>
-              <YStack space="$3">
-                <Text fontSize="$4" fontWeight="bold">
-                  Add Custom Block Size
+            {/* Hitch Offset (only for trailers) */}
+            {profile.type === 'trailer' && (
+              <View className="gap-2">
+                <Text className="text-lg font-semibold text-orange-500">
+                  Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
                 </Text>
-                <XStack space="$3" alignItems="center">
-                  <Input
-                    flex={1}
-                    size="$4"
+
+                {useTypicalMeasurements ? (
+                  <View className="p-3 bg-muted rounded-xl">
+                    <Text className="text-base font-medium text-foreground">
+                      {settings.measurementUnits === 'metric'
+                        ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
+                        : `${profile.hitchOffsetInches}"`}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      Standard for travel trailers
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="gap-2">
+                    <TextInput
+                      className="p-4 bg-muted rounded-xl text-foreground text-base"
+                      placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)}`}
+                      placeholderTextColor="#737373"
+                      value={convertForDisplay(
+                        profile.hitchOffsetInches,
+                        settings.measurementUnits
+                      ).toString()}
+                      onChangeText={(text) => {
+                        const num = parseFloat(text) || 0;
+                        setProfile((prev) => ({
+                          ...prev,
+                          hitchOffsetInches: convertToInches(num, settings.measurementUnits),
+                        }));
+                      }}
+                      keyboardType="decimal-pad"
+                    />
+                    <Text className="text-sm text-muted-foreground">
+                      Measure from rear axle center to hitch ball
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Help section */}
+          <View className="p-3 bg-primary/10 border border-primary/30 rounded-xl">
+            <Text className="text-primary text-sm font-semibold">
+              {useTypicalMeasurements ? 'Using Standard Values' : 'Measurement Tips'}
+            </Text>
+            <Text className="text-primary/80 text-sm">
+              {useTypicalMeasurements
+                ? "These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed."
+                : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
+
+  const renderBlocksStep = () => {
+    const blockHeights = getCommonBlockHeights(settings.measurementUnits);
+
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <View className="gap-4 pb-4">
+          <View className="gap-2 items-center">
+            <Text className="text-foreground text-center text-xl font-bold">Leveling Blocks</Text>
+            <Text className="text-muted-foreground text-center text-base">
+              Do you have leveling blocks to help level your {selectedVehicleType?.name}?
+            </Text>
+          </View>
+
+          {/* Do you have blocks? */}
+          <View className="p-4 bg-primary/10 border border-primary rounded-xl">
+            <View className="gap-3">
+              <Text className="font-bold text-foreground">Leveling Block Inventory</Text>
+              <View className="flex-row gap-2 items-center">
+                <Switch
+                  value={hasLevelingBlocks}
+                  onValueChange={setHasLevelingBlocks}
+                  trackColor={{ false: '#333', true: '#3b82f6' }}
+                  thumbColor="#fff"
+                />
+                <Text className="text-foreground">I have leveling blocks</Text>
+              </View>
+              <Text className="text-muted-foreground text-sm">
+                {hasLevelingBlocks
+                  ? 'Great! This will help you get precise leveling instructions with block counts.'
+                  : 'No problem! The app will show you exact measurements instead of block counts.'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Block selection if they have blocks */}
+          {hasLevelingBlocks && (
+            <View className="gap-4">
+              <Text className="font-bold text-center text-foreground">
+                What block heights do you have?
+              </Text>
+
+              <View className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl">
+                <Text className="text-cyan-400 text-sm font-semibold mb-2">
+                  Block Selection Tips:
+                </Text>
+                <Text className="text-cyan-400/80 text-sm">
+                  {'\u2022'} Select all heights you own - the app will optimize which to use{'\n'}
+                  {'\u2022'} Common heights: 1", 2", 4" blocks work for most situations{'\n'}
+                  {'\u2022'} Check your block packaging or measure with a ruler if unsure
+                </Text>
+              </View>
+
+              <View className="gap-3">
+                {blockHeights.map((block) => (
+                  <TouchableOpacity
+                    key={block.value}
+                    className={`p-3 rounded-xl border ${
+                      selectedBlockHeights.includes(block.value)
+                        ? 'bg-green-500/10 border-green-500'
+                        : 'bg-card border-border'
+                    }`}
+                    onPress={() => {
+                      setSelectedBlockHeights((prev) =>
+                        prev.includes(block.value)
+                          ? prev.filter((h) => h !== block.value)
+                          : [...prev, block.value].sort((a, b) => a - b)
+                      );
+                    }}
+                  >
+                    <View className="flex-row gap-3 items-center">
+                      <View
+                        className={`w-6 h-6 rounded border-2 items-center justify-center ${
+                          selectedBlockHeights.includes(block.value)
+                            ? 'border-green-500 bg-green-500'
+                            : 'border-muted-foreground'
+                        }`}
+                      >
+                        {selectedBlockHeights.includes(block.value) && (
+                          <Text className="text-white text-xs font-bold">✓</Text>
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-lg font-bold text-foreground">{block.label}</Text>
+                        <Text className="text-sm text-muted-foreground">{block.description}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Custom block size input */}
+              <View className="p-4 bg-muted rounded-xl gap-3">
+                <Text className="text-base font-bold text-foreground">Add Custom Block Size</Text>
+                <View className="flex-row gap-3 items-center">
+                  <TextInput
+                    className="flex-1 p-3 bg-card rounded-lg text-foreground text-base"
                     placeholder="e.g., 1.25"
+                    placeholderTextColor="#737373"
                     keyboardType="decimal-pad"
                     value={customBlockInput}
                     onChangeText={setCustomBlockInput}
                     onSubmitEditing={() => {
                       const value = parseFloat(customBlockInput);
                       if (value && value > 0 && value <= 12 && !selectedBlockHeights.includes(value)) {
-                        setSelectedBlockHeights(prev => [...prev, value].sort((a, b) => a - b));
+                        setSelectedBlockHeights((prev) => [...prev, value].sort((a, b) => a - b));
                         setCustomBlockInput('');
                       }
                     }}
                   />
-                  <Button
-                    size="$4"
-                    backgroundColor="$blue9"
+                  <TouchableOpacity
+                    className={`px-4 py-3 rounded-lg ${
+                      customBlockInput.trim() ? 'bg-primary' : 'bg-muted'
+                    }`}
                     onPress={() => {
                       const value = parseFloat(customBlockInput);
                       if (value && value > 0 && value <= 12 && !selectedBlockHeights.includes(value)) {
-                        setSelectedBlockHeights(prev => [...prev, value].sort((a, b) => a - b));
+                        setSelectedBlockHeights((prev) => [...prev, value].sort((a, b) => a - b));
                         setCustomBlockInput('');
                       }
                     }}
                     disabled={!customBlockInput.trim()}
                   >
-                    Add
-                  </Button>
-                  <Text>inches</Text>
-                </XStack>
-                <Text fontSize="$2" color="$colorPress">
+                    <Text
+                      className={`font-semibold ${
+                        customBlockInput.trim() ? 'text-primary-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Add
+                    </Text>
+                  </TouchableOpacity>
+                  <Text className="text-muted-foreground">inches</Text>
+                </View>
+                <Text className="text-xs text-muted-foreground">
                   Enter a custom block height (0.1 - 12 inches)
                 </Text>
-              </YStack>
-            </Card>
+              </View>
 
-            {selectedBlockHeights.length === 0 && hasLevelingBlocks && (
-              <Card padding="$3" backgroundColor="$yellow2" borderColor="$yellow9" borderWidth={1}>
-                <XStack space="$2" alignItems="center">
-                  {/* <Info size={16} color="$yellow11" /> */}
-                  <Text color="$yellow11" fontSize="$3" flex={1}>
-                    Please select at least one block height, or turn off "I have leveling blocks" above.
+              {selectedBlockHeights.length === 0 && hasLevelingBlocks && (
+                <View className="p-3 bg-yellow-500/10 border border-yellow-500 rounded-xl">
+                  <Text className="text-yellow-500 text-sm">
+                    Please select at least one block height, or turn off "I have leveling blocks"
+                    above.
                   </Text>
-                </XStack>
-              </Card>
-            )}
+                </View>
+              )}
 
-            {selectedBlockHeights.length > 0 && (
-              <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
-                <Text color="$green11" fontSize="$3" textAlign="center">
-                  ✓ Selected: {selectedBlockHeights.map(h => `${h}"`).join(', ')} {/* formatMeasurement disabled */}
-                </Text>
-              </Card>
-            )}
-          </YStack>
-        )}
+              {selectedBlockHeights.length > 0 && (
+                <View className="p-3 bg-green-500/10 border border-green-500 rounded-xl">
+                  <Text className="text-green-500 text-sm text-center">
+                    ✓ Selected:{' '}
+                    {selectedBlockHeights
+                      .map((h) => formatMeasurement(h, settings.measurementUnits))
+                      .join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
-        <Card padding="$3" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-          <XStack space="$2" alignItems="flex-start">
-            {/* <Info size={16} color="$blue11" /> */}
-            <Text color="$blue11" fontSize="$3" flex={1}>
-              Don't worry if you're not sure about your block heights. You can always update this later in your vehicle profile settings.
+          <View className="p-3 bg-primary/10 border border-primary/30 rounded-xl">
+            <Text className="text-primary/80 text-sm">
+              Don't worry if you're not sure about your block heights. You can always update this
+              later in your vehicle profile settings.
             </Text>
-          </XStack>
-        </Card>
-      </YStack>
-    </ScrollView>
-  );
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
 
   const STEPS = [
-    { title: "Vehicle Type", component: renderVehicleTypeStep },
-    { title: "Vehicle Name", component: renderNameStep },
-    { title: "Measurements", component: renderMeasurementsStep },
-    { title: "Leveling Blocks", component: renderBlocksStep }
+    { title: 'Vehicle Type', component: renderVehicleTypeStep },
+    { title: 'Vehicle Name', component: renderNameStep },
+    { title: 'Measurements', component: renderMeasurementsStep },
+    { title: 'Leveling Blocks', component: renderBlocksStep },
   ];
 
   const currentStepData = STEPS[step];
-  const canProceed = step === 0 ? !!profile.type : 
-                   step === 1 ? !!profile.name.trim() : 
-                   step === 2 ? true : // measurements step
-                   step === 3 ? (!hasLevelingBlocks || selectedBlockHeights.length > 0) : // blocks step
-                   true;
+  const canProceed =
+    step === 0
+      ? !!profile.type
+      : step === 1
+        ? !!profile.name.trim()
+        : step === 2
+          ? true
+          : step === 3
+            ? !hasLevelingBlocks || selectedBlockHeights.length > 0
+            : true;
 
   if (!isVisible) return null;
 
   return (
-    <Card
-      position="absolute"
-      top="$4"
-      left="$4"
-      right="$4"
-      bottom="$4"
-      zIndex={1000}
-      backgroundColor="$background"
-      borderColor="$borderColor"
-      borderWidth={2}
-      borderRadius="$4"
-    >
-      <YStack flex={1} height="100%">
-        {/* Fixed header */}
-        <YStack padding="$4" paddingBottom="$2" space="$3">
-          {/* Close button */}
-          <XStack justifyContent="space-between" alignItems="center">
-            <H2>{editingProfile ? 'Edit Vehicle' : 'Vehicle Setup'}</H2>
-            <Button size="$3" backgroundColor="$gray9" onPress={onCancel}>
-              Cancel
-            </Button>
-          </XStack>
-          
-          {/* Progress */}
-          <XStack space="$2" justifyContent="center">
-            {STEPS.map((_, index) => (
-              <Card
-                key={index}
-                width={40}
-                height={4}
-                backgroundColor={index <= step ? '$blue9' : '$gray6'}
-                borderRadius="$2"
-              />
-            ))}
-          </XStack>
+    <Modal visible={isVisible} animationType="slide" transparent>
+      <View className="flex-1 bg-black/50 justify-center items-center p-4">
+        <View className="w-full max-w-[500px] max-h-[90%] bg-background border-2 border-border rounded-2xl overflow-hidden">
+          {/* Fixed header */}
+          <View className="p-4 pb-2 gap-3 border-b border-border">
+            {/* Close button */}
+            <View className="flex-row justify-between items-center">
+              <Text className="text-xl font-bold text-foreground">
+                {editingProfile ? 'Edit Vehicle' : 'Vehicle Setup'}
+              </Text>
+              <TouchableOpacity
+                className="px-4 py-2 bg-muted rounded-lg"
+                onPress={onCancel}
+              >
+                <Text className="text-muted-foreground font-semibold">Cancel</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Step Title */}
-          <H3 color="$colorPress" textAlign="center">
-            Step {step + 1} of {STEPS.length}: {currentStepData.title}
-          </H3>
-        </YStack>
+            {/* Progress */}
+            <View className="flex-row gap-2 justify-center">
+              {STEPS.map((_, index) => (
+                <View
+                  key={index}
+                  className={`w-10 h-1 rounded ${
+                    index <= step ? 'bg-primary' : 'bg-muted'
+                  }`}
+                />
+              ))}
+            </View>
 
-        {/* Scrollable content */}
-        <ScrollView flex={1} paddingHorizontal="$4">
-          {currentStepData.component()}
-        </ScrollView>
+            {/* Step Title */}
+            <Text className="text-muted-foreground text-center">
+              Step {step + 1} of {STEPS.length}: {currentStepData.title}
+            </Text>
+          </View>
 
-        {/* Fixed navigation buttons */}
-        <XStack padding="$4" paddingTop="$2" space="$3" backgroundColor="$background">
-          {step > 0 && (
-            <Button
-              flex={1}
-              size="$5"
-              backgroundColor="$gray9"
-              onPress={handleBack}
+          {/* Scrollable content */}
+          <View className="flex-1 px-4 py-2">{currentStepData.component()}</View>
+
+          {/* Fixed navigation buttons */}
+          <View className="flex-row p-4 pt-2 gap-3 border-t border-border">
+            {step > 0 && (
+              <TouchableOpacity
+                className="flex-1 py-4 bg-muted rounded-xl items-center"
+                onPress={handleBack}
+              >
+                <Text className="text-muted-foreground font-semibold">Back</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              className={`flex-1 py-4 rounded-xl items-center ${
+                canProceed ? 'bg-primary' : 'bg-muted'
+              }`}
+              disabled={!canProceed}
+              onPress={step < STEPS.length - 1 ? handleNext : handleComplete}
             >
-              Back
-            </Button>
-          )}
-          
-          <Button
-            flex={1}
-            size="$5"
-            backgroundColor="$blue9"
-            disabled={!canProceed}
-            onPress={step < STEPS.length - 1 ? handleNext : handleComplete}
-          >
-            {step < STEPS.length - 1 ? 'Next' : (editingProfile ? 'Update Profile' : 'Create Profile')}
-          </Button>
-        </XStack>
-      </YStack>
-    </Card>
+              <Text
+                className={`font-semibold ${
+                  canProceed ? 'text-primary-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                {step < STEPS.length - 1
+                  ? 'Next'
+                  : editingProfile
+                    ? 'Update Profile'
+                    : 'Create Profile'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }

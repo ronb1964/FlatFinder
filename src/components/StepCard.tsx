@@ -1,91 +1,60 @@
-import React from 'react'
-import { YStack, XStack, Text, Card, H2 } from 'tamagui'
+import React from 'react';
+import { View, Text } from 'react-native';
 
 export interface StepCardProps {
-  stepNumber: number
-  title: string
-  subtitle: string
-  icon: React.ReactNode
-  color: string
-  children: React.ReactNode
+  stepNumber: number;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  color: string;
+  children: React.ReactNode;
 }
 
 /**
  * StepCard component for displaying numbered steps in the leveling process
  * Ported from original Flutter implementation with modern React Native styling
  */
-export function StepCard({ 
-  stepNumber, 
-  title, 
-  subtitle, 
-  icon, 
-  color, 
-  children 
-}: StepCardProps) {
+export function StepCard({ stepNumber, title, subtitle, icon, color, children }: StepCardProps) {
   return (
-    <Card
-      backgroundColor="rgba(255, 255, 255, 0.03)"
-      borderColor="rgba(255, 255, 255, 0.1)"
-      borderWidth={1}
-      borderRadius="$6"
-      padding="$5"
-      shadowColor="rgba(0, 0, 0, 0.5)"
-      shadowOffset={{ width: 0, height: 8 }}
-      shadowOpacity={0.3}
-      shadowRadius={16}
+    <View
+      className="bg-white/[0.03] border border-white/10 rounded-2xl p-5"
       style={{
         borderLeftColor: color,
         borderLeftWidth: 4,
+        shadowColor: 'rgba(0, 0, 0, 0.5)',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
       }}
     >
-      <YStack space="$4">
+      <View className="gap-4">
         {/* Step Header */}
-        <XStack space="$4" alignItems="center">
-          <YStack 
-            backgroundColor={color}
-            borderRadius="$6"
-            width={40}
-            height={40}
-            justifyContent="center"
-            alignItems="center"
+        <View className="flex-row gap-4 items-center">
+          <View
+            className="rounded-xl w-10 h-10 justify-center items-center"
+            style={{ backgroundColor: color }}
           >
-            <Text
-              color="#ffffff"
-              fontWeight="800"
-              fontSize="$5"
-            >
-              {stepNumber}
-            </Text>
-          </YStack>
-          
-          <YStack flex={1} space="$1">
-            <H2 
-              fontSize="$6" 
-              fontWeight="700" 
-              color={color}
-            >
+            <Text className="text-white font-extrabold text-lg">{stepNumber}</Text>
+          </View>
+
+          <View className="flex-1 gap-1">
+            <Text className="text-xl font-bold" style={{ color }}>
               {title}
-            </H2>
-            <Text 
-              fontSize="$4" 
-              color="#94a3b8"
-            >
-              {subtitle}
             </Text>
-          </YStack>
-          
-          <YStack 
-            backgroundColor={`${color}20`}
-            borderRadius="$4"
-            padding="$2"
+            <Text className="text-base text-[#94a3b8]">{subtitle}</Text>
+          </View>
+
+          <View
+            className="rounded-lg p-2"
+            style={{ backgroundColor: `${color}20` }}
           >
             {icon}
-          </YStack>
-        </XStack>
-        
+          </View>
+        </View>
+
         {/* Step Content */}
         {children}
-      </YStack>
-    </Card>
-  )
+      </View>
+    </View>
+  );
 }

@@ -1,40 +1,62 @@
 import React, { useState } from 'react';
-import { YStack, XStack, Text, Button, H1, H2, Card, ScrollView, useTheme, Switch, Input, Label } from 'tamagui';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Switch,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowRight, ArrowLeft, Target, AlertTriangle, Zap, CheckCircle, Car, Truck, Home, Ruler, Package, Info } from '@tamagui/lucide-icons';
+import {
+  ArrowRight,
+  ArrowLeft,
+  Target,
+  AlertTriangle,
+  Zap,
+  CheckCircle,
+  Car,
+  Truck,
+  Home,
+  Ruler,
+  Package,
+} from 'lucide-react-native';
 import { useAppStore } from '../src/state/appStore';
-import { StandardBlockSets, BlockInventory } from '../src/lib/rvLevelingMath';
+import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
-import { formatMeasurement, getTypicalMeasurements, getCommonBlockHeights, convertToInches, convertForDisplay } from '../src/lib/units';
+import {
+  formatMeasurement,
+  getTypicalMeasurements,
+  getCommonBlockHeights,
+  convertToInches,
+} from '../src/lib/units';
 
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    icon: Car
+    Icon: Car,
   },
   {
     id: 'motorhome',
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
-    icon: Truck
+    Icon: Truck,
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
-    icon: Home
-  }
+    Icon: Home,
+  },
 ];
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
-  const { updateSettings, addProfile, setActiveProfile, settings } = useAppStore();
-  const theme = useTheme();
+  const { updateSettings, addProfile, setActiveProfile } = useAppStore();
 
-  // Setup data collected during onboarding
   const [setupData, setSetupData] = useState({
     measurementUnits: 'imperial' as 'imperial' | 'metric',
     vehicleType: '' as 'trailer' | 'motorhome' | 'van' | '',
@@ -45,37 +67,35 @@ export default function OnboardingScreen() {
     hasLevelingBlocks: true,
     selectedBlockHeights: [2, 4] as number[],
     customBlockHeight: '',
-    showCustomBlockInput: false
+    showCustomBlockInput: false,
   });
 
-  // Get typical measurements based on selected units
   const typicalMeasurements = getTypicalMeasurements(setupData.measurementUnits);
-  const selectedVehicleType = VEHICLE_TYPES.find(v => v.id === setupData.vehicleType);
+  const selectedVehicleType = VEHICLE_TYPES.find((v) => v.id === setupData.vehicleType);
 
-  // Define onboarding steps with setup
   const STEPS = [
-    { title: "Welcome", component: renderWelcomeStep },
-    { title: "How It Works", component: renderHowItWorksStep },
-    { title: "Safety First", component: renderSafetyStep },
-    { title: "Choose Units", component: renderUnitsStep },
-    { title: "Your Vehicle", component: renderVehicleStep },
-    { title: "Vehicle Details", component: renderVehicleDetailsStep },
-    { title: "Leveling Blocks", component: renderBlocksStep },
-    { title: "Ready to Level", component: renderCompletionStep }
+    { title: 'Welcome', component: renderWelcomeStep },
+    { title: 'How It Works', component: renderHowItWorksStep },
+    { title: 'Safety First', component: renderSafetyStep },
+    { title: 'Choose Units', component: renderUnitsStep },
+    { title: 'Your Vehicle', component: renderVehicleStep },
+    { title: 'Vehicle Details', component: renderVehicleDetailsStep },
+    { title: 'Leveling Blocks', component: renderBlocksStep },
+    { title: 'Ready to Level', component: renderCompletionStep },
   ];
 
   const currentStepData = STEPS[currentStep];
 
   const handleNext = () => {
-    // Apply typical measurements when vehicle type is selected
     if (currentStep === 4 && setupData.vehicleType) {
-      const typical = typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
+      const typical =
+        typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
       if (typical) {
-        setSetupData(prev => ({
+        setSetupData((prev) => ({
           ...prev,
           wheelbaseInches: convertToInches(typical.wheelbase, setupData.measurementUnits),
           trackWidthInches: convertToInches(typical.track, setupData.measurementUnits),
-          hitchOffsetInches: convertToInches(typical.hitch || 0, setupData.measurementUnits)
+          hitchOffsetInches: convertToInches(typical.hitch || 0, setupData.measurementUnits),
         }));
       }
     }
@@ -83,7 +103,6 @@ export default function OnboardingScreen() {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete onboarding
       completeOnboarding();
     }
   };
@@ -95,729 +114,673 @@ export default function OnboardingScreen() {
   };
 
   const completeOnboarding = () => {
-    // Create block inventory from selected heights
     let blockInventory: BlockInventory[] = [];
-    
+
     if (setupData.hasLevelingBlocks) {
       if (setupData.showCustomBlockInput && setupData.customBlockHeight.trim()) {
-        // Custom block height
-        const customHeight = convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits);
+        const customHeight = convertToInches(
+          parseFloat(setupData.customBlockHeight),
+          setupData.measurementUnits
+        );
         blockInventory = [
           { thickness: customHeight, quantity: 8 },
-          // Add some precision blocks for better stacking
           { thickness: 1.0, quantity: 8 },
           { thickness: 0.5, quantity: 8 },
-          { thickness: 0.25, quantity: 8 }
+          { thickness: 0.25, quantity: 8 },
         ];
       } else {
-        // Standard block heights with more inventory and precision blocks
-        const baseBlocks = setupData.selectedBlockHeights.map(height => ({
+        const baseBlocks = setupData.selectedBlockHeights.map((height) => ({
           thickness: height,
-          quantity: 8 // More blocks per height
+          quantity: 8,
         }));
-        
-        // Add smaller increment blocks for better precision and higher stacking
         const precisionBlocks = [
           { thickness: 1.0, quantity: 12 },
           { thickness: 0.5, quantity: 12 },
           { thickness: 0.25, quantity: 12 },
-          { thickness: 0.125, quantity: 8 }
+          { thickness: 0.125, quantity: 8 },
         ];
-        
         blockInventory = [...baseBlocks, ...precisionBlocks];
       }
     }
 
-    // Create the vehicle profile
     addProfile({
       name: setupData.vehicleName || `My ${selectedVehicleType?.name || 'Vehicle'}`,
       type: setupData.vehicleType as 'trailer' | 'motorhome' | 'van',
       wheelbaseInches: setupData.wheelbaseInches,
       trackWidthInches: setupData.trackWidthInches,
-      hitchOffsetInches: setupData.vehicleType === 'trailer' ? setupData.hitchOffsetInches : undefined,
+      hitchOffsetInches:
+        setupData.vehicleType === 'trailer' ? setupData.hitchOffsetInches : undefined,
       blockInventory,
-      calibration: createCalibration()
+      calibration: createCalibration(),
     });
 
-    // Update settings with units and completion
-    updateSettings({ 
+    updateSettings({
       hasCompletedOnboarding: true,
       onboardingStep: STEPS.length,
-      measurementUnits: setupData.measurementUnits
+      measurementUnits: setupData.measurementUnits,
     });
 
-    // Set the newly created profile as active
     setTimeout(() => {
       const state = useAppStore.getState();
       if (state.profiles.length > 0) {
         setActiveProfile(state.profiles[state.profiles.length - 1].id);
       }
     }, 100);
-    
-    // Navigate to main app
+
     router.replace('/(tabs)');
   };
 
   const skipOnboarding = () => {
-    updateSettings({ 
+    updateSettings({
       hasCompletedOnboarding: true,
-      onboardingStep: STEPS.length 
+      onboardingStep: STEPS.length,
     });
-    
     router.replace('/(tabs)');
   };
 
-  // Validation for each step
   const canProceed = () => {
     switch (currentStep) {
-      case 3: return !!setupData.measurementUnits; // Units step
-      case 4: return !!setupData.vehicleType; // Vehicle type step
-      case 5: return !!setupData.vehicleName.trim(); // Vehicle details step
-      case 6: // Blocks step
+      case 3:
+        return !!setupData.measurementUnits;
+      case 4:
+        return !!setupData.vehicleType;
+      case 5:
+        return !!setupData.vehicleName.trim();
+      case 6:
         if (!setupData.hasLevelingBlocks) return true;
         if (setupData.showCustomBlockInput) {
-          return setupData.customBlockHeight.trim() !== '' && !isNaN(parseFloat(setupData.customBlockHeight));
+          return (
+            setupData.customBlockHeight.trim() !== '' &&
+            !isNaN(parseFloat(setupData.customBlockHeight))
+          );
         }
         return setupData.selectedBlockHeights.length > 0;
-      default: return true;
+      default:
+        return true;
     }
   };
 
-  // Step rendering functions
   function renderWelcomeStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$blue9" borderRadius="$8">
-          <Target size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            Welcome to LevelMate!
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            Your Professional RV Leveling Assistant
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-primary rounded-2xl">
+          <Target size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$3">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate transforms your phone into a precision leveling tool for RVs, trailers, and motorhomes.
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">
+            Welcome to FlatFinder!
+          </Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            Your Professional RV Leveling Assistant
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-3">
+            <Text className="text-foreground text-base text-center">
+              FlatFinder transforms your phone into a precision leveling tool for RVs,
+              trailers, and motorhomes.
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              Whether you're a weekend warrior or full-time RVer, proper leveling is essential for:
+            <Text className="text-foreground text-base text-center">
+              Whether you're a weekend warrior or full-time RVer, proper leveling is
+              essential for:
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="left">
-              • Comfort - Sleep better on a level bed{'\n'}
-              • Safety - Prevent items from sliding or falling{'\n'}
-              • Appliance protection - Refrigerators need to be level{'\n'}
-              • Stability - Reduce rocking and swaying
+            <Text className="text-foreground text-base text-left">
+              {'\u2022'} Comfort - Sleep better on a level bed{'\n'}
+              {'\u2022'} Safety - Prevent items from sliding or falling{'\n'}
+              {'\u2022'} Appliance protection - Refrigerators need to be level{'\n'}
+              {'\u2022'} Stability - Reduce rocking and swaying
             </Text>
-          </YStack>
-        </Card>
-      </YStack>
+          </View>
+        </View>
+      </View>
     );
   }
 
   function renderHowItWorksStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$orange9" borderRadius="$8">
-          <AlertTriangle size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            How Leveling Works
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            Understanding Pitch and Roll
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-orange-500 rounded-2xl">
+          <AlertTriangle size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$3">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">
+            How Leveling Works
+          </Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            Understanding Pitch and Roll
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-3">
+            <Text className="text-foreground text-base text-center">
               Your RV can be unlevel in two directions:
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="left">
-              • PITCH: Front-to-back (nose up/down){'\n'}
-              • ROLL: Side-to-side (left/right high)
+            <Text className="text-foreground text-base text-left">
+              {'\u2022'} PITCH: Front-to-back (nose up/down){'\n'}
+              {'\u2022'} ROLL: Side-to-side (left/right high)
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate measures both angles using your phone's built-in motion sensors.
+            <Text className="text-foreground text-base text-center">
+              FlatFinder measures both angles using your phone's built-in motion sensors.
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              The goal is to get both pitch and roll as close to 0° as possible. Most RV appliances work fine within ±1° of level.
+            <Text className="text-foreground text-base text-center">
+              The goal is to get both pitch and roll as close to 0° as possible. Most RV
+              appliances work fine within ±1° of level.
             </Text>
-          </YStack>
-        </Card>
-      </YStack>
+          </View>
+        </View>
+      </View>
     );
   }
 
   function renderSafetyStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$red9" borderRadius="$8">
-          <AlertTriangle size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            Safety First
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            Important Guidelines
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-red-500 rounded-2xl">
+          <AlertTriangle size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$3">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">Safety First</Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            Important Guidelines
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-3">
+            <Text className="text-foreground text-base text-center">
               Before you start leveling:
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="left">
-              • Choose the most level spot available{'\n'}
-              • Avoid slopes greater than 8° in any direction{'\n'}
-              • Ensure your RV is stable and chocks are in place{'\n'}
-              • Never level on soft or unstable ground
+            <Text className="text-foreground text-base text-left">
+              {'\u2022'} Choose the most level spot available{'\n'}
+              {'\u2022'} Avoid slopes greater than 8° in any direction{'\n'}
+              {'\u2022'} Ensure your RV is stable and chocks are in place{'\n'}
+              {'\u2022'} Never level on soft or unstable ground
             </Text>
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              LevelMate will warn you if angles become unsafe during leveling.
+            <Text className="text-foreground text-base text-center">
+              FlatFinder will warn you if angles become unsafe during leveling.
             </Text>
-          </YStack>
-        </Card>
-      </YStack>
+          </View>
+        </View>
+      </View>
     );
   }
 
   function renderUnitsStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$purple9" borderRadius="$8">
-          <Ruler size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            Choose Your Units
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            Imperial or Metric Measurements
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-purple-500 rounded-2xl">
+          <Ruler size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$4">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">
+            Choose Your Units
+          </Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            Imperial or Metric Measurements
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-4">
+            <Text className="text-foreground text-base text-center">
               Choose your preferred measurement system. You can change this later in Settings.
             </Text>
-            
-            <YStack space="$3">
-              <Card
-                padding="$4"
-                backgroundColor={setupData.measurementUnits === 'imperial' ? '$blue3' : '$background'}
-                borderColor={setupData.measurementUnits === 'imperial' ? '$blue9' : '$borderColor'}
-                borderWidth={2}
-                pressStyle={{ scale: 0.98 }}
-                onPress={() => setSetupData(prev => ({ ...prev, measurementUnits: 'imperial' }))}
+
+            <View className="gap-3">
+              <TouchableOpacity
+                className={`p-4 rounded-xl border-2 ${
+                  setupData.measurementUnits === 'imperial'
+                    ? 'bg-primary/10 border-primary'
+                    : 'bg-card border-border'
+                }`}
+                onPress={() =>
+                  setSetupData((prev) => ({ ...prev, measurementUnits: 'imperial' }))
+                }
               >
-                <XStack alignItems="center" space="$3">
-                  <Card
-                    width={20}
-                    height={20}
-                    borderRadius={10}
-                    borderWidth={2}
-                    borderColor="$blue9"
-                    backgroundColor={setupData.measurementUnits === 'imperial' ? '$blue9' : '$background'}
-                    justifyContent="center"
-                    alignItems="center"
+                <View className="flex-row items-center gap-3">
+                  <View
+                    className={`w-5 h-5 rounded-full border-2 ${
+                      setupData.measurementUnits === 'imperial'
+                        ? 'border-primary bg-primary'
+                        : 'border-muted-foreground'
+                    }`}
                   >
                     {setupData.measurementUnits === 'imperial' && (
-                      <Card width={8} height={8} borderRadius={4} backgroundColor="white" />
+                      <View className="w-2 h-2 rounded-full bg-white m-auto" />
                     )}
-                  </Card>
-                  <YStack flex={1}>
-                    <Text fontSize="$5" fontWeight="bold">Imperial</Text>
-                    <Text fontSize="$3" color="$colorPress">Inches, feet (US standard)</Text>
-                  </YStack>
-                </XStack>
-              </Card>
-              
-              <Card
-                padding="$4"
-                backgroundColor={setupData.measurementUnits === 'metric' ? '$blue3' : '$background'}
-                borderColor={setupData.measurementUnits === 'metric' ? '$blue9' : '$borderColor'}
-                borderWidth={2}
-                pressStyle={{ scale: 0.98 }}
-                onPress={() => setSetupData(prev => ({ ...prev, measurementUnits: 'metric' }))}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-lg font-bold text-foreground">Imperial</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      Inches, feet (US standard)
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className={`p-4 rounded-xl border-2 ${
+                  setupData.measurementUnits === 'metric'
+                    ? 'bg-primary/10 border-primary'
+                    : 'bg-card border-border'
+                }`}
+                onPress={() =>
+                  setSetupData((prev) => ({ ...prev, measurementUnits: 'metric' }))
+                }
               >
-                <XStack alignItems="center" space="$3">
-                  <Card
-                    width={20}
-                    height={20}
-                    borderRadius={10}
-                    borderWidth={2}
-                    borderColor="$blue9"
-                    backgroundColor={setupData.measurementUnits === 'metric' ? '$blue9' : '$background'}
-                    justifyContent="center"
-                    alignItems="center"
+                <View className="flex-row items-center gap-3">
+                  <View
+                    className={`w-5 h-5 rounded-full border-2 ${
+                      setupData.measurementUnits === 'metric'
+                        ? 'border-primary bg-primary'
+                        : 'border-muted-foreground'
+                    }`}
                   >
                     {setupData.measurementUnits === 'metric' && (
-                      <Card width={8} height={8} borderRadius={4} backgroundColor="white" />
+                      <View className="w-2 h-2 rounded-full bg-white m-auto" />
                     )}
-                  </Card>
-                  <YStack flex={1}>
-                    <Text fontSize="$5" fontWeight="bold">Metric</Text>
-                    <Text fontSize="$3" color="$colorPress">Centimeters, meters (International)</Text>
-                  </YStack>
-                </XStack>
-              </Card>
-            </YStack>
-          </YStack>
-        </Card>
-      </YStack>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-lg font-bold text-foreground">Metric</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      Centimeters, meters (International)
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
     );
   }
 
   function renderVehicleStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$green9" borderRadius="$8">
-          <Zap size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            Your Vehicle
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            What type of RV do you have?
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-green-500 rounded-2xl">
+          <Zap size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$4">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              This helps us provide accurate measurements and setup defaults for your vehicle type.
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">Your Vehicle</Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            What type of RV do you have?
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-4">
+            <Text className="text-foreground text-base text-center">
+              This helps us provide accurate measurements and setup defaults for your
+              vehicle type.
             </Text>
-            
-            <YStack space="$3">
+
+            <View className="gap-3">
               {VEHICLE_TYPES.map((vehicleType) => {
-                const Icon = vehicleType.icon;
                 const isSelected = setupData.vehicleType === vehicleType.id;
-                
+                const VehicleIcon = vehicleType.Icon;
+
                 return (
-                  <Card
+                  <TouchableOpacity
                     key={vehicleType.id}
-                    padding="$4"
-                    backgroundColor={isSelected ? '$blue3' : '$background'}
-                    borderColor={isSelected ? '$blue9' : '$borderColor'}
-                    borderWidth={2}
-                    pressStyle={{ scale: 0.98 }}
-                    onPress={() => setSetupData(prev => ({ ...prev, vehicleType: vehicleType.id as any }))}
+                    className={`p-4 rounded-xl border-2 ${
+                      isSelected ? 'bg-primary/10 border-primary' : 'bg-card border-border'
+                    }`}
+                    onPress={() =>
+                      setSetupData((prev) => ({
+                        ...prev,
+                        vehicleType: vehicleType.id as 'trailer' | 'motorhome' | 'van',
+                      }))
+                    }
                   >
-                    <XStack space="$3" alignItems="center">
-                      <Card padding="$3" backgroundColor={isSelected ? '$blue9' : '$gray6'}>
-                        <Icon size={32} color={isSelected ? 'white' : '$color'} />
-                      </Card>
-                      <YStack flex={1} space="$1">
-                        <Text fontSize="$6" fontWeight="bold" color="$color">
+                    <View className="flex-row gap-3 items-center">
+                      <View
+                        className={`p-3 rounded-xl ${isSelected ? 'bg-primary' : 'bg-muted'}`}
+                      >
+                        <VehicleIcon size={32} color={isSelected ? '#fff' : '#a3a3a3'} />
+                      </View>
+                      <View className="flex-1 gap-1">
+                        <Text className="text-lg font-bold text-foreground">
                           {vehicleType.name}
                         </Text>
-                        <Text fontSize="$4" color="$colorPress">
+                        <Text className="text-base text-muted-foreground">
                           {vehicleType.description}
                         </Text>
-                      </YStack>
-                    </XStack>
-                  </Card>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
                 );
               })}
-            </YStack>
-          </YStack>
-        </Card>
-      </YStack>
+            </View>
+          </View>
+        </View>
+      </View>
     );
   }
 
   function renderVehicleDetailsStep() {
-    return (
-      <ScrollView>
-        <YStack space="$4" alignItems="center">
-          <Card padding="$6" backgroundColor="$purple9" borderRadius="$8">
-            {selectedVehicleType && <selectedVehicleType.icon size={64} color="white" />}
-          </Card>
-          
-          <YStack space="$2" alignItems="center">
-            <H1 color="$color" textAlign="center" fontSize="$9">
-              Vehicle Details
-            </H1>
-            <H2 color="$colorPress" textAlign="center" fontSize="$6">
-              Tell us about your {selectedVehicleType?.name}
-            </H2>
-          </YStack>
+    const typical =
+      typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
 
-          <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-            <YStack space="$4">
-              <YStack space="$2">
-                <Label htmlFor="vehicle-name">Vehicle Name</Label>
-                <Input
-                  id="vehicle-name"
-                  size="$5"
+    return (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-4 items-center">
+          <View className="p-6 bg-purple-500 rounded-2xl">
+            {selectedVehicleType && (
+              <selectedVehicleType.Icon size={64} color="#fff" />
+            )}
+          </View>
+
+          <View className="gap-2 items-center">
+            <Text className="text-foreground text-center text-3xl font-bold">
+              Vehicle Details
+            </Text>
+            <Text className="text-muted-foreground text-center text-xl">
+              Tell us about your {selectedVehicleType?.name}
+            </Text>
+          </View>
+
+          <View className="p-6 bg-card border border-border rounded-2xl w-full">
+            <View className="gap-4">
+              <View className="gap-2">
+                <Text className="text-foreground font-semibold">Vehicle Name</Text>
+                <TextInput
+                  className="p-4 bg-muted rounded-xl text-foreground text-base"
                   placeholder={`My ${selectedVehicleType?.name}`}
+                  placeholderTextColor="#737373"
                   value={setupData.vehicleName}
-                  onChangeText={(text) => setSetupData(prev => ({ ...prev, vehicleName: text }))}
+                  onChangeText={(text) =>
+                    setSetupData((prev) => ({ ...prev, vehicleName: text }))
+                  }
                 />
-                <Text color="$colorPress" fontSize="$3">
+                <Text className="text-muted-foreground text-sm">
                   Give your vehicle a memorable name (e.g., "Big Blue", "Family Trailer")
                 </Text>
-              </YStack>
+              </View>
 
-              <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-                <YStack space="$2">
-                  <Text fontWeight="bold">Great news!</Text>
-                  <Text color="$colorPress" fontSize="$3">
-                    We'll use typical measurements for your {selectedVehicleType?.name}. You can adjust these later if needed.
+              <View className="p-4 bg-primary/10 border border-primary rounded-xl">
+                <View className="gap-2">
+                  <Text className="text-foreground font-bold">Great news!</Text>
+                  <Text className="text-muted-foreground text-sm">
+                    We'll use typical measurements for your {selectedVehicleType?.name}. You
+                    can adjust these later if needed.
                   </Text>
-                  <Text color="$colorPress" fontSize="$3">
-                    {(() => {
-                      const typical = typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
-                      if (!typical) return 'Loading measurements...';
-                      
-                      let text = `• Wheelbase: ${formatMeasurement(convertToInches(typical.wheelbase, setupData.measurementUnits), setupData.measurementUnits)}\n`;
-                      text += `• Track Width: ${formatMeasurement(convertToInches(typical.track, setupData.measurementUnits), setupData.measurementUnits)}`;
-                      
-                      if (setupData.vehicleType === 'trailer' && typical.hitch) {
-                        text += `\n• Hitch Offset: ${formatMeasurement(convertToInches(typical.hitch, setupData.measurementUnits), setupData.measurementUnits)}`;
-                      }
-                      
-                      return text;
-                    })()}
-                  </Text>
-                </YStack>
-              </Card>
-            </YStack>
-          </Card>
-        </YStack>
+                  {typical && (
+                    <Text className="text-muted-foreground text-sm">
+                      {'\u2022'} Wheelbase:{' '}
+                      {formatMeasurement(
+                        convertToInches(typical.wheelbase, setupData.measurementUnits),
+                        setupData.measurementUnits
+                      )}
+                      {'\n'}
+                      {'\u2022'} Track Width:{' '}
+                      {formatMeasurement(
+                        convertToInches(typical.track, setupData.measurementUnits),
+                        setupData.measurementUnits
+                      )}
+                      {setupData.vehicleType === 'trailer' && typical.hitch
+                        ? `\n\u2022 Hitch Offset: ${formatMeasurement(
+                            convertToInches(typical.hitch, setupData.measurementUnits),
+                            setupData.measurementUnits
+                          )}`
+                        : ''}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     );
   }
 
   function renderBlocksStep() {
-    return (
-      <ScrollView>
-        <YStack space="$4" alignItems="center">
-          <Card padding="$6" backgroundColor="$green9" borderRadius="$8">
-            <Package size={64} color="white" />
-          </Card>
-          
-          <YStack space="$2" alignItems="center">
-            <H1 color="$color" textAlign="center" fontSize="$9">
-              Leveling Blocks
-            </H1>
-            <H2 color="$colorPress" textAlign="center" fontSize="$6">
-              Do you have leveling blocks?
-            </H2>
-          </YStack>
+    const blockHeights = getCommonBlockHeights(setupData.measurementUnits);
 
-          <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-            <YStack space="$4">
-              <Card padding="$4" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-                <YStack space="$3">
-                  <XStack space="$2" alignItems="center">
-                    <Package size={20} color="$blue9" />
-                    <Text fontWeight="bold">Block Inventory</Text>
-                  </XStack>
-                  <XStack space="$2" alignItems="center">
+    return (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-4 items-center">
+          <View className="p-6 bg-green-500 rounded-2xl">
+            <Package size={64} color="#fff" />
+          </View>
+
+          <View className="gap-2 items-center">
+            <Text className="text-foreground text-center text-3xl font-bold">
+              Leveling Blocks
+            </Text>
+            <Text className="text-muted-foreground text-center text-xl">
+              Do you have leveling blocks?
+            </Text>
+          </View>
+
+          <View className="p-6 bg-card border border-border rounded-2xl w-full">
+            <View className="gap-4">
+              <View className="p-4 bg-primary/10 border border-primary rounded-xl">
+                <View className="gap-3">
+                  <View className="flex-row gap-2 items-center">
+                    <Package size={20} color="#3b82f6" />
+                    <Text className="font-bold text-foreground">Block Inventory</Text>
+                  </View>
+                  <View className="flex-row gap-2 items-center">
                     <Switch
-                      size="$4"
-                      checked={setupData.hasLevelingBlocks}
-                      onCheckedChange={(checked) => setSetupData(prev => ({ ...prev, hasLevelingBlocks: checked }))}
-                    >
-                      <Switch.Thumb animation="quick" />
-                    </Switch>
-                    <Text>I have leveling blocks</Text>
-                  </XStack>
-                  <Text color="$colorPress" fontSize="$3">
-                    {setupData.hasLevelingBlocks 
-                      ? "Great! Select your block heights below for precise leveling instructions."
-                      : "No problem! The app will show you exact measurements instead."
-                    }
+                      value={setupData.hasLevelingBlocks}
+                      onValueChange={(checked) =>
+                        setSetupData((prev) => ({ ...prev, hasLevelingBlocks: checked }))
+                      }
+                      trackColor={{ false: '#333', true: '#3b82f6' }}
+                      thumbColor="#fff"
+                    />
+                    <Text className="text-foreground">I have leveling blocks</Text>
+                  </View>
+                  <Text className="text-muted-foreground text-sm">
+                    {setupData.hasLevelingBlocks
+                      ? 'Great! Select your block heights below for precise leveling instructions.'
+                      : "No problem! The app will show you exact measurements instead."}
                   </Text>
-                </YStack>
-              </Card>
+                </View>
+              </View>
 
               {setupData.hasLevelingBlocks && (
-                <YStack space="$4">
-                  <Text fontWeight="bold" textAlign="center">
+                <View className="gap-4">
+                  <Text className="font-bold text-center text-foreground">
                     What block heights do you have?
                   </Text>
-                  
-                  <YStack space="$3">
-                    {getCommonBlockHeights(setupData.measurementUnits).map((block) => (
-                      <Card
+
+                  <View className="gap-3">
+                    {blockHeights.map((block) => (
+                      <TouchableOpacity
                         key={block.value}
-                        padding="$3"
-                        backgroundColor={setupData.selectedBlockHeights.includes(block.value) ? '$green2' : '$background'}
-                        borderColor={setupData.selectedBlockHeights.includes(block.value) ? '$green9' : '$borderColor'}
-                        borderWidth={1}
-                        pressStyle={{ scale: 0.98 }}
+                        className={`p-3 rounded-xl border ${
+                          setupData.selectedBlockHeights.includes(block.value)
+                            ? 'bg-green-500/10 border-green-500'
+                            : 'bg-card border-border'
+                        }`}
                         onPress={() => {
-                          setSetupData(prev => ({
+                          setSetupData((prev) => ({
                             ...prev,
-                            selectedBlockHeights: prev.selectedBlockHeights.includes(block.value)
-                              ? prev.selectedBlockHeights.filter(h => h !== block.value)
-                              : [...prev.selectedBlockHeights, block.value].sort((a, b) => a - b)
+                            selectedBlockHeights: prev.selectedBlockHeights.includes(
+                              block.value
+                            )
+                              ? prev.selectedBlockHeights.filter((h) => h !== block.value)
+                              : [...prev.selectedBlockHeights, block.value].sort(
+                                  (a, b) => a - b
+                                ),
                           }));
                         }}
                       >
-                        <XStack space="$3" alignItems="center">
-                          <Card
-                            width={24}
-                            height={24}
-                            borderRadius={4}
-                            borderWidth={2}
-                            borderColor="$green9"
-                            backgroundColor={setupData.selectedBlockHeights.includes(block.value) ? '$green9' : '$background'}
-                            justifyContent="center"
-                            alignItems="center"
+                        <View className="flex-row gap-3 items-center">
+                          <View
+                            className={`w-6 h-6 rounded border-2 items-center justify-center ${
+                              setupData.selectedBlockHeights.includes(block.value)
+                                ? 'border-green-500 bg-green-500'
+                                : 'border-muted-foreground'
+                            }`}
                           >
                             {setupData.selectedBlockHeights.includes(block.value) && (
-                              <Text color="white" fontSize="$3" fontWeight="bold">✓</Text>
+                              <Text className="text-white text-xs font-bold">✓</Text>
                             )}
-                          </Card>
-                          <YStack flex={1}>
-                            <Text fontSize="$5" fontWeight="bold">
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-lg font-bold text-foreground">
                               {block.label}
                             </Text>
-                            <Text fontSize="$3" color="$colorPress">
+                            <Text className="text-sm text-muted-foreground">
                               {block.description}
                             </Text>
-                          </YStack>
-                        </XStack>
-                      </Card>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
                     ))}
+                  </View>
 
-                    {/* Custom block option */}
-                    <Card
-                      padding="$3"
-                      backgroundColor={setupData.showCustomBlockInput ? '$blue2' : '$background'}
-                      borderColor={setupData.showCustomBlockInput ? '$blue9' : '$borderColor'}
-                      borderWidth={1}
-                      pressStyle={{ scale: 0.98 }}
-                      onPress={() => {
-                        setSetupData(prev => ({
-                          ...prev,
-                          showCustomBlockInput: !prev.showCustomBlockInput,
-                          selectedBlockHeights: prev.showCustomBlockInput ? prev.selectedBlockHeights : []
-                        }));
-                      }}
-                    >
-                      <XStack space="$3" alignItems="center">
-                        <Card
-                          width={24}
-                          height={24}
-                          borderRadius={4}
-                          borderWidth={2}
-                          borderColor="$blue9"
-                          backgroundColor={setupData.showCustomBlockInput ? '$blue9' : '$background'}
-                          justifyContent="center"
-                          alignItems="center"
-                        >
-                          {setupData.showCustomBlockInput && (
-                            <Text color="white" fontSize="$3" fontWeight="bold">✓</Text>
-                          )}
-                        </Card>
-                        <YStack flex={1}>
-                          <Text fontSize="$5" fontWeight="bold">
-                            Custom Size
-                          </Text>
-                          <Text fontSize="$3" color="$colorPress">
-                            Enter your own block height
-                          </Text>
-                        </YStack>
-                      </XStack>
-                    </Card>
-                  </YStack>
-
-                  {/* Custom input field */}
-                  {setupData.showCustomBlockInput && (
-                    <YStack space="$2">
-                      <Label htmlFor="custom-block">Custom Block Height</Label>
-                      <XStack space="$2" alignItems="center">
-                        <Input
-                          id="custom-block"
-                          flex={1}
-                          size="$4"
-                          placeholder={setupData.measurementUnits === 'imperial' ? 'e.g., 1.5' : 'e.g., 3.8'}
-                          value={setupData.customBlockHeight}
-                          onChangeText={(text) => setSetupData(prev => ({ ...prev, customBlockHeight: text }))}
-                          keyboardType="decimal-pad"
-                        />
-                        <Text color="$colorPress" fontSize="$4" minWidth={30}>
-                          {setupData.measurementUnits === 'imperial' ? 'in' : 'cm'}
-                        </Text>
-                      </XStack>
-                      <Text color="$colorPress" fontSize="$3">
-                        Enter the height of your custom leveling blocks
+                  {setupData.selectedBlockHeights.length > 0 && (
+                    <View className="p-3 bg-green-500/10 border border-green-500 rounded-xl">
+                      <Text className="text-green-500 text-sm text-center">
+                        ✓ Selected:{' '}
+                        {setupData.selectedBlockHeights
+                          .map((h) => formatMeasurement(h, setupData.measurementUnits, 0))
+                          .join(', ')}
                       </Text>
-                    </YStack>
+                    </View>
                   )}
-
-                  {/* Summary */}
-                  {!setupData.showCustomBlockInput && setupData.selectedBlockHeights.length > 0 && (
-                    <Card padding="$3" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
-                      <Text color="$green11" fontSize="$3" textAlign="center">
-                        ✓ Selected: {setupData.selectedBlockHeights.map(h => formatMeasurement(h, setupData.measurementUnits, 0)).join(', ')}
-                      </Text>
-                    </Card>
-                  )}
-
-                  {setupData.showCustomBlockInput && setupData.customBlockHeight.trim() && !isNaN(parseFloat(setupData.customBlockHeight)) && (
-                    <Card padding="$3" backgroundColor="$blue2" borderColor="$blue9" borderWidth={1}>
-                      <Text color="$blue11" fontSize="$3" textAlign="center">
-                        ✓ Custom: {formatMeasurement(convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits), setupData.measurementUnits, 1)}
-                      </Text>
-                    </Card>
-                  )}
-                </YStack>
+                </View>
               )}
-            </YStack>
-          </Card>
-        </YStack>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     );
   }
 
   function renderCompletionStep() {
     return (
-      <YStack space="$4" alignItems="center">
-        <Card padding="$6" backgroundColor="$green9" borderRadius="$8">
-          <CheckCircle size={64} color="white" />
-        </Card>
-        
-        <YStack space="$2" alignItems="center">
-          <H1 color="$color" textAlign="center" fontSize="$9">
-            Ready to Level!
-          </H1>
-          <H2 color="$colorPress" textAlign="center" fontSize="$6">
-            Your setup is complete
-          </H2>
-        </YStack>
+      <View className="gap-4 items-center">
+        <View className="p-6 bg-green-500 rounded-2xl">
+          <CheckCircle size={64} color="#fff" />
+        </View>
 
-        <Card padding="$6" backgroundColor="$background" borderColor="$borderColor" borderWidth={1} borderRadius="$6" width="100%">
-          <YStack space="$4">
-            <Text color="$color" fontSize="$4" lineHeight="$4" textAlign="center">
-              Perfect! We've set up LevelMate with your preferences:
+        <View className="gap-2 items-center">
+          <Text className="text-foreground text-center text-3xl font-bold">
+            Ready to Level!
+          </Text>
+          <Text className="text-muted-foreground text-center text-xl">
+            Your setup is complete
+          </Text>
+        </View>
+
+        <View className="p-6 bg-card border border-border rounded-2xl w-full">
+          <View className="gap-4">
+            <Text className="text-foreground text-base text-center">
+              Perfect! We've set up FlatFinder with your preferences:
             </Text>
-            
-            <YStack space="$2">
-              <Text color="$color" fontSize="$4">
-                📱 <Text fontWeight="bold">Units:</Text> {setupData.measurementUnits === 'imperial' ? 'Imperial (inches/feet)' : 'Metric (cm/meters)'}
+
+            <View className="gap-2">
+              <Text className="text-foreground text-base">
+                📱 <Text className="font-bold">Units:</Text>{' '}
+                {setupData.measurementUnits === 'imperial'
+                  ? 'Imperial (inches/feet)'
+                  : 'Metric (cm/meters)'}
               </Text>
-              <Text color="$color" fontSize="$4">
-                🚐 <Text fontWeight="bold">Vehicle:</Text> {setupData.vehicleName || `My ${selectedVehicleType?.name}`}
+              <Text className="text-foreground text-base">
+                🚐 <Text className="font-bold">Vehicle:</Text>{' '}
+                {setupData.vehicleName || `My ${selectedVehicleType?.name}`}
               </Text>
-              <Text color="$color" fontSize="$4">
-                📦 <Text fontWeight="bold">Blocks:</Text> {(() => {
+              <Text className="text-foreground text-base">
+                📦 <Text className="font-bold">Blocks:</Text>{' '}
+                {(() => {
                   if (!setupData.hasLevelingBlocks) return 'Measurement mode';
-                  if (setupData.showCustomBlockInput && setupData.customBlockHeight.trim()) {
-                    return `Custom (${formatMeasurement(convertToInches(parseFloat(setupData.customBlockHeight), setupData.measurementUnits), setupData.measurementUnits, 1)})`;
-                  }
-                  return `${setupData.selectedBlockHeights.length} height${setupData.selectedBlockHeights.length !== 1 ? 's' : ''}`;
+                  return `${setupData.selectedBlockHeights.length} height${
+                    setupData.selectedBlockHeights.length !== 1 ? 's' : ''
+                  }`;
                 })()}
               </Text>
-            </YStack>
+            </View>
 
-            <Card padding="$4" backgroundColor="$green2" borderColor="$green9" borderWidth={1}>
-              <Text color="$green11" fontSize="$4" textAlign="center" fontWeight="bold">
+            <View className="p-4 bg-green-500/10 border border-green-500 rounded-xl">
+              <Text className="text-green-500 text-base text-center font-bold">
                 You're all set! Tap "Get Started" to begin leveling.
               </Text>
-            </Card>
-          </YStack>
-        </Card>
-      </YStack>
+            </View>
+          </View>
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background?.val || '#000' }}>
-      <YStack 
-        flex={1} 
-        padding="$3" 
-        space="$4"
-      >
+    <SafeAreaView className="flex-1 bg-background">
+      <View className="flex-1 p-3 gap-4">
         {/* Progress Indicator */}
-        <XStack space="$2" justifyContent="center" alignItems="center">
+        <View className="flex-row gap-2 justify-center items-center">
           {STEPS.map((_, index) => (
-            <Card
+            <View
               key={index}
-              width={12}
-              height={12}
-              backgroundColor={index <= currentStep ? '$blue9' : '$gray6'}
-              borderRadius="$10"
+              className={`w-3 h-3 rounded-full ${
+                index <= currentStep ? 'bg-primary' : 'bg-muted'
+              }`}
             />
           ))}
-        </XStack>
+        </View>
 
         {/* Content */}
-        <ScrollView 
-          flex={1} 
-          showsVerticalScrollIndicator={false}
-        >
-          <YStack space="$5" paddingBottom="$7">
-            {currentStepData.component()}
-          </YStack>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <View className="gap-5 pb-7">{currentStepData.component()}</View>
         </ScrollView>
 
         {/* Navigation */}
-        <YStack space="$3">
-          <XStack space="$3">
+        <View className="gap-3">
+          <View className="flex-row gap-3">
             {currentStep > 0 && (
-              <Button
-                flex={1}
-                size="$5"
-                backgroundColor="$gray9"
-                pressStyle={{ scale: 0.95 }}
+              <TouchableOpacity
+                className="flex-1 flex-row items-center justify-center gap-2 bg-muted py-4 rounded-xl"
                 onPress={handleBack}
-                icon={ArrowLeft}
               >
-                Back
-              </Button>
+                <ArrowLeft size={20} color="#a3a3a3" />
+                <Text className="text-muted-foreground font-semibold">Back</Text>
+              </TouchableOpacity>
             )}
-            
-            <Button
-              flex={1}
-              size="$5"
-              backgroundColor="$blue9"
-              pressStyle={{ scale: 0.95 }}
+
+            <TouchableOpacity
+              className={`flex-1 flex-row items-center justify-center gap-2 py-4 rounded-xl ${
+                canProceed() ? 'bg-primary' : 'bg-muted'
+              }`}
               onPress={handleNext}
               disabled={!canProceed()}
-              iconAfter={currentStep < STEPS.length - 1 ? ArrowRight : CheckCircle}
             >
-              {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
-            </Button>
-          </XStack>
+              <Text
+                className={`font-semibold ${
+                  canProceed() ? 'text-primary-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
+              </Text>
+              {currentStep < STEPS.length - 1 ? (
+                <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+              ) : (
+                <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Skip Option */}
-          <Button
-            size="$4"
-            backgroundColor="transparent"
-            color="$colorPress"
-            pressStyle={{ scale: 0.95 }}
-            onPress={skipOnboarding}
-          >
-            Skip Tutorial
-          </Button>
-        </YStack>
+          <TouchableOpacity className="py-2" onPress={skipOnboarding}>
+            <Text className="text-muted-foreground text-center">Skip Tutorial</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Step Counter */}
-        <Text color="$colorPress" fontSize="$3" textAlign="center">
+        <Text className="text-muted-foreground text-sm text-center">
           {currentStep + 1} of {STEPS.length}
         </Text>
-      </YStack>
+      </View>
     </SafeAreaView>
   );
 }

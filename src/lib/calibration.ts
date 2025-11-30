@@ -65,7 +65,7 @@ export function getLevelStatus(values: { pitch: number; roll: number }): {
       isLevel: true,
       nearLevel: true,
       color: '#10b981', // green
-      description: 'Perfect Level',
+      description: 'Perfect Level!',
     };
   } else if (maxAngle <= 0.5) {
     return {

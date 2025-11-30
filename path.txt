@@ -1,0 +1,1 @@
+/home/ron/.local/bin:/home/ron/bin:/usr/local/bin:/usr/bin

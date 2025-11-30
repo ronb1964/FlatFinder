@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-na
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RefreshCw, Target, Settings, Zap, AlertTriangle } from '@tamagui/lucide-icons';
+import { RefreshCw, Target, Settings, Zap, AlertTriangle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
