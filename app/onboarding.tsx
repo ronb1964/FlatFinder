@@ -11,6 +11,7 @@ import {
   Platform,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -21,14 +22,13 @@ import {
   AlertTriangle,
   Zap,
   CheckCircle,
-  Car,
-  Truck,
-  Home,
   Ruler,
   Package,
   Trash2,
   Plus,
+  Compass,
 } from 'lucide-react-native';
+import { TrailerIcon, MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
 import { useAppStore } from '../src/state/appStore';
 import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
@@ -44,19 +44,22 @@ const ICON_COLORS = {
   warning: { bg: 'rgba(249, 115, 22, 0.2)', border: 'rgba(249, 115, 22, 0.4)' },
   danger: { bg: 'rgba(239, 68, 68, 0.2)', border: 'rgba(239, 68, 68, 0.4)' },
   purple: { bg: 'rgba(168, 85, 247, 0.2)', border: 'rgba(168, 85, 247, 0.4)' },
+  yellow: { bg: 'rgba(234, 179, 8, 0.2)', border: 'rgba(234, 179, 8, 0.4)' },
 };
 
-// Simple icon container that matches the level screen's subtle style
+// Glass-styled icon container
 const IconBox = ({
   children,
   variant = 'primary',
 }: {
   children: React.ReactNode;
-  variant?: 'primary' | 'success' | 'warning' | 'danger' | 'purple';
+  variant?: 'primary' | 'success' | 'warning' | 'danger' | 'purple' | 'yellow';
 }) => {
   const colors = ICON_COLORS[variant];
   return (
     <View style={[styles.iconBox, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+      {/* Top highlight for glass effect */}
+      <View style={styles.iconBoxHighlight} />
       {children}
     </View>
   );
@@ -67,25 +70,29 @@ const VEHICLE_TYPES = [
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    Icon: Car,
+    Icon: TrailerIcon,
+    iconSize: 32,
   },
   {
     id: 'motorhome',
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
-    Icon: Truck,
+    Icon: MotorhomeIcon,
+    iconSize: 34, // Slightly larger to match visual weight of other icons
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
-    Icon: Home,
+    Icon: VanIcon,
+    iconSize: 28,
   },
 ];
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const { updateSettings, addProfile, setActiveProfile } = useAppStore();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -269,12 +276,28 @@ export default function OnboardingScreen() {
               Whether you&apos;re a weekend warrior or full-time RVer, proper leveling is essential
               for:
             </Text>
-            <Text style={styles.bulletList}>
-              {'\u2022'} Comfort - Sleep better on a level bed{'\n'}
-              {'\u2022'} Safety - Prevent items from sliding or falling{'\n'}
-              {'\u2022'} Appliance protection - Refrigerators need to be level{'\n'}
-              {'\u2022'} Stability - Reduce rocking and swaying
-            </Text>
+            <View style={styles.bulletList}>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>Comfort - Sleep better on a level bed</Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>
+                  Safety - Prevent items from sliding or falling
+                </Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>
+                  Appliance protection - Refrigerators need to be level
+                </Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>Stability - Reduce rocking and swaying</Text>
+              </View>
+            </View>
           </View>
         </GlassCard>
       </View>
@@ -284,8 +307,8 @@ export default function OnboardingScreen() {
   function renderHowItWorksStep() {
     return (
       <View style={styles.stepContent}>
-        <IconBox variant="warning">
-          <AlertTriangle size={36} color="#f97316" />
+        <IconBox variant="yellow">
+          <Compass size={36} color="#eab308" />
         </IconBox>
 
         <View style={styles.titleContainer}>
@@ -296,10 +319,16 @@ export default function OnboardingScreen() {
         <GlassCard variant="default">
           <View style={styles.cardContent}>
             <Text style={styles.cardText}>Your RV can be unlevel in two directions:</Text>
-            <Text style={styles.bulletList}>
-              {'\u2022'} PITCH: Front-to-back (nose up/down){'\n'}
-              {'\u2022'} ROLL: Side-to-side (left/right high)
-            </Text>
+            <View style={styles.bulletList}>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>PITCH: Front-to-back (nose up/down)</Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>ROLL: Side-to-side (left/right high)</Text>
+              </View>
+            </View>
             <Text style={styles.cardText}>
               FlatFinder measures both angles using your phone&apos;s built-in motion sensors.
             </Text>
@@ -328,12 +357,26 @@ export default function OnboardingScreen() {
         <GlassCard variant="default">
           <View style={styles.cardContent}>
             <Text style={styles.cardText}>Before you start leveling:</Text>
-            <Text style={styles.bulletList}>
-              {'\u2022'} Choose the most level spot available{'\n'}
-              {'\u2022'} Avoid slopes greater than 8° in any direction{'\n'}
-              {'\u2022'} Ensure your RV is stable and chocks are in place{'\n'}
-              {'\u2022'} Never level on soft or unstable ground
-            </Text>
+            <View style={styles.bulletList}>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>Choose the most level spot available</Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>Avoid slopes greater than 8° in any direction</Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>
+                  Ensure your RV is stable and chocks are in place
+                </Text>
+              </View>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <Text style={styles.bulletText}>Never level on soft or unstable ground</Text>
+              </View>
+            </View>
             <Text style={styles.cardText}>
               FlatFinder will warn you if angles become unsafe during leveling.
             </Text>
@@ -369,6 +412,8 @@ export default function OnboardingScreen() {
                 ]}
                 onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'imperial' }))}
               >
+                {/* Glass highlight */}
+                <View style={styles.optionCardHighlight} />
                 <View style={styles.optionRow}>
                   <View
                     style={[
@@ -394,6 +439,8 @@ export default function OnboardingScreen() {
                 ]}
                 onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'metric' }))}
               >
+                {/* Glass highlight */}
+                <View style={styles.optionCardHighlight} />
                 <View style={styles.optionRow}>
                   <View
                     style={[
@@ -452,6 +499,8 @@ export default function OnboardingScreen() {
                       }))
                     }
                   >
+                    {/* Glass highlight */}
+                    <View style={styles.optionCardHighlight} />
                     <View style={styles.vehicleOptionRow}>
                       <View
                         style={[
@@ -459,7 +508,10 @@ export default function OnboardingScreen() {
                           isSelected && styles.vehicleIconContainerSelected,
                         ]}
                       >
-                        <VehicleIcon size={26} color={isSelected ? '#fff' : '#a3a3a3'} />
+                        <VehicleIcon
+                          size={vehicleType.iconSize}
+                          color={isSelected ? '#fff' : '#a3a3a3'}
+                        />
                       </View>
                       <View style={styles.optionText}>
                         <Text style={styles.optionTitle}>{vehicleType.name}</Text>
@@ -539,59 +591,84 @@ export default function OnboardingScreen() {
               {!setupData.useCustomMeasurements && typical && (
                 <View style={styles.measurementsSummary}>
                   <Text style={styles.measurementsSummaryTitle}>Default measurements:</Text>
-                  <Text style={styles.measurementsSummaryText}>
-                    {'\u2022'} Wheelbase:{' '}
-                    {setupData.measurementUnits === 'imperial'
-                      ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
-                      : `${typical.wheelbase} cm`}
-                    {'\n'}
-                    {'\u2022'} Track Width:{' '}
-                    {setupData.measurementUnits === 'imperial'
-                      ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
-                      : `${typical.track} cm`}
-                    {setupData.vehicleType === 'trailer' && typical.hitch
-                      ? `\n\u2022 Hitch Offset: ${
-                          setupData.measurementUnits === 'imperial'
+                  <View style={styles.measurementsList}>
+                    {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
+                    {setupData.vehicleType !== 'trailer' && (
+                      <View style={styles.measurementItem}>
+                        <Text style={styles.measurementLabel}>
+                          {'\u2022'} Wheelbase:{' '}
+                          {setupData.measurementUnits === 'imperial'
+                            ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
+                            : `${typical.wheelbase} cm`}
+                        </Text>
+                        <Text style={styles.measurementHint}>
+                          Distance between front and rear axles
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.measurementItem}>
+                      <Text style={styles.measurementLabel}>
+                        {'\u2022'} Track Width:{' '}
+                        {setupData.measurementUnits === 'imperial'
+                          ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
+                          : `${typical.track} cm`}
+                      </Text>
+                      <Text style={styles.measurementHint}>
+                        Distance between wheels (side to side)
+                      </Text>
+                    </View>
+                    {/* Hitch Offset - only for trailers (single axle + tongue jack) */}
+                    {setupData.vehicleType === 'trailer' && typical.hitch && (
+                      <View style={styles.measurementItem}>
+                        <Text style={styles.measurementLabel}>
+                          {'\u2022'} Hitch Offset:{' '}
+                          {setupData.measurementUnits === 'imperial'
                             ? `${convertToInches(typical.hitch, setupData.measurementUnits)}"`
-                            : `${typical.hitch} cm`
-                        }`
-                      : ''}
-                  </Text>
+                            : `${typical.hitch} cm`}
+                        </Text>
+                        <Text style={styles.measurementHint}>
+                          Distance from trailer axle to hitch ball
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               )}
 
               {/* Custom Measurements Input */}
               {setupData.useCustomMeasurements && (
                 <View style={styles.customMeasurementsContainer}>
-                  {/* Wheelbase */}
-                  <View style={styles.measurementInputRow}>
-                    <View style={styles.measurementInputContainer}>
-                      <Text style={styles.inputLabel}>Wheelbase ({unitLabel})</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder={typical ? String(typical.wheelbase) : '240'}
-                        placeholderTextColor="#737373"
-                        keyboardType="decimal-pad"
-                        value={String(
-                          setupData.measurementUnits === 'imperial'
-                            ? setupData.wheelbaseInches
-                            : Math.round(setupData.wheelbaseInches * 2.54)
-                        )}
-                        onChangeText={(text) => {
-                          const value = parseFloat(text) || 0;
-                          const inches =
-                            setupData.measurementUnits === 'imperial' ? value : value / 2.54;
-                          setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
-                        }}
-                        onFocus={() => {
-                          globalThis.setTimeout(() => {
-                            scrollViewRef.current?.scrollToEnd({ animated: true });
-                          }, 300);
-                        }}
-                      />
-                      <Text style={styles.inputHint}>Distance between axles</Text>
+                  {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
+                  {setupData.vehicleType !== 'trailer' && (
+                    <View style={styles.measurementInputRow}>
+                      <View style={styles.measurementInputContainer}>
+                        <Text style={styles.inputLabel}>Wheelbase ({unitLabel})</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder={typical ? String(typical.wheelbase) : '240'}
+                          placeholderTextColor="#737373"
+                          keyboardType="decimal-pad"
+                          value={String(
+                            setupData.measurementUnits === 'imperial'
+                              ? setupData.wheelbaseInches
+                              : Math.round(setupData.wheelbaseInches * 2.54)
+                          )}
+                          onChangeText={(text) => {
+                            const value = parseFloat(text) || 0;
+                            const inches =
+                              setupData.measurementUnits === 'imperial' ? value : value / 2.54;
+                            setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
+                          }}
+                          onFocus={() => {
+                            globalThis.setTimeout(() => {
+                              scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 300);
+                          }}
+                        />
+                        <Text style={styles.inputHint}>Distance between front and rear axles</Text>
+                      </View>
                     </View>
-                  </View>
+                  )}
 
                   {/* Track Width */}
                   <View style={styles.measurementInputRow}>
@@ -650,7 +727,9 @@ export default function OnboardingScreen() {
                             }, 300);
                           }}
                         />
-                        <Text style={styles.inputHint}>Distance from hitch to front axle</Text>
+                        <Text style={styles.inputHint}>
+                          Distance from trailer axle to hitch ball
+                        </Text>
                       </View>
                     </View>
                   )}
@@ -887,9 +966,7 @@ export default function OnboardingScreen() {
                         <TextInput
                           style={styles.addBlockTextInput}
                           placeholder={
-                            setupData.measurementUnits === 'imperial'
-                              ? 'e.g., 5 or 1.5'
-                              : 'e.g., 12'
+                            setupData.measurementUnits === 'imperial' ? 'e.g., 5' : 'e.g., 12'
                           }
                           placeholderTextColor="#737373"
                           keyboardType="decimal-pad"
@@ -984,6 +1061,10 @@ export default function OnboardingScreen() {
                 You&apos;re all set! Tap &quot;Get Started&quot; to begin leveling.
               </Text>
             </View>
+
+            <Text style={styles.settingsHint}>
+              You can update these preferences anytime in Settings.
+            </Text>
           </View>
         </GlassCard>
       </View>
@@ -1026,9 +1107,9 @@ export default function OnboardingScreen() {
             <View style={styles.navigation}>
               <View style={styles.navButtonsRow}>
                 {currentStep > 0 && (
-                  <GlassButton variant="ghost" onPress={handleBack} style={styles.navButton}>
+                  <GlassButton variant="primary" onPress={handleBack} style={styles.navButton}>
                     <View style={styles.buttonContent}>
-                      <ArrowLeft size={20} color="#a3a3a3" />
+                      <ArrowLeft size={20} color="#fff" />
                       <Text style={styles.backButtonText}>Back</Text>
                     </View>
                   </GlassButton>
@@ -1058,10 +1139,15 @@ export default function OnboardingScreen() {
                 </GlassButton>
               </View>
 
-              {/* Skip Option - with border */}
-              <TouchableOpacity style={styles.skipButton} onPress={skipOnboarding}>
-                <Text style={styles.skipButtonText}>Skip Tutorial</Text>
-              </TouchableOpacity>
+              {/* Skip Option - glass styled */}
+              <GlassButton
+                variant="default"
+                size="sm"
+                onPress={() => setShowSkipConfirm(true)}
+                style={styles.skipButton}
+              >
+                Skip Tutorial
+              </GlassButton>
 
               {/* Step Counter */}
               <Text style={styles.stepCounter}>
@@ -1071,6 +1157,46 @@ export default function OnboardingScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Skip Tutorial Confirmation Modal */}
+      <Modal
+        visible={showSkipConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSkipConfirm(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Skip Tutorial?</Text>
+            <Text style={styles.modalText}>
+              The tutorial helps you set up your vehicle and understand how FlatFinder works. You
+              can always access settings later, but the guided setup is recommended for first-time
+              users.
+            </Text>
+            <View style={styles.modalButtons}>
+              <GlassButton
+                variant="primary"
+                size="md"
+                onPress={() => setShowSkipConfirm(false)}
+                style={styles.modalButton}
+              >
+                Continue Tutorial
+              </GlassButton>
+              <GlassButton
+                variant="default"
+                size="md"
+                onPress={() => {
+                  setShowSkipConfirm(false);
+                  skipOnboarding();
+                }}
+                style={styles.modalButton}
+              >
+                Skip Anyway
+              </GlassButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1094,7 +1220,8 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   progressDot: {
     width: 10,
@@ -1170,9 +1297,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bulletList: {
+    gap: 6,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  bullet: {
     fontSize: 16,
     color: THEME.colors.text,
-    textAlign: 'left',
+    marginRight: 8,
+    lineHeight: 22,
+  },
+  bulletText: {
+    fontSize: 16,
+    color: THEME.colors.text,
+    flex: 1,
+    lineHeight: 22,
   },
   optionsContainer: {
     gap: 12,
@@ -1180,13 +1321,23 @@ const styles = StyleSheet.create({
   optionCard: {
     padding: 12,
     borderRadius: 12,
-    borderWidth: 2,
-    backgroundColor: THEME.colors.surface,
-    borderColor: THEME.colors.border,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    overflow: 'hidden',
+    position: 'relative',
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderColor: THEME.colors.primary,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderColor: 'rgba(96, 165, 250, 0.5)',
+  },
+  optionCardHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   optionRow: {
     flexDirection: 'row',
@@ -1194,23 +1345,38 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: THEME.colors.textSecondary,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: THEME.colors.primary,
-    backgroundColor: THEME.colors.primary,
+    borderColor: 'rgba(96, 165, 250, 0.6)',
+    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+      },
+    }),
   },
   radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#60a5fa',
   },
   optionText: {
     flex: 1,
@@ -1231,12 +1397,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vehicleIconContainer: {
-    padding: 10,
+    width: 48,
+    height: 48,
     borderRadius: 10,
-    backgroundColor: THEME.colors.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   vehicleIconContainerSelected: {
-    backgroundColor: THEME.colors.primary,
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: 'rgba(96, 165, 250, 0.5)',
+  },
+  vehicleIconImage: {
+    width: 28,
+    height: 28,
   },
   inputContainer: {
     gap: 8,
@@ -1247,8 +1423,10 @@ const styles = StyleSheet.create({
   },
   textInput: {
     padding: 16,
-    backgroundColor: THEME.colors.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     color: THEME.colors.text,
     fontSize: 16,
   },
@@ -1277,7 +1455,7 @@ const styles = StyleSheet.create({
   },
   vehicleNameInput: {
     padding: 14,
-    backgroundColor: THEME.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
@@ -1325,6 +1503,21 @@ const styles = StyleSheet.create({
     color: THEME.colors.text,
     lineHeight: 22,
   },
+  measurementsList: {
+    gap: 8,
+  },
+  measurementItem: {
+    gap: 2,
+  },
+  measurementLabel: {
+    fontSize: 14,
+    color: THEME.colors.text,
+  },
+  measurementHint: {
+    fontSize: 12,
+    color: THEME.colors.textSecondary,
+    marginLeft: 14,
+  },
   customMeasurementsContainer: {
     gap: 12,
   },
@@ -1362,8 +1555,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: THEME.colors.surface,
-    borderColor: THEME.colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   blockOptionSelected: {
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -1442,7 +1635,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: THEME.colors.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1481,10 +1676,10 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 14,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: THEME.colors.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
     borderStyle: 'dashed',
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
   },
   addBlockButtonText: {
     color: THEME.colors.primary,
@@ -1493,10 +1688,10 @@ const styles = StyleSheet.create({
   },
   addBlockInputContainer: {
     padding: 16,
-    backgroundColor: THEME.colors.surface,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: THEME.colors.primary,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
     gap: 12,
   },
   addBlockInputLabel: {
@@ -1506,33 +1701,46 @@ const styles = StyleSheet.create({
   },
   addBlockInputRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   addBlockTextInput: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: THEME.colors.secondary,
-    borderRadius: 8,
+    width: 110,
+    padding: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     color: THEME.colors.text,
     fontSize: 16,
+    textAlign: 'center',
   },
   addBlockConfirmButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: THEME.colors.primary,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.5)',
   },
   addBlockConfirmText: {
     color: '#fff',
     fontWeight: '600',
+    fontSize: 15,
   },
   addBlockCancelButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   addBlockCancelText: {
-    color: THEME.colors.textSecondary,
+    color: '#f87171',
+    fontWeight: '600',
+    fontSize: 15,
   },
   summaryList: {
     gap: 8,
@@ -1557,6 +1765,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
   },
+  settingsHint: {
+    color: THEME.colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+  },
   navigation: {
     gap: 6,
     paddingTop: 8,
@@ -1578,7 +1792,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   backButtonText: {
-    color: THEME.colors.textSecondary,
+    color: '#fff',
     fontWeight: '600',
   },
   nextButton: {
@@ -1602,17 +1816,7 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
   },
   skipButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    borderRadius: 8,
     alignSelf: 'center',
-  },
-  skipButtonText: {
-    color: THEME.colors.textSecondary,
-    textAlign: 'center',
-    fontSize: 14,
   },
   stepCounter: {
     color: THEME.colors.textSecondary,
@@ -1620,13 +1824,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Simple icon box - matches level screen style
+  // Glass-styled icon box
   iconBox: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  iconBoxHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
 
   // Navigation button style
@@ -1639,5 +1853,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+
+  // Skip confirmation modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: THEME.colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.colors.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalText: {
+    fontSize: 15,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    gap: 10,
+  },
+  modalButton: {
+    width: '100%',
   },
 });

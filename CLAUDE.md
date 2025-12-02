@@ -59,42 +59,55 @@ This keeps the app simple, minimal dependencies, and consistent.
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of last session)
+## Current State (as of Dec 2, 2025)
 
-- All screens (Onboarding, Settings, Profiles) converted to StyleSheet - WORKING
-- Firefox browser working with Playwright MCP for testing
-- Block inventory tracks quantities (how many of each size block)
-- Custom vehicle measurements option in onboarding
-- Switch visibility improved (track color #555 instead of #333)
-- GlassCard fixed with width: '100%' to prevent content overflow
-- Measurement display fixed: shows inches (144") instead of feet (12')
-- Block counter rapid-click fixed: uses ref-based batching to register all clicks
-- ESLint errors fixed in both profiles.tsx and onboarding.tsx
-- Keyboard handling improved: input fields auto-scroll into view when keyboard appears
-- Block inventory UI simplified: delete/add block sizes, better navigation visibility
-- Branch: `ui-overhaul-checkpoint`
-- Last commit: `96a496e` - fix: improve onboarding keyboard handling and input field visibility
+**Onboarding UI Overhaul - COMPLETE:**
+
+All onboarding screens (pages 1-8) now follow the "Liquid Glass" theme with:
+
+- Custom SVG vehicle icons (trailer, motorhome, van) from SVG Repo
+- GlassCard and GlassButton components throughout
+- Semi-transparent backgrounds, subtle borders, top highlight bars
+- Proper radio button and option card glass styling
+- Block inventory with glass-styled input panel
+
+**Trailer Leveling Math - FIXED:**
+
+The leveling math in `src/lib/rvLevelingMath.ts` now correctly handles trailers:
+
+- Trailers: 3 lift points (left wheel, right wheel, tongue jack) - uses pitch/roll correctly
+- Motorhomes/Vans: 4 lift points (all 4 wheels) - uses wheelbase for pitch calculations
+- Wheelbase field is now hidden for trailers in onboarding (they only need Track Width + Hitch Offset)
+
+**Calibration Routine - CODE COMPLETE, NEEDS VISUAL TESTING:**
+
+1. **Math layer done** - `src/lib/calibration.ts` has `solveMultiPositionCalibration()`
+2. **CalibrationWizard.tsx** - Complete with StyleSheet, rotating UI, 5-step flow
+3. **app/calibration.tsx** - Complete with Quick Calibrate option
+4. **LevelingAssistant.tsx** - Complete with SVG vehicle diagrams
+
+Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### Calibration Routine
+### Test Calibration UI
 
-Ron wants to work on the **calibration routine** next session. This is the process where users calibrate their phone's sensors to ensure accurate leveling readings.
+The onboarding is complete. Next up:
 
-**Context:**
-
-- The app already has `createCalibration()` in `src/lib/levelingMath.ts`
-- Calibration is stored per-profile in `appStore`
-- Need to review current implementation and determine what improvements/UI Ron wants
-
-**Previous work completed:**
-
-- Onboarding UI fully functional and tested on real device
-- Keyboard handling works properly - input fields scroll into view
-- Block inventory management simplified with delete/add functionality
+1. Navigate to Calibration screen - verify UI looks correct
+2. Test the calibration wizard flow (Start Calibration button)
+3. Navigate to Leveling Assistant - verify SVG vehicle diagram displays
+4. Test the leveling calculations with different pitch/roll values
+5. Verify trailer shows 3 lift points (left wheel, right wheel, tongue jack)
+6. Verify motorhome shows 4 lift points (all wheels)
 
 **Dev server:** `npx expo start --clear`
-**Web testing:** Firefox via Playwright MCP at `http://localhost:8081`
+
+**Key files changed this session:**
+
+- `src/lib/rvLevelingMath.ts` - Fixed trailer geometry (3 points vs 4)
+- `app/onboarding.tsx` - Hidden wheelbase field for trailers
+- `src/components/icons/VehicleIcons.tsx` - Custom SVG vehicle icons
 
 ## Development
 
@@ -106,46 +119,107 @@ npx expo start --clear
 # App runs on http://localhost:8081
 ```
 
-## Testing with MCP Tools
+## Browser Testing Setup
 
-This project uses both Playwright MCP and Browser Automation MCP for testing:
+### Browser: Use Chrome (Not Firefox)
+
+Playwright MCP is configured to use **Chrome**. Firefox has issues with Wayland on this system.
+
+### How to Start a Testing Session
+
+1. **Start the Expo dev server** (if not already running):
+
+   ```bash
+   npx expo start --clear
+   ```
+
+   App runs at `http://localhost:8081`
+
+2. **Launch Chrome and navigate to the app**:
+
+   ```
+   mcp__playwright__browser_navigate to http://localhost:8081
+   ```
+
+   This opens Chrome automatically - no manual browser launch needed.
+
+3. **Set mobile viewport** (iPhone 14 Pro Max: 430x932):
+
+   ```
+   mcp__playwright__browser_resize with width=430, height=932
+   ```
+
+4. **Interact with the app**:
+   - `browser_snapshot` - Get element refs for clicking/typing
+   - `browser_click` - Click buttons/links using ref from snapshot
+   - `browser_type` - Type into text fields
+   - `browser_take_screenshot` - Capture visual state
+
+### Important Notes
+
+- **Don't click the blue "Cancel" banner** at the top of Chrome - that's the Playwright MCP connection indicator. Clicking it disconnects Playwright.
+- The white area on the sides of narrow viewport is normal - it's browser chrome outside the app viewport.
+- Screenshots from Playwright show only the viewport (the app), not the browser chrome.
+
+### Common Device Viewport Sizes
+
+| Device            | Width | Height |
+| ----------------- | ----- | ------ |
+| iPhone 14 Pro Max | 430   | 932    |
+| iPhone 14 Pro     | 393   | 852    |
+| iPhone SE         | 375   | 667    |
+| Pixel 7           | 412   | 915    |
+| iPad Mini         | 768   | 1024   |
+
+---
+
+## MCP Tools Reference
 
 ### Playwright MCP (mcp**playwright**\*)
 
-- `mcp__playwright__browser_navigate` - Navigate to URLs
-- `mcp__playwright__browser_snapshot` - Get accessibility tree (preferred over screenshots for interactions)
-- `mcp__playwright__browser_click` - Click elements by ref
-- `mcp__playwright__browser_type` - Type into inputs
-- `mcp__playwright__browser_take_screenshot` - Visual screenshots
-- `mcp__playwright__browser_evaluate` - Run JS in browser
+Primary tool for browser automation and testing:
+
+- `browser_navigate` - Navigate to URLs
+- `browser_snapshot` - Get accessibility tree (preferred for interactions)
+- `browser_click` - Click elements by ref
+- `browser_type` - Type into inputs
+- `browser_take_screenshot` - Visual screenshots
+- `browser_resize` - Set viewport dimensions
+- `browser_wait_for` - Wait for text or time delay
+- `browser_evaluate` - Run JS in browser
+- `browser_run_code` - Run Playwright code snippets
 
 ### Browser Automation MCP (mcp**browser-automation**\*)
 
-- `mcp__browser-automation__takeScreenshot` - Screenshot current tab
-- `mcp__browser-automation__getConsoleLogs` - Check console output
-- `mcp__browser-automation__getConsoleErrors` - Check for errors
-- `mcp__browser-automation__getNetworkErrors` - Check network issues
-- `mcp__browser-automation__runDebuggerMode` - Debug issues
-- `mcp__browser-automation__runAccessibilityAudit` - A11y checks
-- `mcp__browser-automation__runPerformanceAudit` - Performance checks
+For debugging and audits (works with existing browser):
+
+- `takeScreenshot` - Screenshot current tab
+- `getConsoleLogs` - Check console output
+- `getConsoleErrors` - Check for errors
+- `getNetworkErrors` - Check network issues
+- `runDebuggerMode` - Debug issues
+- `runAccessibilityAudit` - A11y checks
+- `runPerformanceAudit` - Performance checks
 
 ### React Native Guide MCP (mcp**react-native-guide**\*)
 
-- `mcp__react-native-guide__analyze_component` - Analyze components for best practices
-- `mcp__react-native-guide__analyze_codebase_performance` - Full codebase performance audit
-- `mcp__react-native-guide__analyze_codebase_comprehensive` - Performance, security, code quality analysis
-- `mcp__react-native-guide__optimize_performance` - Get optimization suggestions for specific scenarios
-- `mcp__react-native-guide__debug_issue` - Debugging guidance for crashes, performance, UI issues
-- `mcp__react-native-guide__generate_component_test` - Generate Jest/Detox tests for components
-- `mcp__react-native-guide__architecture_advice` - Project structure recommendations
-- `mcp__react-native-guide__refactor_component` - Refactoring suggestions
+- `analyze_component` - Analyze components for best practices
+- `analyze_codebase_performance` - Full codebase performance audit
+- `analyze_codebase_comprehensive` - Performance, security, code quality analysis
+- `optimize_performance` - Get optimization suggestions
+- `debug_issue` - Debugging guidance for crashes, performance, UI issues
+- `generate_component_test` - Generate Jest/Detox tests
+- `architecture_advice` - Project structure recommendations
+- `refactor_component` - Refactoring suggestions
 
 ### Typical Testing Flow
 
 1. Start Expo dev server: `npx expo start --clear`
 2. Navigate Playwright to `http://localhost:8081`
-3. Use browser_snapshot for element refs, then interact
-4. Use browser-automation tools for debugging/audits
+3. Resize to mobile viewport (e.g., 430x932 for iPhone 14 Pro Max)
+4. Use `browser_snapshot` for element refs, then interact
+5. Use `browser_take_screenshot` to capture visuals
+6. Use browser-automation tools for debugging/audits
 
 ## Git
 

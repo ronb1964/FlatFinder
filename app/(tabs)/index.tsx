@@ -1,9 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  useWindowDimensions,
+  Modal,
+  Animated,
+} from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RefreshCw, Target, Settings, Zap, AlertTriangle } from 'lucide-react-native';
+import {
+  RefreshCw,
+  Target,
+  Settings,
+  Zap,
+  AlertTriangle,
+  X,
+  CheckCircle,
+  User,
+} from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +59,12 @@ export default function LevelScreen() {
   const [showLevelingAssistant, setShowLevelingAssistant] = useState(false);
   const [cautionDismissed, setCautionDismissed] = useState(false);
   const [safetyWarningDismissed, setSafetyWarningDismissed] = useState(false);
+  const [showQuickCalModal, setShowQuickCalModal] = useState(false);
+  const [modalAnimation] = useState(new Animated.Value(0));
+
+  // Halo animations for status text
+  const perfectGlowOpacity = useRef(new Animated.Value(0)).current;
+  const nearlyGlowOpacity = useRef(new Animated.Value(0)).current;
 
   const requestSensorPermission = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,6 +111,51 @@ export default function LevelScreen() {
       }
       setLastHapticLevel(status.isLevel);
     }
+
+    // Animate glows based on level status
+    if (status.isLevel) {
+      // Perfect level - show green glow, hide yellow
+      Animated.parallel([
+        Animated.timing(perfectGlowOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(nearlyGlowOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (status.nearLevel) {
+      // Nearly level - show yellow glow, hide green
+      Animated.parallel([
+        Animated.timing(perfectGlowOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(nearlyGlowOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Not level at all - hide both glows
+      Animated.parallel([
+        Animated.timing(perfectGlowOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(nearlyGlowOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
   }, [
     pitchDeg,
     rollDeg,
@@ -96,6 +164,8 @@ export default function LevelScreen() {
     lastHapticLevel,
     cautionDismissed,
     safetyWarningDismissed,
+    perfectGlowOpacity,
+    nearlyGlowOpacity,
   ]);
 
   const handleCalibrate = () => {
@@ -106,7 +176,31 @@ export default function LevelScreen() {
     setShowLevelingAssistant(true);
   };
 
+  // Open the Quick Calibrate confirmation modal with animation
+  const openQuickCalModal = () => {
+    setShowQuickCalModal(true);
+    Animated.spring(modalAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Close the modal with animation
+  const closeQuickCalModal = () => {
+    Animated.timing(modalAnimation, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowQuickCalModal(false);
+    });
+  };
+
+  // Perform the actual quick calibration
   const handleQuickCalibrate = () => {
+    closeQuickCalModal();
     setIsCalibrating(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -204,19 +298,25 @@ export default function LevelScreen() {
             </Pressable>
           )}
 
-          {/* Top Section - Header + Bubble Level */}
-          <View style={styles.topSection}>
-            {/* Header */}
+          {/* Level Display Group - Header + Bubble + Readings (stay together) */}
+          <View style={styles.levelDisplayGroup}>
+            {/* Header with halo effect */}
             <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: levelStatus.color },
-                  isSmallScreen && styles.statusTextSmall,
-                ]}
-              >
-                {levelStatus.description}
-              </Text>
+              <View style={styles.statusContainer}>
+                {/* Green glow - for perfect level */}
+                <Animated.View style={[styles.statusGlowGreen, { opacity: perfectGlowOpacity }]} />
+                {/* Yellow glow - for nearly level (smaller) */}
+                <Animated.View style={[styles.statusGlowYellow, { opacity: nearlyGlowOpacity }]} />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: levelStatus.color },
+                    isSmallScreen && styles.statusTextSmall,
+                  ]}
+                >
+                  {levelStatus.description}
+                </Text>
+              </View>
             </View>
 
             {/* Bubble Level */}
@@ -225,15 +325,13 @@ export default function LevelScreen() {
                 pitch={calibratedValues.pitch}
                 roll={calibratedValues.roll}
                 isLevel={levelStatus.isLevel}
+                nearLevel={levelStatus.nearLevel}
                 heading={yawDeg}
                 size="full"
               />
             </View>
-          </View>
 
-          {/* Bottom Section - Cards + Buttons */}
-          <View style={styles.bottomSection}>
-            {/* Numeric Display - Glass Card */}
+            {/* Numeric Display - Glass Card (close to bubble) */}
             <View style={[styles.cardContainer, isSmallScreen && styles.cardContainerSmall]}>
               <GlassCard
                 variant={levelStatus.isLevel ? 'success' : 'default'}
@@ -294,7 +392,10 @@ export default function LevelScreen() {
                 </View>
               </GlassCard>
             </View>
+          </View>
 
+          {/* Action Buttons Group - Separate from level display */}
+          <View style={styles.actionButtonsGroup}>
             {/* Sensor Permission Button */}
             {(permissionStatus === 'denied' ||
               (!isReliable && errorMessage?.includes('sensor'))) && (
@@ -315,25 +416,25 @@ export default function LevelScreen() {
               <View style={styles.buttonRow}>
                 <View style={styles.buttonHalf}>
                   <GlassButton
-                    variant={isCalibrating ? 'success' : 'ghost'}
+                    variant={isCalibrating ? 'success' : 'warning'}
                     size={isSmallScreen ? 'sm' : 'md'}
-                    onPress={handleQuickCalibrate}
+                    onPress={openQuickCalModal}
                     disabled={isCalibrating || !isReliable}
                     icon={
                       isCalibrating ? (
                         <RefreshCw size={16} color="#fff" />
                       ) : (
-                        <Target size={16} color="#a3a3a3" />
+                        <Target size={16} color="#fff" />
                       )
                     }
                   >
-                    {isCalibrating ? 'Setting...' : 'Quick Set'}
+                    {isCalibrating ? 'Calibrating...' : 'Quick Calibrate'}
                   </GlassButton>
                 </View>
 
                 <View style={styles.buttonHalf}>
                   <GlassButton
-                    variant="primary"
+                    variant="secondary"
                     size={isSmallScreen ? 'sm' : 'md'}
                     onPress={handleCalibrate}
                     icon={<Settings size={16} color="#fff" />}
@@ -342,13 +443,15 @@ export default function LevelScreen() {
                   </GlassButton>
                 </View>
               </View>
+            </View>
 
+            {/* Leveling Assistant - Main feature, separated from calibration tools */}
+            <View style={styles.assistantContainer}>
               <GlassButton
                 variant="primary"
                 size={isSmallScreen ? 'md' : 'lg'}
                 onPress={handleShowLevelingAssistant}
                 icon={<Zap size={18} color="#fff" />}
-                style={styles.assistantButton}
               >
                 Leveling Assistant
               </GlassButton>
@@ -356,19 +459,100 @@ export default function LevelScreen() {
 
             {/* Active Profile Indicator */}
             {activeProfile && (
-              <View
+              <Pressable
                 style={[styles.profileContainer, isSmallScreen && styles.profileContainerSmall]}
+                onPress={() => router.push('/(tabs)/profiles')}
               >
-                <GlassCard variant="default" compact>
+                <View style={[styles.profileCard, isSmallScreen && styles.profileCardSmall]}>
+                  {/* Glass highlight bar */}
+                  <View style={styles.profileHighlight} />
                   <View style={styles.profileContent}>
-                    <Text style={styles.profileLabel}>Profile:</Text>
-                    <Text style={styles.profileName}>{activeProfile.name}</Text>
+                    <View
+                      style={[
+                        styles.profileIconContainer,
+                        isSmallScreen && styles.profileIconContainerSmall,
+                      ]}
+                    >
+                      <User size={isSmallScreen ? 14 : 16} color="#60a5fa" />
+                    </View>
+                    <View style={styles.profileTextContainer}>
+                      <Text
+                        style={[styles.profileLabel, isSmallScreen && styles.profileLabelSmall]}
+                      >
+                        Active Profile
+                      </Text>
+                      <Text style={[styles.profileName, isSmallScreen && styles.profileNameSmall]}>
+                        {activeProfile.name}
+                      </Text>
+                    </View>
                   </View>
-                </GlassCard>
-              </View>
+                </View>
+              </Pressable>
             )}
           </View>
         </View>
+
+        {/* Quick Calibrate Confirmation Modal */}
+        <Modal
+          visible={showQuickCalModal}
+          transparent
+          animationType="none"
+          onRequestClose={closeQuickCalModal}
+        >
+          <Pressable style={styles.modalOverlay} onPress={closeQuickCalModal}>
+            <Animated.View
+              style={[
+                styles.quickCalModal,
+                {
+                  opacity: modalAnimation,
+                  transform: [
+                    {
+                      scale: modalAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.9, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                {/* Modal Header */}
+                <View style={styles.modalHeader}>
+                  <Target size={28} color="#3b82f6" />
+                  <Text style={styles.modalTitle}>Quick Calibrate</Text>
+                  <Pressable style={styles.modalCloseBtn} onPress={closeQuickCalModal}>
+                    <X size={22} color="#737373" />
+                  </Pressable>
+                </View>
+
+                {/* Warning Message */}
+                <View style={styles.modalWarning}>
+                  <AlertTriangle size={20} color="#eab308" />
+                  <Text style={styles.modalWarningText}>
+                    Phone must be on a known level surface
+                  </Text>
+                </View>
+
+                <Text style={styles.modalDescription}>
+                  This sets your current position as &quot;level.&quot; Use a hardware bubble level
+                  to verify the surface first.
+                </Text>
+
+                {/* Action Buttons */}
+                <View style={styles.modalButtons}>
+                  <Pressable style={styles.modalCancelBtn} onPress={closeQuickCalModal}>
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable style={styles.modalConfirmBtn} onPress={handleQuickCalibrate}>
+                    <CheckCircle size={18} color="#fff" />
+                    <Text style={styles.modalConfirmText}>Calibrate</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -388,7 +572,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   centerContent: {
     flex: 1,
@@ -447,30 +631,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.6)',
   },
-  topSection: {
-    flex: 1,
-    justifyContent: 'center',
+  levelDisplayGroup: {
+    // This group contains bubble level + pitch/roll card - they stay together
+    alignItems: 'center',
+    paddingTop: 24,
   },
-  bottomSection: {
-    paddingBottom: 70, // Account for tab bar
+  levelDisplayGroupLarge: {
+    paddingTop: 20,
+  },
+  actionButtonsGroup: {
+    // Action buttons below level display
+    marginTop: 16,
+    paddingBottom: 16, // Minimal padding, tab bar has its own space
   },
   header: {
     alignItems: 'center',
     paddingTop: 8,
     paddingBottom: 4,
   },
+  statusContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  statusGlowGreen: {
+    position: 'absolute',
+    // Centered behind the text - larger glow for perfect level
+    top: -15,
+    left: -30,
+    right: -30,
+    bottom: -15,
+    borderRadius: 50,
+    backgroundColor: 'rgba(34, 197, 94, 0.4)',
+    // @ts-expect-error - filter works on web
+    filter: 'blur(20px)',
+  },
+  statusGlowYellow: {
+    position: 'absolute',
+    // Smaller, tighter glow for nearly level
+    top: -4,
+    left: -12,
+    right: -12,
+    bottom: -4,
+    borderRadius: 30,
+    backgroundColor: 'rgba(234, 179, 8, 0.35)',
+    // @ts-expect-error - filter works on web
+    filter: 'blur(12px)',
+  },
   statusText: {
     fontSize: 32,
     fontWeight: '700',
     letterSpacing: -0.5,
+    // Soft black outline to help text pop against glow
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   levelContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardContainer: {
-    marginTop: 16,
+    marginTop: 8,
     marginHorizontal: 4,
+    width: '100%',
   },
   numericDisplay: {
     flexDirection: 'row',
@@ -536,8 +762,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   buttonContainer: {
-    marginTop: 16,
-    gap: 12,
+    marginTop: 28,
+    gap: 10,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -546,26 +772,170 @@ const styles = StyleSheet.create({
   buttonHalf: {
     flex: 1,
   },
-  assistantButton: {
-    marginTop: 4,
+  assistantContainer: {
+    marginTop: 12,
   },
   profileContainer: {
     marginTop: 16,
     marginHorizontal: 4,
   },
+  profileCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  profileHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
   profileContent: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  profileIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileTextContainer: {
+    flex: 1,
   },
   profileLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#737373',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   profileName: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
     color: '#fafafa',
+  },
+  // Small screen profile styles
+  profileCardSmall: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  profileIconContainerSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
+  profileLabelSmall: {
+    fontSize: 10,
+    marginBottom: 1,
+  },
+  profileNameSmall: {
+    fontSize: 13,
+  },
+  // Quick Calibrate Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  quickCalModal: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fafafa',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  modalWarningText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#eab308',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#a3a3a3',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#a3a3a3',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3b82f6',
+    gap: 8,
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

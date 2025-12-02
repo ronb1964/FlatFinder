@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, memo } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import Svg, {
   Circle,
   Line,
@@ -20,14 +20,17 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-const { width: screenWidth } = Dimensions.get('window');
+// Note: Screen dimensions are now obtained via useWindowDimensions hook inside the component
+// for proper reactivity when viewport changes
 
 interface BubbleLevelProps {
   pitch: number;
   roll: number;
   isLevel: boolean;
+  nearLevel?: boolean; // Close to level but not perfect - shows yellow
   heading?: number; // Compass heading in degrees (0-360)
   size?: 'compact' | 'full';
+  maxSize?: number; // Optional max size override for responsive layouts
 }
 
 // Get cardinal direction from heading
@@ -66,19 +69,38 @@ const COLORS = {
   crosshairs: 'rgba(96, 165, 250, 0.5)',
   center: '#60a5fa',
   success: '#22c55e',
+  nearLevel: '#eab308', // Yellow/amber for nearly level
 };
 
 export const BubbleLevel = memo(function BubbleLevel({
   pitch,
   roll,
   isLevel,
+  nearLevel = false,
   heading = 0,
   size = 'full',
+  maxSize,
 }: BubbleLevelProps) {
+  // Get reactive screen dimensions - updates when viewport changes
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
   // Memoize constants to prevent recalculation
   const dimensions = useMemo(() => {
-    const BUBBLE_SIZE =
-      size === 'compact' ? Math.min(screenWidth * 0.35, 120) : Math.min(screenWidth * 0.8, 320);
+    // For small screens (height < 700), reduce bubble size
+    // iPhone SE is 667px, needs extra small treatment
+    const isSmallScreen = screenHeight < 700;
+    const isExtraSmallScreen = screenHeight < 680;
+    const baseSize =
+      size === 'compact'
+        ? Math.min(screenWidth * 0.35, 120)
+        : isExtraSmallScreen
+          ? Math.min(screenWidth * 0.6, 200) // Extra small for iPhone SE
+          : isSmallScreen
+            ? Math.min(screenWidth * 0.7, 240) // Smaller on short screens
+            : Math.min(screenWidth * 0.8, 320);
+
+    // Use maxSize override if provided, otherwise use calculated size
+    const BUBBLE_SIZE = maxSize ? Math.min(baseSize, maxSize) : baseSize;
     const PADDING = BUBBLE_SIZE * 0.1;
     const VIEWBOX_SIZE = BUBBLE_SIZE + PADDING * 2;
     const center = VIEWBOX_SIZE / 2;
@@ -87,7 +109,7 @@ export const BubbleLevel = memo(function BubbleLevel({
     const maxOffset = rimRadius - bubbleRadius - 4;
 
     return { BUBBLE_SIZE, PADDING, VIEWBOX_SIZE, center, rimRadius, bubbleRadius, maxOffset };
-  }, [size]);
+  }, [size, maxSize, screenWidth, screenHeight]);
 
   const { PADDING, VIEWBOX_SIZE, center, rimRadius, bubbleRadius, maxOffset } = dimensions;
   // Sensitivity: bubble hits edge at this angle. Lower = more sensitive.
@@ -215,15 +237,26 @@ export const BubbleLevel = memo(function BubbleLevel({
           </RadialGradient>
 
           {/* Sharp bubble - centered reflection for clear level indication */}
+          {/* Colors: green when level, yellow when near, blue otherwise */}
           <RadialGradient id="bubble3d" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-            <Stop offset="25%" stopColor={isLevel ? '#86efac' : '#93c5fd'} stopOpacity="0.85" />
+            <Stop
+              offset="25%"
+              stopColor={isLevel ? '#86efac' : nearLevel ? '#fde68a' : '#93c5fd'}
+              stopOpacity="0.85"
+            />
             <Stop
               offset="55%"
-              stopColor={isLevel ? COLORS.success : COLORS.bubble.base}
+              stopColor={
+                isLevel ? COLORS.success : nearLevel ? COLORS.nearLevel : COLORS.bubble.base
+              }
               stopOpacity="1"
             />
-            <Stop offset="100%" stopColor={isLevel ? '#15803d' : '#1d4ed8'} stopOpacity="1" />
+            <Stop
+              offset="100%"
+              stopColor={isLevel ? '#15803d' : nearLevel ? '#a16207' : '#1d4ed8'}
+              stopOpacity="1"
+            />
           </RadialGradient>
 
           {/* Subtle shadow only - no blur on bubble itself */}
@@ -342,7 +375,13 @@ export const BubbleLevel = memo(function BubbleLevel({
           fill="url(#bubble3d)"
           animatedProps={bubbleProps}
           filter="url(#bubbleShadow)"
-          stroke={isLevel ? 'rgba(134, 239, 172, 0.8)' : 'rgba(147, 197, 253, 0.8)'}
+          stroke={
+            isLevel
+              ? 'rgba(134, 239, 172, 0.8)'
+              : nearLevel
+                ? 'rgba(253, 224, 71, 0.8)'
+                : 'rgba(147, 197, 253, 0.8)'
+          }
           strokeWidth={2}
         />
 
