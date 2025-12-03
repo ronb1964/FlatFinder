@@ -29,6 +29,8 @@ interface BubbleLevelProps {
   isLevel: boolean;
   nearLevel?: boolean; // Close to level but not perfect - shows yellow
   heading?: number; // Compass heading in degrees (0-360)
+  showHeading?: boolean; // Show/hide the heading display (default true)
+  showCompass?: boolean; // Show/hide compass ring and markers (default true)
   size?: 'compact' | 'full';
   maxSize?: number; // Optional max size override for responsive layouts
 }
@@ -78,6 +80,8 @@ export const BubbleLevel = memo(function BubbleLevel({
   isLevel,
   nearLevel = false,
   heading = 0,
+  showHeading = true,
+  showCompass = true,
   size = 'full',
   maxSize,
 }: BubbleLevelProps) {
@@ -408,91 +412,99 @@ export const BubbleLevel = memo(function BubbleLevel({
         />
 
         {/* Compass Ring - rotates with heading, but letters counter-rotate to stay upright */}
-        <G rotation={-heading} origin={`${center}, ${center}`}>
-          {/* Cardinal direction markers - counter-rotate to stay readable */}
-          {['N', 'E', 'S', 'W'].map((dir, i) => {
-            const angle = i * 90;
-            const rad = ((angle - 90) * Math.PI) / 180;
-            const textRadius = rimRadius * 0.78;
-            const x = center + Math.cos(rad) * textRadius;
-            const y = center + Math.sin(rad) * textRadius;
-            const isNorth = dir === 'N';
-            // Counter-rotate by adding heading back to keep text upright
-            const textRotation = heading;
-            return (
-              <SvgText
-                key={dir}
-                x={x}
-                y={y}
-                fill={isNorth ? '#ef4444' : '#fafafa'}
-                fontSize={size === 'compact' ? 14 : 20}
-                fontWeight={isNorth ? '800' : '700'}
-                textAnchor="middle"
-                alignmentBaseline="central"
-                rotation={textRotation}
-                origin={`${x}, ${y}`}
-              >
-                {dir}
-              </SvgText>
-            );
-          })}
+        {showCompass && (
+          <G rotation={-heading} origin={`${center}, ${center}`}>
+            {/* Cardinal direction markers - counter-rotate to stay readable */}
+            {['N', 'E', 'S', 'W'].map((dir, i) => {
+              const angle = i * 90;
+              const rad = ((angle - 90) * Math.PI) / 180;
+              const textRadius = rimRadius * 0.78;
+              const x = center + Math.cos(rad) * textRadius;
+              const y = center + Math.sin(rad) * textRadius;
+              const isNorth = dir === 'N';
+              // Counter-rotate by adding heading back to keep text upright
+              const textRotation = heading;
+              return (
+                <SvgText
+                  key={dir}
+                  x={x}
+                  y={y}
+                  fill={isNorth ? '#ef4444' : '#fafafa'}
+                  fontSize={size === 'compact' ? 14 : 20}
+                  fontWeight={isNorth ? '800' : '700'}
+                  textAnchor="middle"
+                  alignmentBaseline="central"
+                  rotation={textRotation}
+                  origin={`${x}, ${y}`}
+                >
+                  {dir}
+                </SvgText>
+              );
+            })}
 
-          {/* Intercardinal markers - also counter-rotate to stay readable */}
-          {['NE', 'SE', 'SW', 'NW'].map((dir, i) => {
-            const angle = 45 + i * 90;
-            const rad = ((angle - 90) * Math.PI) / 180;
-            const textRadius = rimRadius * 0.78;
-            const x = center + Math.cos(rad) * textRadius;
-            const y = center + Math.sin(rad) * textRadius;
-            // Counter-rotate by adding heading back to keep text upright
-            const textRotation = heading;
-            return (
-              <SvgText
-                key={dir}
-                x={x}
-                y={y}
-                fill="#a3a3a3"
-                fontSize={size === 'compact' ? 10 : 14}
-                fontWeight="600"
-                textAnchor="middle"
-                alignmentBaseline="central"
-                rotation={textRotation}
-                origin={`${x}, ${y}`}
-              >
-                {dir}
-              </SvgText>
-            );
-          })}
-        </G>
+            {/* Intercardinal markers - also counter-rotate to stay readable */}
+            {['NE', 'SE', 'SW', 'NW'].map((dir, i) => {
+              const angle = 45 + i * 90;
+              const rad = ((angle - 90) * Math.PI) / 180;
+              const textRadius = rimRadius * 0.78;
+              const x = center + Math.cos(rad) * textRadius;
+              const y = center + Math.sin(rad) * textRadius;
+              // Counter-rotate by adding heading back to keep text upright
+              const textRotation = heading;
+              return (
+                <SvgText
+                  key={dir}
+                  x={x}
+                  y={y}
+                  fill="#a3a3a3"
+                  fontSize={size === 'compact' ? 10 : 14}
+                  fontWeight="600"
+                  textAnchor="middle"
+                  alignmentBaseline="central"
+                  rotation={textRotation}
+                  origin={`${x}, ${y}`}
+                >
+                  {dir}
+                </SvgText>
+              );
+            })}
+          </G>
+        )}
 
         {/* Fixed heading indicator triangle at top */}
-        <Line
-          x1={center}
-          y1={PADDING + 4}
-          x2={center - 6}
-          y2={PADDING + 14}
-          stroke="#ef4444"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-        <Line
-          x1={center}
-          y1={PADDING + 4}
-          x2={center + 6}
-          y2={PADDING + 14}
-          stroke="#ef4444"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+        {showCompass && (
+          <>
+            <Line
+              x1={center}
+              y1={PADDING + 4}
+              x2={center - 6}
+              y2={PADDING + 14}
+              stroke="#ef4444"
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+            <Line
+              x1={center}
+              y1={PADDING + 4}
+              x2={center + 6}
+              y2={PADDING + 14}
+              stroke="#ef4444"
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+          </>
+        )}
       </Svg>
 
       {/* Compass Heading Readout */}
-      <View style={styles.compassReadout}>
-        <View style={styles.compassCard}>
-          <Text style={styles.compassHeading}>{Math.round(normalizedHeading)}°</Text>
-          <Text style={styles.compassDirection}>{cardinalDirection}</Text>
+      {showHeading && (
+        <View style={styles.compassReadout}>
+          <View style={styles.compassCard}>
+            <Text style={styles.compassHeading}>{Math.round(normalizedHeading)}°</Text>
+            <Text style={styles.compassDirection}>{cardinalDirection}</Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 });

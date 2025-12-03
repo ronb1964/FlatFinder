@@ -1,20 +1,8 @@
 import React from 'react';
-import {
-  Pressable,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  Platform,
-  View,
-} from 'react-native';
+import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, Platform, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -24,7 +12,7 @@ interface GlassButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  variant?: 'default' | 'primary' | 'success' | 'ghost';
+  variant?: 'default' | 'primary' | 'secondary' | 'warning' | 'success' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
 }
@@ -47,24 +35,51 @@ export function GlassButton({
       border: 'rgba(255, 255, 255, 0.15)',
       text: '#fafafa',
       glow: 'transparent',
+      bg: 'rgba(38, 38, 38, 0.8)',
     },
     primary: {
       gradient: ['rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.2)'],
       border: 'rgba(96, 165, 250, 0.5)',
       text: '#ffffff',
       glow: 'rgba(59, 130, 246, 0.3)',
+      bg: 'rgba(59, 130, 246, 0.3)',
+    },
+    secondary: {
+      // Teal/Cyan for Full Calibration
+      gradient: ['rgba(6, 182, 212, 0.4)', 'rgba(6, 182, 212, 0.2)'],
+      border: 'rgba(34, 211, 238, 0.5)',
+      text: '#ffffff',
+      glow: 'rgba(6, 182, 212, 0.3)',
+      bg: 'rgba(6, 182, 212, 0.3)',
+    },
+    warning: {
+      // Orange/Amber for Quick Calibrate
+      gradient: ['rgba(245, 158, 11, 0.4)', 'rgba(245, 158, 11, 0.2)'],
+      border: 'rgba(251, 191, 36, 0.5)',
+      text: '#ffffff',
+      glow: 'rgba(245, 158, 11, 0.3)',
+      bg: 'rgba(245, 158, 11, 0.3)',
     },
     success: {
       gradient: ['rgba(34, 197, 94, 0.4)', 'rgba(34, 197, 94, 0.2)'],
       border: 'rgba(74, 222, 128, 0.5)',
       text: '#ffffff',
       glow: 'rgba(34, 197, 94, 0.3)',
+      bg: 'rgba(34, 197, 94, 0.3)',
     },
     ghost: {
       gradient: ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)'],
       border: 'rgba(255, 255, 255, 0.1)',
       text: '#a3a3a3',
       glow: 'transparent',
+      bg: 'rgba(38, 38, 38, 0.8)',
+    },
+    danger: {
+      gradient: ['rgba(239, 68, 68, 0.25)', 'rgba(239, 68, 68, 0.1)'],
+      border: 'rgba(239, 68, 68, 0.4)',
+      text: '#f87171',
+      glow: 'rgba(239, 68, 68, 0.2)',
+      bg: 'rgba(239, 68, 68, 0.15)',
     },
   };
 
@@ -105,21 +120,10 @@ export function GlassButton({
       ]}
     >
       {/* Top highlight */}
-      <View
-        style={[
-          styles.highlight,
-          { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
-        ]}
-      />
+      <View style={[styles.highlight, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
       <View style={styles.content}>
         {icon && <View style={styles.icon}>{icon}</View>}
-        <Text
-          style={[
-            styles.text,
-            { color: colors.text, fontSize: sizing.fontSize },
-            textStyle,
-          ]}
-        >
+        <Text style={[styles.text, { color: colors.text, fontSize: sizing.fontSize }, textStyle]}>
           {children}
         </Text>
       </View>
@@ -143,11 +147,7 @@ export function GlassButton({
               borderColor: colors.border,
               height: sizing.height,
               paddingHorizontal: sizing.paddingHorizontal,
-              backgroundColor: variant === 'primary'
-                ? 'rgba(59, 130, 246, 0.3)'
-                : variant === 'success'
-                ? 'rgba(34, 197, 94, 0.3)'
-                : 'rgba(38, 38, 38, 0.8)',
+              backgroundColor: colors.bg,
               opacity: disabled ? 0.5 : 1,
             },
           ]}
@@ -155,11 +155,7 @@ export function GlassButton({
           <View style={styles.content}>
             {icon && <View style={styles.icon}>{icon}</View>}
             <Text
-              style={[
-                styles.text,
-                { color: colors.text, fontSize: sizing.fontSize },
-                textStyle,
-              ]}
+              style={[styles.text, { color: colors.text, fontSize: sizing.fontSize }, textStyle]}
             >
               {children}
             </Text>

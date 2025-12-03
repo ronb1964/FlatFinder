@@ -914,14 +914,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   modalCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#a3a3a3',
+    color: '#f87171',
   },
   modalConfirmBtn: {
     flex: 1,
@@ -930,7 +930,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.5)',
     gap: 8,
   },
   modalConfirmText: {

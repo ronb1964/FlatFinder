@@ -20,6 +20,23 @@ This keeps continuity between sessions so you don't start fresh every time.
 
 ---
 
+## RULES - FOLLOW THESE ALWAYS
+
+1. **Never offer screenshots** - Ron has the app open in the browser. He can see everything. Don't ask "Would you like me to take a screenshot?" - if he needs one, he'll ask.
+
+2. **Wait for approval before proceeding** - After making changes, wait for Ron to review and approve before moving to the next step. Don't assume things are fixed or acceptable.
+
+3. **Don't jump ahead** - Make changes, report what you did, then stop and wait for feedback.
+
+4. **Calculate, don't guess** - For layout/positioning problems, ALWAYS do the math first:
+   - Know the container dimensions
+   - Know the element sizes
+   - Calculate exact positions mathematically
+   - Never use trial-and-error guessing with random values
+   - Show the calculation before making changes
+
+---
+
 ## Project Overview
 
 FlatFinder is a React Native/Expo app for RV leveling with a "Liquid Glass" UI theme. It uses device sensors to show pitch/roll via a bubble level with an integrated compass.
@@ -59,55 +76,80 @@ This keeps the app simple, minimal dependencies, and consistent.
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 2, 2025)
+## Current State (as of Dec 3, 2025)
 
-**Onboarding UI Overhaul - COMPLETE:**
+**Onboarding UI Overhaul - COMPLETE**
 
-All onboarding screens (pages 1-8) now follow the "Liquid Glass" theme with:
+**Calibration Wizard - IN PROGRESS:**
 
-- Custom SVG vehicle icons (trailer, motorhome, van) from SVG Repo
-- GlassCard and GlassButton components throughout
-- Semi-transparent backgrounds, subtle borders, top highlight bars
-- Proper radio button and option card glass styling
-- Block inventory with glass-styled input panel
+1. **Step 1 (portrait)** - COMPLETE - Capture button with glow animation, "Hold steady" text added
+2. **Transition screen 1 (portrait)** - COMPLETE - Added "AFTER you press the Next button" to instruction
+3. **Step 2 (landscape)** - COMPLETE - Phone and text box horizontally aligned, vertically centered, gap: 100
+4. **Transition screen 2 (landscape)** - COMPLETE
+5. **Step 3 (upside-down/180°)** - NOT STARTED - Should be portrait layout like Step 1, rotated 180°
+6. **Complete screen** - Existing
 
-**Trailer Leveling Math - FIXED:**
+**Text/Button consistency done:**
 
-The leveling math in `src/lib/rvLevelingMath.ts` now correctly handles trailers:
+- All capture buttons say "Capture Reading" with consistent sizing (fontSize: 18, paddingVertical: 16)
+- All instructions say "Hold steady, then tap Capture Reading."
+- Cancel buttons consistent across portrait and landscape
 
-- Trailers: 3 lift points (left wheel, right wheel, tongue jack) - uses pitch/roll correctly
-- Motorhomes/Vans: 4 lift points (all 4 wheels) - uses wheelbase for pitch calculations
-- Wheelbase field is now hidden for trailers in onboarding (they only need Track Width + Hitch Offset)
-
-**Calibration Routine - CODE COMPLETE, NEEDS VISUAL TESTING:**
-
-1. **Math layer done** - `src/lib/calibration.ts` has `solveMultiPositionCalibration()`
-2. **CalibrationWizard.tsx** - Complete with StyleSheet, rotating UI, 5-step flow
-3. **app/calibration.tsx** - Complete with Quick Calibrate option
-4. **LevelingAssistant.tsx** - Complete with SVG vehicle diagrams
+**Key file:** `src/components/CalibrationWizard.tsx`
 
 Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### Test Calibration UI
+### Build Step 3 (position_180) Layout
 
-The onboarding is complete. Next up:
+Step 3 is the final capture step where phone is rotated 180° (upside-down from start).
 
-1. Navigate to Calibration screen - verify UI looks correct
-2. Test the calibration wizard flow (Start Calibration button)
-3. Navigate to Leveling Assistant - verify SVG vehicle diagram displays
-4. Test the leveling calculations with different pitch/roll values
-5. Verify trailer shows 3 lift points (left wheel, right wheel, tongue jack)
-6. Verify motorhome shows 4 lift points (all wheels)
+**IMPORTANT:** Step 3 should be PORTRAIT layout like Step 1, just rotated 180° (upside-down). NOT landscape like Step 2.
 
-**Dev server:** `npx expo start --clear`
+**Current code state:**
 
-**Key files changed this session:**
+- `position_180` has `uiRotation: 180` set
+- `position_180` is NOT in `isRotatedStep` array (so it uses portrait layout)
+- Capture button condition includes `position_180`
 
-- `src/lib/rvLevelingMath.ts` - Fixed trailer geometry (3 points vs 4)
-- `app/onboarding.tsx` - Hidden wheelbase field for trailers
-- `src/components/icons/VehicleIcons.tsx` - Custom SVG vehicle icons
+**To do:**
+
+1. Navigate to Step 3 and verify the portrait layout displays correctly (rotated 180°)
+2. Verify phone indicator, text box, and buttons are properly positioned
+3. Test full calibration flow end-to-end
+
+**After Step 3:**
+
+- Test LevelingAssistant SVG vehicle diagrams
+- Verify trailer shows 3 lift points, motorhome shows 4
+
+## CRITICAL - Rotation Coordinate Mapping
+
+When container rotates -90° (counterclockwise), coordinates map:
+
+| Pre-rotation | My View (screenshot) |
+| ------------ | -------------------- |
+| TOP          | LEFT                 |
+| BOTTOM       | RIGHT                |
+| LEFT         | BOTTOM               |
+| RIGHT        | TOP                  |
+
+**To move element UP in my view:** Use `paddingBottom` or decrease `top` value
+**To move element DOWN in my view:** Use `paddingTop` or increase `top` value
+
+**flexDirection behavior:**
+
+- `row` → children stack BOTTOM-to-TOP in my view
+- `column` → children stack LEFT-to-RIGHT in my view
+
+**Layout styles for landscape screens:**
+
+- `landscapeDotsTop` - Progress dots (positioned at pre-rotation top = my LEFT)
+- `landscapeTitleArea` - Title/subtitle (positioned at pre-rotation top = my LEFT)
+- `landscapeTwoColumns` - Two-column layout for Step 2 capture screen
+- `landscapeCenteredStack` - Single centered stack for transition screens
+- `landscapeButtonsArea` - Buttons (positioned at pre-rotation bottom = my RIGHT)
 
 ## Development
 
@@ -226,3 +268,24 @@ For debugging and audits (works with existing browser):
 - Remote: git@github.com:ronb1964/FlatFinder.git (SSH)
 - Main branch: `main`
 - Current feature branch: `ui-overhaul-checkpoint`
+
+## Future Tools - Add When Ready
+
+### Cali MCP (Add when ready for App Store builds)
+
+When Ron is ready to build native iOS/Android binaries for App Store submission, add the Cali MCP:
+
+```bash
+claude mcp add cali -s user -- npx -y @callstack/cali-mcp-server
+```
+
+**What it provides:**
+
+- Build automation for iOS/Android
+- Device/simulator management
+- React Native library search
+- Dependency management
+
+**When to add:** Before first App Store / Play Store submission
+
+Source: https://github.com/callstackincubator/cali
