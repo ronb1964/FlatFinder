@@ -80,20 +80,13 @@ This keeps the app simple, minimal dependencies, and consistent.
 
 **Onboarding UI Overhaul - COMPLETE**
 
-**Calibration Wizard - IN PROGRESS:**
+**Calibration Wizard - COMPLETE:**
 
-1. **Step 1 (portrait)** - COMPLETE - Capture button with glow animation, "Hold steady" text added
-2. **Transition screen 1 (portrait)** - COMPLETE - Added "AFTER you press the Next button" to instruction
-3. **Step 2 (landscape)** - COMPLETE - Phone and text box horizontally aligned, vertically centered, gap: 100
-4. **Transition screen 2 (landscape)** - COMPLETE
-5. **Step 3 (upside-down/180°)** - NOT STARTED - Should be portrait layout like Step 1, rotated 180°
-6. **Complete screen** - Existing
-
-**Text/Button consistency done:**
-
-- All capture buttons say "Capture Reading" with consistent sizing (fontSize: 18, paddingVertical: 16)
-- All instructions say "Hold steady, then tap Capture Reading."
-- Cancel buttons consistent across portrait and landscape
+- All 3 steps working with proper layouts (portrait for Steps 1 & 3, landscape for Step 2)
+- Transition screens with rotation animations
+- Phone indicator and text box properly aligned (mathematical centering)
+- Cancel returns to home screen (not wizard start)
+- Quick Calibrate modal uses glass theme button
 
 **Key file:** `src/components/CalibrationWizard.tsx`
 
@@ -101,28 +94,16 @@ Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### Build Step 3 (position_180) Layout
+### Leveling Solution Screen (Post-Calibration)
 
-Step 3 is the final capture step where phone is rotated 180° (upside-down from start).
+After calibration completes, the app should show a leveling solution/plan. This is the screen that tells the user how to level their RV.
 
-**IMPORTANT:** Step 3 should be PORTRAIT layout like Step 1, just rotated 180° (upside-down). NOT landscape like Step 2.
+**What to work on:**
 
-**Current code state:**
-
-- `position_180` has `uiRotation: 180` set
-- `position_180` is NOT in `isRotatedStep` array (so it uses portrait layout)
-- Capture button condition includes `position_180`
-
-**To do:**
-
-1. Navigate to Step 3 and verify the portrait layout displays correctly (rotated 180°)
-2. Verify phone indicator, text box, and buttons are properly positioned
-3. Test full calibration flow end-to-end
-
-**After Step 3:**
-
-- Test LevelingAssistant SVG vehicle diagrams
-- Verify trailer shows 3 lift points, motorhome shows 4
+1. Review the LevelingAssistant component (`src/components/LevelingAssistant.tsx`)
+2. Test the SVG vehicle diagrams - trailer should show 3 lift points, motorhome should show 4
+3. Verify block calculations and leveling recommendations display correctly
+4. Test the flow from calibration completion → leveling solution
 
 ## CRITICAL - Rotation Coordinate Mapping
 
