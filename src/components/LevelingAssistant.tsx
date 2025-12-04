@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
-import { AlertCircle, ArrowLeft, Check, AlertTriangle } from 'lucide-react-native';
-import Svg, { Path, Circle, G, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
-import { useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+// Note: Using global setInterval/clearInterval which are available in React Native runtime
+import { AlertCircle, ArrowLeft, Check, AlertTriangle, Caravan, Plus } from 'lucide-react-native';
+import Svg, {
+  Path,
+  Circle,
+  G,
+  Defs,
+  RadialGradient,
+  Stop,
+  Ellipse,
+  Text as SvgText,
+} from 'react-native-svg';
+import { router } from 'expo-router';
+// Note: removed unused reanimated imports - using useState for pulse animation instead
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import { applyCalibration } from '../lib/calibration';
 import { RVLevelingCalculator, LevelingPlan, WheelLiftRequirement } from '../lib/rvLevelingMath';
@@ -15,6 +26,9 @@ import { useAppStore } from '../state/appStore';
 import { formatMeasurement } from '../lib/units';
 import { THEME } from '../theme';
 import { GlassCard } from './ui/GlassCard';
+import { GlassButton } from './ui/GlassButton';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VEHICLE_WIDTH = Math.min(SCREEN_WIDTH - 48, 320);
@@ -33,19 +47,36 @@ interface WheelIndicatorProps {
 }
 
 function WheelIndicator({ x, y, status, isAnimating = false }: WheelIndicatorProps) {
-  const pulseValue = useSharedValue(0);
+  const [pulseOpacity, setPulseOpacity] = useState(0.3);
 
   useEffect(() => {
-    if (isAnimating) {
-      pulseValue.value = withRepeat(
-        withSequence(withTiming(1, { duration: 1000 }), withTiming(0, { duration: 1000 })),
-        -1,
-        false
-      );
-    } else {
-      pulseValue.value = 0;
+    if (!isAnimating) {
+      setPulseOpacity(0.3);
+      return;
     }
-  }, [isAnimating, pulseValue]);
+
+    // Simple pulse animation using setInterval
+    let increasing = true;
+    const interval = global.setInterval(() => {
+      setPulseOpacity((prev) => {
+        if (increasing) {
+          if (prev >= 0.7) {
+            increasing = false;
+            return prev - 0.02;
+          }
+          return prev + 0.02;
+        } else {
+          if (prev <= 0.3) {
+            increasing = true;
+            return prev + 0.02;
+          }
+          return prev - 0.02;
+        }
+      });
+    }, 50);
+
+    return () => global.clearInterval(interval);
+  }, [isAnimating]);
 
   const colors = {
     ground: { fill: THEME.colors.success, glow: 'rgba(34, 197, 94, 0.6)' },
@@ -57,8 +88,8 @@ function WheelIndicator({ x, y, status, isAnimating = false }: WheelIndicatorPro
 
   return (
     <G>
-      {/* Outer glow */}
-      <Circle cx={x} cy={y} r={18} fill={color.glow} opacity={0.3} />
+      {/* Outer glow - pulses when animating */}
+      <Circle cx={x} cy={y} r={isAnimating ? 20 : 18} fill={color.glow} opacity={pulseOpacity} />
       {/* Main circle */}
       <Circle cx={x} cy={y} r={12} fill={color.fill} opacity={0.9} />
       {/* Inner highlight */}
@@ -83,183 +114,523 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
     const lift = wheelLifts.find((w) => w.location === location);
     if (!lift || lift.liftInches < 0.001) return 'ground';
     const stack = blockStacks[location];
-    if (stack && stack.blocks.length > 0) return 'solution';
+    // Check if blocks fully cover the needed lift (within 0.1" tolerance)
+    if (stack && stack.blocks.length > 0 && stack.totalHeight >= lift.liftInches - 0.1) {
+      return 'solution';
+    }
+    // Has blocks but not enough, or no blocks at all
+    if (stack && stack.blocks.length > 0) return 'warning';
     return 'warning';
   };
 
   const isTrailer = type === 'trailer';
+  const isVan = type === 'van';
+  // Note: motorhome is the default case (else), so no explicit check needed
 
   if (isTrailer) {
-    // Trailer diagram with tongue/hitch
+    // TRAILER: Glass-themed with tongue/hitch
     return (
-      <Svg width={VEHICLE_WIDTH} height={VEHICLE_HEIGHT} viewBox="0 0 320 192">
+      <Svg width={VEHICLE_WIDTH} height={VEHICLE_HEIGHT} viewBox="-15 0 332 192">
         <Defs>
-          <RadialGradient id="bodyGradient" cx="50%" cy="30%" r="70%">
-            <Stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-            <Stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+          <RadialGradient id="trailerBodyGradient" cx="40%" cy="20%" r="80%">
+            <Stop offset="0%" stopColor="rgba(59, 130, 246, 0.15)" />
+            <Stop offset="50%" stopColor="rgba(59, 130, 246, 0.08)" />
+            <Stop offset="100%" stopColor="rgba(59, 130, 246, 0.02)" />
+          </RadialGradient>
+          <RadialGradient id="trailerWheelWell" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="rgba(0,0,0,0.4)" />
+            <Stop offset="100%" stopColor="rgba(0,0,0,0.1)" />
           </RadialGradient>
         </Defs>
 
-        {/* Trailer body - stylized shape */}
+        {/* Outer glow */}
         <Path
-          d="M 60 40
-             L 280 40
-             Q 300 40 300 60
-             L 300 140
-             Q 300 160 280 160
-             L 60 160
-             Q 40 160 40 140
-             L 40 60
-             Q 40 40 60 40 Z"
-          fill="url(#bodyGradient)"
-          stroke="rgba(255,255,255,0.2)"
+          d="M 60 36 L 280 36 Q 304 36 304 60 L 304 140 Q 304 164 280 164 L 60 164 Q 36 164 36 140 L 36 60 Q 36 36 60 36 Z"
+          fill="none"
+          stroke="rgba(59, 130, 246, 0.12)"
+          strokeWidth={8}
+        />
+
+        {/* Trailer body */}
+        <Path
+          d="M 60 40 L 280 40 Q 300 40 300 60 L 300 140 Q 300 160 280 160 L 60 160 Q 40 160 40 140 L 40 60 Q 40 40 60 40 Z"
+          fill="url(#trailerBodyGradient)"
+          stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={1.5}
+        />
+
+        {/* Glass highlight */}
+        <Path
+          d="M 65 42 L 275 42 Q 295 42 297 58"
+          fill="none"
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth={1}
+          strokeLinecap="round"
         />
 
         {/* Tongue/A-frame */}
         <Path
-          d="M 40 90 L 10 96 L 40 102"
-          fill="none"
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth={3}
+          d="M 40 88 L 18 100 L 40 112"
+          fill="rgba(59, 130, 246, 0.05)"
+          stroke="rgba(59, 130, 246, 0.4)"
+          strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* Hitch ball connection */}
+        {/* Hitch coupler */}
         <Circle
-          cx={10}
-          cy={96}
-          r={6}
-          fill="rgba(255,255,255,0.2)"
-          stroke="rgba(255,255,255,0.4)"
-          strokeWidth={1}
+          cx={12}
+          cy={100}
+          r={8}
+          fill="rgba(59, 130, 246, 0.1)"
+          stroke="rgba(59, 130, 246, 0.5)"
+          strokeWidth={2}
         />
+        <Circle cx={12} cy={100} r={3} fill="rgba(59, 130, 246, 0.3)" />
 
         {/* Wheel wells */}
-        <Ellipse cx={260} cy={160} rx={20} ry={8} fill="rgba(0,0,0,0.3)" />
-        <Ellipse cx={260} cy={32} rx={20} ry={8} fill="rgba(0,0,0,0.3)" />
+        <Ellipse cx={260} cy={150} rx={22} ry={7} fill="url(#trailerWheelWell)" />
+        <Ellipse cx={260} cy={50} rx={22} ry={7} fill="url(#trailerWheelWell)" />
 
-        {/* Window detail */}
+        {/* Interior detail lines */}
         <Path
-          d="M 100 55 L 180 55 Q 185 55 185 60 L 185 85 Q 185 90 180 90 L 100 90 Q 95 90 95 85 L 95 60 Q 95 55 100 55"
-          fill="rgba(59, 130, 246, 0.1)"
-          stroke="rgba(59, 130, 246, 0.3)"
+          d="M 80 100 L 240 100"
+          stroke="rgba(255,255,255,0.06)"
           strokeWidth={1}
+          strokeDasharray="6 4"
         />
 
         {/* Wheel indicators */}
         <WheelIndicator
           x={260}
-          y={45}
+          y={50}
+          status={getWheelStatus('right')}
+          isAnimating={getWheelStatus('right') === 'warning'}
+        />
+        <WheelIndicator
+          x={260}
+          y={150}
+          status={getWheelStatus('left')}
+          isAnimating={getWheelStatus('left') === 'warning'}
+        />
+        <WheelIndicator
+          x={12}
+          y={100}
+          status={getWheelStatus('tongue')}
+          isAnimating={getWheelStatus('tongue') === 'warning'}
+        />
+
+        {/* Labels */}
+        <SvgText
+          x="260"
+          y="26"
+          textAnchor="middle"
+          fill="rgba(59, 130, 246, 0.7)"
+          fontSize="11"
+          fontWeight="500"
+        >
+          Right
+        </SvgText>
+        <SvgText
+          x="260"
+          y="180"
+          textAnchor="middle"
+          fill="rgba(59, 130, 246, 0.7)"
+          fontSize="11"
+          fontWeight="500"
+        >
+          Left
+        </SvgText>
+        <SvgText
+          x="12"
+          y="130"
+          textAnchor="middle"
+          fill="rgba(59, 130, 246, 0.7)"
+          fontSize="11"
+          fontWeight="500"
+        >
+          Hitch
+        </SvgText>
+      </Svg>
+    );
+  }
+
+  if (isVan) {
+    // VAN: Distinctive van shape - tapered hood, wider body
+    return (
+      <Svg width={VEHICLE_WIDTH} height={VEHICLE_HEIGHT} viewBox="0 0 320 192">
+        <Defs>
+          <RadialGradient id="vanBodyGradient" cx="25%" cy="20%" r="85%">
+            <Stop offset="0%" stopColor="rgba(34, 197, 94, 0.15)" />
+            <Stop offset="50%" stopColor="rgba(34, 197, 94, 0.08)" />
+            <Stop offset="100%" stopColor="rgba(34, 197, 94, 0.02)" />
+          </RadialGradient>
+          <RadialGradient id="vanHoodGradient" cx="50%" cy="30%" r="70%">
+            <Stop offset="0%" stopColor="rgba(34, 197, 94, 0.18)" />
+            <Stop offset="100%" stopColor="rgba(34, 197, 94, 0.05)" />
+          </RadialGradient>
+          <RadialGradient id="vanWheelWell" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="rgba(0,0,0,0.4)" />
+            <Stop offset="100%" stopColor="rgba(0,0,0,0.1)" />
+          </RadialGradient>
+        </Defs>
+
+        {/* Outer glow - van shape */}
+        <Path
+          d="M 25 60
+             Q 25 45 45 40
+             L 70 36
+             Q 85 34 95 40
+             L 95 40
+             L 265 40
+             Q 290 40 290 65
+             L 290 127
+             Q 290 152 265 152
+             L 95 152
+             Q 85 158 70 156
+             L 45 152
+             Q 25 147 25 132
+             Z"
+          fill="none"
+          stroke="rgba(34, 197, 94, 0.1)"
+          strokeWidth={8}
+        />
+
+        {/* Main van body */}
+        <Path
+          d="M 95 44
+             L 260 44
+             Q 282 44 282 66
+             L 282 126
+             Q 282 148 260 148
+             L 95 148
+             Z"
+          fill="url(#vanBodyGradient)"
+          stroke="rgba(34, 197, 94, 0.4)"
+          strokeWidth={1.5}
+        />
+
+        {/* Hood/cab area - tapered front */}
+        <Path
+          d="M 95 44
+             L 95 148
+             L 70 152
+             Q 50 150 40 140
+             L 32 130
+             Q 28 120 28 96
+             Q 28 72 32 62
+             L 40 52
+             Q 50 42 70 40
+             L 95 44
+             Z"
+          fill="url(#vanHoodGradient)"
+          stroke="rgba(34, 197, 94, 0.45)"
+          strokeWidth={1.5}
+        />
+
+        {/* Windshield */}
+        <Path
+          d="M 45 70 Q 38 80 38 96 Q 38 112 45 122"
+          fill="none"
+          stroke="rgba(34, 197, 94, 0.35)"
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
+
+        {/* Hood line detail */}
+        <Path
+          d="M 60 55 L 85 50"
+          fill="none"
+          stroke="rgba(255,255,255,0.15)"
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+        <Path
+          d="M 60 137 L 85 142"
+          fill="none"
+          stroke="rgba(255,255,255,0.15)"
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+
+        {/* Glass highlight on body */}
+        <Path
+          d="M 100 46 L 255 46 Q 278 46 280 64"
+          fill="none"
+          stroke="rgba(255,255,255,0.2)"
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+
+        {/* Center line */}
+        <Path
+          d="M 50 96 L 260 96"
+          stroke="rgba(255,255,255,0.05)"
+          strokeWidth={1}
+          strokeDasharray="6 4"
+        />
+
+        {/* Wheel wells */}
+        <Ellipse cx={75} cy={44} rx={18} ry={5} fill="url(#vanWheelWell)" />
+        <Ellipse cx={75} cy={148} rx={18} ry={5} fill="url(#vanWheelWell)" />
+        <Ellipse cx={235} cy={44} rx={18} ry={5} fill="url(#vanWheelWell)" />
+        <Ellipse cx={235} cy={148} rx={18} ry={5} fill="url(#vanWheelWell)" />
+
+        {/* Front/Rear labels - consistent spacing from edges */}
+        <SvgText
+          x="8"
+          y="100"
+          textAnchor="middle"
+          fill="rgba(255, 255, 255, 0.6)"
+          fontSize="11"
+          fontWeight="600"
+        >
+          F
+        </SvgText>
+        <SvgText
+          x="308"
+          y="100"
+          textAnchor="middle"
+          fill="rgba(255, 255, 255, 0.6)"
+          fontSize="11"
+          fontWeight="600"
+        >
+          R
+        </SvgText>
+
+        {/* Left/Right labels - driver side (left) is at bottom when front faces left */}
+        <SvgText
+          x="160"
+          y="16"
+          textAnchor="middle"
+          fill="rgba(255, 255, 255, 0.5)"
+          fontSize="10"
+          fontWeight="500"
+        >
+          Passenger (Right)
+        </SvgText>
+        <SvgText
+          x="160"
+          y="186"
+          textAnchor="middle"
+          fill="rgba(255, 255, 255, 0.5)"
+          fontSize="10"
+          fontWeight="500"
+        >
+          Driver (Left)
+        </SvgText>
+
+        {/* Wheel indicators - left wheels at bottom (y=148), right wheels at top (y=44) */}
+        <WheelIndicator
+          x={75}
+          y={148}
           status={getWheelStatus('front_left')}
           isAnimating={getWheelStatus('front_left') === 'warning'}
         />
         <WheelIndicator
-          x={260}
-          y={147}
+          x={75}
+          y={44}
           status={getWheelStatus('front_right')}
           isAnimating={getWheelStatus('front_right') === 'warning'}
         />
         <WheelIndicator
-          x={10}
-          y={96}
-          status={getWheelStatus('hitch')}
-          isAnimating={getWheelStatus('hitch') === 'warning'}
+          x={235}
+          y={148}
+          status={getWheelStatus('rear_left')}
+          isAnimating={getWheelStatus('rear_left') === 'warning'}
+        />
+        <WheelIndicator
+          x={235}
+          y={44}
+          status={getWheelStatus('rear_right')}
+          isAnimating={getWheelStatus('rear_right') === 'warning'}
         />
       </Svg>
     );
   }
 
-  // Motorhome/Van diagram - 4 wheels
+  // MOTORHOME: Class C style with truck cab and box body
   return (
     <Svg width={VEHICLE_WIDTH} height={VEHICLE_HEIGHT} viewBox="0 0 320 192">
       <Defs>
-        <RadialGradient id="rvBodyGradient" cx="50%" cy="30%" r="70%">
-          <Stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-          <Stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+        <RadialGradient id="mhBodyGradient" cx="30%" cy="20%" r="80%">
+          <Stop offset="0%" stopColor="rgba(168, 85, 247, 0.15)" />
+          <Stop offset="50%" stopColor="rgba(168, 85, 247, 0.08)" />
+          <Stop offset="100%" stopColor="rgba(168, 85, 247, 0.02)" />
+        </RadialGradient>
+        <RadialGradient id="mhCabGradient" cx="40%" cy="30%" r="70%">
+          <Stop offset="0%" stopColor="rgba(168, 85, 247, 0.2)" />
+          <Stop offset="100%" stopColor="rgba(168, 85, 247, 0.06)" />
+        </RadialGradient>
+        <RadialGradient id="mhWheelWell" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="rgba(0,0,0,0.4)" />
+          <Stop offset="100%" stopColor="rgba(0,0,0,0.1)" />
         </RadialGradient>
       </Defs>
 
-      {/* RV body */}
+      {/* Outer glow */}
       <Path
-        d="M 50 50
-           L 280 50
-           Q 300 50 300 70
-           L 300 140
-           Q 300 160 280 160
-           L 50 160
-           Q 30 160 30 140
-           L 30 70
-           Q 30 50 50 50 Z"
-        fill="url(#rvBodyGradient)"
-        stroke="rgba(255,255,255,0.2)"
+        d="M 20 55 Q 15 70 15 96 Q 15 122 20 137 L 30 147 Q 45 158 65 158 L 270 158 Q 295 158 295 133 L 295 59 Q 295 34 270 34 L 65 34 Q 45 34 30 45 Z"
+        fill="none"
+        stroke="rgba(168, 85, 247, 0.1)"
+        strokeWidth={8}
+      />
+
+      {/* Main box body */}
+      <Path
+        d="M 85 38
+           L 265 38
+           Q 288 38 288 61
+           L 288 131
+           Q 288 154 265 154
+           L 85 154
+           Z"
+        fill="url(#mhBodyGradient)"
+        stroke="rgba(168, 85, 247, 0.4)"
         strokeWidth={1.5}
       />
 
-      {/* Cab section */}
+      {/* Cab-over section (extends above cab) */}
       <Path
-        d="M 30 70
-           L 15 85
-           Q 10 90 10 100
-           L 10 140
-           Q 10 150 20 150
-           L 30 150"
-        fill="rgba(255,255,255,0.05)"
-        stroke="rgba(255,255,255,0.15)"
+        d="M 85 38 L 85 55 L 35 55 Q 28 55 28 62 L 28 130 Q 28 137 35 137 L 85 137 L 85 154"
+        fill="url(#mhCabGradient)"
+        stroke="rgba(168, 85, 247, 0.45)"
+        strokeWidth={1.5}
+      />
+
+      {/* Truck cab hood - narrower, extends forward */}
+      <Path
+        d="M 35 62
+           L 35 130
+           Q 28 125 23 115
+           L 20 105
+           Q 18 96 20 87
+           L 23 77
+           Q 28 67 35 62
+           Z"
+        fill="url(#mhCabGradient)"
+        stroke="rgba(168, 85, 247, 0.5)"
+        strokeWidth={1.5}
+      />
+
+      {/* Windshield */}
+      <Path
+        d="M 28 75 Q 22 85 22 96 Q 22 107 28 117"
+        fill="none"
+        stroke="rgba(168, 85, 247, 0.4)"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+
+      {/* Hood detail lines */}
+      <Path
+        d="M 32 72 L 50 60"
+        fill="none"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M 32 120 L 50 132"
+        fill="none"
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+
+      {/* Glass highlight on box */}
+      <Path
+        d="M 90 40 L 260 40 Q 284 40 286 58"
+        fill="none"
+        stroke="rgba(255,255,255,0.2)"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+
+      {/* Cab-over bed area outline */}
+      <Path
+        d="M 40 60 L 80 60 L 80 132 L 40 132"
+        fill="none"
+        stroke="rgba(168, 85, 247, 0.15)"
+        strokeWidth={1}
+        strokeDasharray="4 3"
+      />
+
+      {/* Roof AC unit */}
+      <Path
+        d="M 160 55 L 210 55 Q 215 55 215 60 L 215 78 Q 215 83 210 83 L 160 83 Q 155 83 155 78 L 155 60 Q 155 55 160 55"
+        fill="rgba(168, 85, 247, 0.08)"
+        stroke="rgba(168, 85, 247, 0.2)"
         strokeWidth={1}
       />
 
-      {/* Front windshield */}
+      {/* Center line */}
       <Path
-        d="M 18 90 L 28 75 L 28 100 L 18 100 Z"
-        fill="rgba(59, 130, 246, 0.15)"
-        stroke="rgba(59, 130, 246, 0.3)"
+        d="M 45 96 L 270 96"
+        stroke="rgba(255,255,255,0.05)"
         strokeWidth={1}
+        strokeDasharray="6 4"
       />
 
-      {/* Side windows */}
+      {/* Entry door */}
       <Path
-        d="M 80 60 L 140 60 Q 145 60 145 65 L 145 85 Q 145 90 140 90 L 80 90 Q 75 90 75 85 L 75 65 Q 75 60 80 60"
-        fill="rgba(59, 130, 246, 0.1)"
-        stroke="rgba(59, 130, 246, 0.3)"
-        strokeWidth={1}
-      />
-      <Path
-        d="M 160 60 L 220 60 Q 225 60 225 65 L 225 85 Q 225 90 220 90 L 160 90 Q 155 90 155 85 L 155 65 Q 155 60 160 60"
-        fill="rgba(59, 130, 246, 0.1)"
-        stroke="rgba(59, 130, 246, 0.3)"
+        d="M 110 154 L 110 125 Q 110 120 115 120 L 145 120 Q 150 120 150 125 L 150 154"
+        fill="none"
+        stroke="rgba(168, 85, 247, 0.2)"
         strokeWidth={1}
       />
 
       {/* Wheel wells */}
-      <Ellipse cx={70} cy={160} rx={18} ry={7} fill="rgba(0,0,0,0.3)" />
-      <Ellipse cx={70} cy={32} rx={18} ry={7} fill="rgba(0,0,0,0.3)" />
-      <Ellipse cx={260} cy={160} rx={18} ry={7} fill="rgba(0,0,0,0.3)" />
-      <Ellipse cx={260} cy={32} rx={18} ry={7} fill="rgba(0,0,0,0.3)" />
+      <Ellipse cx={65} cy={38} rx={18} ry={5} fill="url(#mhWheelWell)" />
+      <Ellipse cx={65} cy={154} rx={18} ry={5} fill="url(#mhWheelWell)" />
+      <Ellipse cx={250} cy={38} rx={18} ry={5} fill="url(#mhWheelWell)" />
+      <Ellipse cx={250} cy={154} rx={18} ry={5} fill="url(#mhWheelWell)" />
 
-      {/* Wheel indicators - 4 corners */}
+      {/* Front/Rear labels */}
+      <SvgText
+        x="8"
+        y="100"
+        textAnchor="middle"
+        fill="rgba(255, 255, 255, 0.6)"
+        fontSize="11"
+        fontWeight="600"
+      >
+        F
+      </SvgText>
+      <SvgText
+        x="308"
+        y="100"
+        textAnchor="middle"
+        fill="rgba(255, 255, 255, 0.6)"
+        fontSize="11"
+        fontWeight="600"
+      >
+        R
+      </SvgText>
+
+      {/* Wheel indicators */}
       <WheelIndicator
-        x={70}
-        y={45}
+        x={65}
+        y={38}
         status={getWheelStatus('front_left')}
         isAnimating={getWheelStatus('front_left') === 'warning'}
       />
       <WheelIndicator
-        x={70}
-        y={147}
+        x={65}
+        y={154}
         status={getWheelStatus('front_right')}
         isAnimating={getWheelStatus('front_right') === 'warning'}
       />
       <WheelIndicator
-        x={260}
-        y={45}
+        x={250}
+        y={38}
         status={getWheelStatus('rear_left')}
         isAnimating={getWheelStatus('rear_left') === 'warning'}
       />
       <WheelIndicator
-        x={260}
-        y={147}
+        x={250}
+        y={154}
         status={getWheelStatus('rear_right')}
         isAnimating={getWheelStatus('rear_right') === 'warning'}
       />
@@ -277,7 +648,9 @@ interface WheelCardProps {
 
 function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
   const hasBlocks = blockStack.blocks.length > 0;
-  const status = isGround ? 'ground' : hasBlocks ? 'solution' : 'warning';
+  // Check if blocks fully cover the needed lift (within 0.1" tolerance)
+  const isFullyCovered = hasBlocks && blockStack.totalHeight >= lift.liftInches - 0.1;
+  const status = isGround ? 'ground' : isFullyCovered ? 'solution' : 'warning';
 
   const statusColors = {
     ground: {
@@ -309,9 +682,12 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
             <Text style={styles.groundBadgeText}>Ground</Text>
           </View>
         ) : (
-          <Text style={[styles.liftAmount, { color: colors.text }]}>
-            +{formatMeasurement(lift.liftInches, units)}
-          </Text>
+          <View style={styles.liftNeeded}>
+            <Text style={styles.liftNeededLabel}>Lift needed</Text>
+            <Text style={[styles.liftAmount, { color: colors.text }]}>
+              {formatMeasurement(lift.liftInches, units)}
+            </Text>
+          </View>
         )}
       </View>
 
@@ -331,7 +707,7 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
                   ))}
               </View>
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total:</Text>
+                <Text style={styles.totalLabel}>Blocks provide:</Text>
                 <Text style={[styles.totalValue, { color: colors.text }]}>
                   {formatMeasurement(blockStack.totalHeight, units)}
                 </Text>
@@ -424,17 +800,43 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   }, [levelingPlan]);
 
   if (!activeProfile) {
+    const handleSetupProfile = () => {
+      // Close the leveling assistant and navigate to profiles
+      if (onBack) onBack();
+      router.push('/profiles');
+    };
+
     return (
-      <View style={styles.errorContainer}>
-        <AlertCircle size={48} color={THEME.colors.danger} />
-        <Text style={styles.errorTitle}>No Vehicle Profile</Text>
-        <Text style={styles.errorText}>Please set up a vehicle profile first.</Text>
-        {onBack && (
-          <Pressable style={styles.errorButton} onPress={onBack}>
-            <Text style={styles.errorButtonText}>Go Back</Text>
-          </Pressable>
-        )}
-      </View>
+      <LinearGradient colors={['#0a0a0f', '#111118', '#0d0d12']} style={styles.gradient}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.noProfileContainer}>
+            {/* Icon */}
+            <View style={styles.noProfileIconContainer}>
+              <Caravan size={48} color={THEME.colors.primary} />
+            </View>
+
+            {/* Title and description */}
+            <Text style={styles.noProfileTitle}>No Vehicle Profile</Text>
+            <Text style={styles.noProfileDescription}>
+              To calculate leveling requirements, you need to set up a vehicle profile first.
+            </Text>
+            <Text style={styles.noProfileSubtext}>
+              {"Don't worry — the setup wizard will guide you through the process."}
+            </Text>
+
+            {/* Action button */}
+            <View style={styles.noProfileButtonContainer}>
+              <GlassButton
+                onPress={handleSetupProfile}
+                icon={<Plus size={20} color="#fff" />}
+                variant="primary"
+              >
+                Add Vehicle
+              </GlassButton>
+            </View>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
@@ -494,37 +896,24 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                     <Text style={styles.legendText}>Attention</Text>
                   </View>
                 </View>
-              </View>
-            </GlassCard>
-
-            {/* Current Readings */}
-            <GlassCard compact>
-              <View style={styles.readingsContainer}>
-                <View style={styles.readingItem}>
-                  <Text style={styles.readingLabel}>Pitch</Text>
-                  <Text style={styles.readingValue}>
-                    {Math.abs(physicalReadings.pitchDegrees).toFixed(1)}°
-                    <Text style={styles.readingDirection}>
-                      {physicalReadings.pitchDegrees > 0.1
-                        ? ' nose up'
-                        : physicalReadings.pitchDegrees < -0.1
-                          ? ' nose down'
-                          : ''}
-                    </Text>
+                {/* Compact Pitch/Roll readings */}
+                <View style={styles.compactReadings}>
+                  <Text style={styles.compactReadingText}>
+                    Pitch: {Math.abs(physicalReadings.pitchDegrees).toFixed(1)}°
+                    {physicalReadings.pitchDegrees > 0.1
+                      ? ' nose up'
+                      : physicalReadings.pitchDegrees < -0.1
+                        ? ' nose down'
+                        : ''}
                   </Text>
-                </View>
-                <View style={styles.readingDivider} />
-                <View style={styles.readingItem}>
-                  <Text style={styles.readingLabel}>Roll</Text>
-                  <Text style={styles.readingValue}>
-                    {Math.abs(physicalReadings.rollDegrees).toFixed(1)}°
-                    <Text style={styles.readingDirection}>
-                      {physicalReadings.rollDegrees > 0.1
-                        ? ' right up'
-                        : physicalReadings.rollDegrees < -0.1
-                          ? ' left up'
-                          : ''}
-                    </Text>
+                  <Text style={styles.compactReadingDivider}>•</Text>
+                  <Text style={styles.compactReadingText}>
+                    Roll: {Math.abs(physicalReadings.rollDegrees).toFixed(1)}°
+                    {physicalReadings.rollDegrees > 0.1
+                      ? ' right up'
+                      : physicalReadings.rollDegrees < -0.1
+                        ? ' left up'
+                        : ''}
                   </Text>
                 </View>
               </View>
@@ -613,8 +1002,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    gap: 16,
+    padding: 12,
+    gap: 10,
   },
   // Status Banner
   statusBanner: {
@@ -670,34 +1059,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: THEME.colors.textMuted,
   },
-  // Readings
-  readingsContainer: {
+  // Compact readings inline with diagram
+  compactReadings: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
-  readingItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  readingLabel: {
+  compactReadingText: {
     fontSize: 12,
-    color: THEME.colors.textMuted,
-    marginBottom: 4,
-  },
-  readingValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  readingDirection: {
-    fontSize: 12,
-    fontWeight: '400',
     color: THEME.colors.textSecondary,
   },
-  readingDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  compactReadingDivider: {
+    fontSize: 12,
+    color: THEME.colors.textMuted,
   },
   // Warning Banner
   warningBanner: {
@@ -718,7 +1097,7 @@ const styles = StyleSheet.create({
   },
   // Instructions Section
   instructionsSection: {
-    gap: 12,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -741,6 +1120,14 @@ const styles = StyleSheet.create({
   wheelCardTitle: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  liftNeeded: {
+    alignItems: 'flex-end',
+  },
+  liftNeededLabel: {
+    fontSize: 10,
+    color: THEME.colors.textMuted,
+    marginBottom: 1,
   },
   liftAmount: {
     fontSize: 16,
@@ -811,40 +1198,58 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: THEME.colors.textSecondary,
   },
-  // Error State
-  errorContainer: {
+  // No Profile State
+  gradient: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  noProfileContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: THEME.colors.background,
+    paddingBottom: 100, // Space for tab bar
   },
-  errorTitle: {
-    fontSize: 20,
+  noProfileIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  noProfileTitle: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    marginTop: 16,
-  },
-  errorText: {
-    fontSize: 15,
-    color: THEME.colors.textSecondary,
-    marginTop: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
-  errorButton: {
-    marginTop: 24,
-    backgroundColor: THEME.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  errorButtonText: {
+  noProfileDescription: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  noProfileSubtext: {
+    fontSize: 14,
+    color: THEME.colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  noProfileButtonContainer: {
+    marginTop: 32,
+    width: '100%',
   },
   bottomSpacer: {
-    height: 24,
+    height: 100, // Extra space for bottom tab bar
   },
 });
 

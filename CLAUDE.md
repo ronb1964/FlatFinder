@@ -84,34 +84,118 @@ This keeps the app simple, minimal dependencies, and consistent.
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 3, 2025)
+## Current State (as of Dec 4, 2025)
 
 **Onboarding UI Overhaul - COMPLETE**
 
-**Calibration Wizard - COMPLETE:**
+**Calibration Wizard - COMPLETE**
 
-- All 3 steps working with proper layouts (portrait for Steps 1 & 3, landscape for Step 2)
-- Transition screens with rotation animations
-- Phone indicator and text box properly aligned (mathematical centering)
-- Cancel returns to home screen (not wizard start)
-- Quick Calibrate modal uses glass theme button
+**Leveling Plan Screen - MOSTLY COMPLETE:**
 
-**Key file:** `src/components/CalibrationWizard.tsx`
+- Vehicle diagrams working for trailer, van, motorhome (glass-themed SVGs)
+- Diagram shows correct orientation: F (front) left, R (rear) right, Driver (Left) at bottom, Passenger (Right) at top
+- Color-coded wheel indicators: Green (ground), Blue (blocks sufficient), Yellow (needs attention)
+- Yellow wheels pulse to draw attention
+- Block instruction cards match wheel colors
+- Cards show "Lift needed" and "Blocks provide" for clarity
+- Left/Right (Driver/Passenger) labels on diagram for user clarity
+
+**Bubble Level & Math - FIXED THIS SESSION:**
+
+- Bubble now correctly floats to HIGH side (was inverted)
+- Roll math corrected: +roll = right high → left wheels need lift
+- Pitch math corrected: +pitch = nose up → rear wheels need lift
+- Display text matches: "Right High" / "Left High" / "Nose Up" / "Nose Down"
 
 Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### Leveling Solution Screen (Post-Calibration)
+### 1. Implement Block Tolerance Threshold (Quick Fix)
 
-After calibration completes, the app should show a leveling solution/plan. This is the screen that tells the user how to level their RV.
+Currently, wheels show yellow (warning) if blocks don't EXACTLY match the lift needed. This means almost every wheel shows yellow. Need to implement a tolerance threshold.
 
-**What to work on:**
+**Recommended tolerance:** 0.5" (based on research - see below)
 
-1. Review the LevelingAssistant component (`src/components/LevelingAssistant.tsx`)
-2. Test the SVG vehicle diagrams - trailer should show 3 lift points, motorhome should show 4
-3. Verify block calculations and leveling recommendations display correctly
-4. Test the flow from calibration completion → leveling solution
+**Changes needed in `src/components/LevelingAssistant.tsx`:**
+
+In `getWheelStatus()` function (~line 90) and `WheelCard` component (~line 472), change the "solution" check from exact match to within tolerance:
+
+```javascript
+// Current (too strict):
+if (stack.totalHeight >= lift.liftInches - 0.1)
+
+// Change to (with tolerance for overshoot too):
+const tolerance = 0.5; // inches
+if (Math.abs(stack.totalHeight - lift.liftInches) <= tolerance)
+```
+
+Also consider allowing slight OVERSHOOT (blocks provide more than needed) as acceptable - being 0.3" high is fine.
+
+### 2. Implement Calibration → Leveling Flow
+
+When user taps "Leveling Assistant" from home screen:
+
+- If never calibrated → Prompt with options: "Quick Calibrate" / "Full Calibration"
+- If previously calibrated → Show options: "Quick Calibrate" / "Full Calibration" / "Use Last Calibration"
+
+After completing calibration wizard:
+
+- Show two buttons: "View Leveling Plan" / "Go Home"
+
+**Key messaging to include:**
+
+- "If your vehicle has moved since last calibration, please calibrate again"
+- For Quick Calibrate: "Only use if phone is on a known level surface"
+
+### 3. Review Trailer and Motorhome Diagrams
+
+Van diagram is done and looks good. Still need to verify:
+
+- Trailer diagram (has tongue/hitch graphic)
+- Motorhome diagram (has cab-over section)
+
+Create test profiles for each type and verify diagrams display correctly.
+
+---
+
+## RV Leveling Research (for reference)
+
+### Acceptable Leveling Tolerance
+
+- **Target:** 1-2 degrees for comfort
+- **Maximum:** 3 degrees (to protect absorption refrigerator)
+- **Auto-levelers:** Typically achieve 0.5-0.7 degrees
+
+**Why it matters:** Refrigerators and AC coils rely on gravity. Slides need level surface to extend/retract properly.
+
+**Block height tolerance recommendation:** 0.5" is reasonable - most RVers consider "close enough" acceptable.
+
+### Common Block Sizes
+
+| Product          | Dimensions              | Lift Per Block      |
+| ---------------- | ----------------------- | ------------------- |
+| Lynx Levelers    | 8.5" × 8.5" × 1.5"      | 1"                  |
+| Camco Blocks     | 8.5" × 8.5" × 1"        | 1"                  |
+| Andersen Leveler | Curved ramp             | 0.5" to 4" variable |
+| 2×6 Lumber       | 1.5" thick × 5.5" wide  | 1.5"                |
+| 2×8 Lumber       | 1.5" thick × 7.25" wide | 1.5"                |
+| 3/4" Plywood     | 0.75" thick             | 0.75"               |
+
+**Default block inventory suggestion:**
+
+- 4× 1" blocks (like Camco)
+- 2× 2" blocks
+- 2× 0.5" blocks (for fine-tuning)
+
+Sources:
+
+- [GoDownsize - How Level Should RVs Be?](https://www.godownsize.com/how-level-rv/)
+- [Camper Report - Why RVs Have to Be Level](https://camperreport.com/why-rvs-have-to-be-level-and-how-to-do-it-faster/)
+- [Tri-Lynx Levelers](https://trilynx.com/products/lynx-leveler-10-pack)
+- [Getaway Couple - Camco vs Lynx Comparison](https://www.getawaycouple.com/camco-vs-lynx-levelers/)
+
+---
 
 ## CRITICAL - Rotation Coordinate Mapping
 

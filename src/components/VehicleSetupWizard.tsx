@@ -5,13 +5,13 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Switch,
   Modal,
   StyleSheet,
 } from 'react-native';
-import { Check, Trash2, Plus } from 'lucide-react-native';
-import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
+import { Check, Trash2, Plus, Caravan } from 'lucide-react-native';
+import { MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
 import { GlassButton } from './ui/GlassButton';
+import { GlassToggle } from './ui/GlassToggle';
 import { StandardBlockSets, BlockInventory } from '../lib/rvLevelingMath';
 import { useAppStore } from '../state/appStore';
 import { getTypicalMeasurements, convertToInches, convertForDisplay } from '../lib/units';
@@ -40,12 +40,21 @@ interface VehicleSetupWizardProps {
   isOnboarding?: boolean;
 }
 
+// Wrapper for Caravan to match custom icon interface
+const TrailerIconWrapper = ({
+  size = 24,
+  color = '#a3a3a3',
+}: {
+  size?: number;
+  color?: string;
+}) => <Caravan size={size} color={color} />;
+
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    Icon: TrailerIcon,
+    Icon: TrailerIconWrapper,
     iconSize: 32,
   },
   {
@@ -326,6 +335,7 @@ export function VehicleSetupWizard({
           value={profile.name}
           onChangeText={(text) => setProfile((prev) => ({ ...prev, name: text }))}
           selectTextOnFocus={true}
+          autoFocus={true}
         />
         <View style={styles.tipBox}>
           <Text style={styles.tipTitle}>{isOnboarding ? 'Ideas:' : 'Naming Tips:'}</Text>
@@ -571,12 +581,7 @@ export function VehicleSetupWizard({
           {/* Toggle for having blocks */}
           <View style={styles.switchSection}>
             <View style={styles.switchRow}>
-              <Switch
-                value={hasLevelingBlocks}
-                onValueChange={setHasLevelingBlocks}
-                trackColor={{ false: '#555', true: THEME.colors.primary }}
-                thumbColor="#fff"
-              />
+              <GlassToggle value={hasLevelingBlocks} onValueChange={setHasLevelingBlocks} />
               <Text style={styles.switchText}>
                 {hasLevelingBlocks ? 'I have leveling blocks' : "I don't have leveling blocks"}
               </Text>

@@ -33,10 +33,13 @@ interface AppState {
   profiles: VehicleProfile[];
   activeProfileId: string | null;
   activeProfile: VehicleProfile | null;
-  
+
   // Settings
   settings: AppSettings;
-  
+
+  // UI State
+  showLevelingAssistant: boolean;
+
   // Actions
   loadProfiles: () => Promise<void>;
   saveProfiles: () => Promise<void>;
@@ -44,13 +47,16 @@ interface AppState {
   updateProfile: (id: string, updates: Partial<VehicleProfile>) => void;
   deleteProfile: (id: string) => void;
   setActiveProfile: (id: string) => void;
-  
+
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
   updateSettings: (updates: Partial<AppSettings>) => void;
   resetOnboarding: () => void;
-  
+
   calibrateActiveProfile: (offsets: Calibration) => void;
+
+  // UI Actions
+  setShowLevelingAssistant: (show: boolean) => void;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -76,6 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeProfileId: null,
   activeProfile: null,
   settings: DEFAULT_SETTINGS,
+  showLevelingAssistant: false,
 
   loadProfiles: async () => {
     try {
@@ -86,36 +93,53 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       if (profilesJson) {
         const rawProfiles = JSON.parse(profilesJson);
-        
+
         // Migrate legacy calibration format to modern format
-        const profiles = rawProfiles.map((profile: any) => {
-          if (profile.calibration) {
-            // Check if calibration is in legacy format
-            if ('pitch' in profile.calibration && 'roll' in profile.calibration) {
-              // Convert legacy {pitch, roll} to modern {pitchOffsetDegrees, rollOffsetDegrees}
-              profile.calibration = createCalibration({
-                pitchOffsetDegrees: profile.calibration.pitch,
-                rollOffsetDegrees: profile.calibration.roll,
-              });
+        const profiles = rawProfiles.map(
+          (profile: VehicleProfile & { calibration?: { pitch?: number; roll?: number } }) => {
+            if (profile.calibration) {
+              // Check if calibration is in legacy format
+              if ('pitch' in profile.calibration && 'roll' in profile.calibration) {
+                // Convert legacy {pitch, roll} to modern {pitchOffsetDegrees, rollOffsetDegrees}
+                profile.calibration = createCalibration({
+                  pitchOffsetDegrees: profile.calibration.pitch,
+                  rollOffsetDegrees: profile.calibration.roll,
+                });
+              }
+            } else {
+              // Set default calibration if missing
+              profile.calibration = createCalibration();
             }
-          } else {
-            // Set default calibration if missing
-            profile.calibration = createCalibration();
+            return profile;
           }
-          return profile;
-        });
-        
-        const activeProfile = activeId ? profiles.find((p: VehicleProfile) => p.id === activeId) : null;
-        
+        );
+
+        // Determine active profile:
+        // 1. Use saved activeId if it exists and matches a profile
+        // 2. If no active profile but profiles exist, auto-select the first one
+        let finalActiveId = activeId;
+        let activeProfile = activeId
+          ? profiles.find((p: VehicleProfile) => p.id === activeId)
+          : null;
+
+        if (!activeProfile && profiles.length > 0) {
+          // Auto-select the first profile if none is active
+          finalActiveId = profiles[0].id;
+          activeProfile = profiles[0];
+        }
+
         set({
           profiles,
-          activeProfileId: activeId,
+          activeProfileId: finalActiveId,
           activeProfile,
         });
-        
-        // Save migrated profiles to storage
-        if (rawProfiles.length !== profiles.length || 
-            JSON.stringify(rawProfiles) !== JSON.stringify(profiles)) {
+
+        // Save migrated profiles to storage (and updated active profile)
+        if (
+          rawProfiles.length !== profiles.length ||
+          JSON.stringify(rawProfiles) !== JSON.stringify(profiles) ||
+          finalActiveId !== activeId
+        ) {
           get().saveProfiles();
         }
       }
@@ -146,8 +170,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       updatedAt: new Date(),
     };
 
+    // Add the profile and automatically set it as active
     set((state) => ({
       profiles: [...state.profiles, newProfile],
+      activeProfileId: newProfile.id,
+      activeProfile: newProfile,
     }));
 
     get().saveProfiles();
@@ -168,18 +195,43 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteProfile: (id) => {
-    set((state) => ({
-      profiles: state.profiles.filter((p) => p.id !== id),
-      activeProfileId: state.activeProfileId === id ? null : state.activeProfileId,
-      activeProfile: state.activeProfileId === id ? null : state.activeProfile,
-    }));
+    set((state) => {
+      const remainingProfiles = state.profiles.filter((p) => p.id !== id);
+      const wasActiveDeleted = state.activeProfileId === id;
+
+      // If we deleted the active profile, auto-select another one if available
+      let newActiveId: string | null = state.activeProfileId;
+      let newActiveProfile: VehicleProfile | null = state.activeProfile;
+
+      if (wasActiveDeleted) {
+        if (remainingProfiles.length > 0) {
+          // Select the most recently created profile
+          const sorted = [...remainingProfiles].sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA; // Newest first
+          });
+          newActiveId = sorted[0].id;
+          newActiveProfile = sorted[0];
+        } else {
+          newActiveId = null;
+          newActiveProfile = null;
+        }
+      }
+
+      return {
+        profiles: remainingProfiles,
+        activeProfileId: newActiveId,
+        activeProfile: newActiveProfile,
+      };
+    });
 
     get().saveProfiles();
   },
 
   setActiveProfile: (id) => {
     const profile = get().profiles.find((p) => p.id === id);
-    
+
     set({
       activeProfileId: id,
       activeProfile: profile || null,
@@ -196,7 +248,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Merge with defaults to ensure new fields are present for existing users
         const mergedSettings = { ...DEFAULT_SETTINGS, ...loadedSettings };
         set({ settings: mergedSettings });
-        
+
         // Save the merged settings to ensure new fields are persisted
         await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(mergedSettings));
       }
@@ -223,10 +275,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   resetOnboarding: () => {
     set((state) => ({
-      settings: { 
-        ...state.settings, 
+      settings: {
+        ...state.settings,
         hasCompletedOnboarding: false,
-        onboardingStep: 0 
+        onboardingStep: 0,
       },
     }));
 
@@ -238,5 +290,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!activeProfileId) return;
 
     get().updateProfile(activeProfileId, { calibration: offsets });
+  },
+
+  setShowLevelingAssistant: (show) => {
+    set({ showLevelingAssistant: show });
   },
 }));

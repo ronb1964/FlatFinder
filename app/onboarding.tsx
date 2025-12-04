@@ -26,8 +26,9 @@ import {
   Plus,
   Compass,
   Check,
+  Caravan,
 } from 'lucide-react-native';
-import { TrailerIcon, MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
+import { MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
 import { useAppStore } from '../src/state/appStore';
 import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
@@ -64,12 +65,21 @@ const IconBox = ({
   );
 };
 
+// Wrapper for Caravan to match custom icon interface
+const TrailerIconWrapper = ({
+  size = 24,
+  color = '#a3a3a3',
+}: {
+  size?: number;
+  color?: string;
+}) => <Caravan size={size} color={color} />;
+
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    Icon: TrailerIcon,
+    Icon: TrailerIconWrapper,
     iconSize: 32,
   },
   {
@@ -549,6 +559,7 @@ export default function OnboardingScreen() {
                   value={setupData.vehicleName}
                   onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
                   selectTextOnFocus={true}
+                  autoFocus={true}
                 />
               </View>
 

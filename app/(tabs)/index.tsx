@@ -19,8 +19,9 @@ import {
   AlertTriangle,
   X,
   CheckCircle,
-  User,
+  Caravan,
 } from 'lucide-react-native';
+import { MotorhomeIcon, VanIcon } from '../../src/components/icons/VehicleIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -46,7 +47,13 @@ function KeepAwakeWrapper() {
 export default function LevelScreen() {
   const { pitchDeg, rollDeg, yawDeg, isAvailable, isReliable, permissionStatus, errorMessage } =
     useDeviceAttitude();
-  const { activeProfile, settings, calibrateActiveProfile } = useAppStore();
+  const {
+    activeProfile,
+    settings,
+    calibrateActiveProfile,
+    showLevelingAssistant,
+    setShowLevelingAssistant,
+  } = useAppStore();
   const { showLeveling } = useLocalSearchParams<{ showLeveling?: string }>();
   const { height: screenHeight } = useWindowDimensions();
 
@@ -57,7 +64,6 @@ export default function LevelScreen() {
   const [levelStatus, setLevelStatus] = useState(getLevelStatus({ pitch: 0, roll: 0 }));
   const [lastHapticLevel, setLastHapticLevel] = useState(false);
   const [isCalibrating, setIsCalibrating] = useState(false);
-  const [showLevelingAssistant, setShowLevelingAssistant] = useState(false);
   const [cautionDismissed, setCautionDismissed] = useState(false);
   const [safetyWarningDismissed, setSafetyWarningDismissed] = useState(false);
   const [showQuickCalModal, setShowQuickCalModal] = useState(false);
@@ -74,7 +80,7 @@ export default function LevelScreen() {
       // Clear the param from URL to prevent re-triggering on refresh
       router.setParams({ showLeveling: undefined });
     }
-  }, [showLeveling]);
+  }, [showLeveling, setShowLevelingAssistant]);
 
   const requestSensorPermission = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,7 +104,7 @@ export default function LevelScreen() {
     const calibrated = applyCalibration({ pitch: pitchDeg, roll: rollDeg }, offsets);
     setCalibratedValues(calibrated);
 
-    const status = getLevelStatus(calibrated);
+    const status = getLevelStatus(calibrated, settings.levelThreshold);
     setLevelStatus(status);
 
     const maxAngle = Math.max(Math.abs(calibrated.pitch), Math.abs(calibrated.roll));
@@ -171,6 +177,7 @@ export default function LevelScreen() {
     rollDeg,
     activeProfile,
     settings.hapticsEnabled,
+    settings.levelThreshold,
     lastHapticLevel,
     cautionDismissed,
     safetyWarningDismissed,
@@ -258,7 +265,7 @@ export default function LevelScreen() {
 
   return (
     <LinearGradient colors={['#0a0a0f', '#111118', '#0d0d12']} style={styles.gradient}>
-      {Platform.OS !== 'web' && <KeepAwakeWrapper />}
+      {Platform.OS !== 'web' && settings.keepAwake && <KeepAwakeWrapper />}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           {/* Caution Warning (yellow) - 6° to 10° */}
@@ -468,37 +475,62 @@ export default function LevelScreen() {
             </View>
 
             {/* Active Profile Indicator */}
-            {activeProfile && (
-              <Pressable
-                style={[styles.profileContainer, isSmallScreen && styles.profileContainerSmall]}
-                onPress={() => router.push('/(tabs)/profiles')}
+            <Pressable
+              style={[styles.profileContainer, isSmallScreen && styles.profileContainerSmall]}
+              onPress={() => router.push('/(tabs)/profiles')}
+            >
+              <View
+                style={[
+                  styles.profileCard,
+                  isSmallScreen && styles.profileCardSmall,
+                  !activeProfile && styles.profileCardEmpty,
+                ]}
               >
-                <View style={[styles.profileCard, isSmallScreen && styles.profileCardSmall]}>
-                  {/* Glass highlight bar */}
-                  <View style={styles.profileHighlight} />
-                  <View style={styles.profileContent}>
-                    <View
+                {/* Glass highlight bar */}
+                <View style={styles.profileHighlight} />
+                <View style={styles.profileContent}>
+                  <View
+                    style={[
+                      styles.profileIconContainer,
+                      isSmallScreen && styles.profileIconContainerSmall,
+                      !activeProfile && styles.profileIconContainerEmpty,
+                    ]}
+                  >
+                    {activeProfile ? (
+                      activeProfile.type === 'trailer' ? (
+                        <Caravan size={isSmallScreen ? 14 : 16} color="#60a5fa" />
+                      ) : activeProfile.type === 'motorhome' ? (
+                        <MotorhomeIcon size={isSmallScreen ? 16 : 18} color="#60a5fa" />
+                      ) : (
+                        <VanIcon size={isSmallScreen ? 14 : 16} color="#60a5fa" />
+                      )
+                    ) : (
+                      <AlertTriangle size={isSmallScreen ? 14 : 16} color="#f87171" />
+                    )}
+                  </View>
+                  <View style={styles.profileTextContainer}>
+                    <Text
                       style={[
-                        styles.profileIconContainer,
-                        isSmallScreen && styles.profileIconContainerSmall,
+                        styles.profileLabel,
+                        isSmallScreen && styles.profileLabelSmall,
+                        !activeProfile && styles.profileLabelEmpty,
                       ]}
                     >
-                      <User size={isSmallScreen ? 14 : 16} color="#60a5fa" />
-                    </View>
-                    <View style={styles.profileTextContainer}>
-                      <Text
-                        style={[styles.profileLabel, isSmallScreen && styles.profileLabelSmall]}
-                      >
-                        Active Profile
-                      </Text>
-                      <Text style={[styles.profileName, isSmallScreen && styles.profileNameSmall]}>
-                        {activeProfile.name}
-                      </Text>
-                    </View>
+                      {activeProfile ? 'Active Profile' : 'No Vehicle Profile'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.profileName,
+                        isSmallScreen && styles.profileNameSmall,
+                        !activeProfile && styles.profileNameEmpty,
+                      ]}
+                    >
+                      {activeProfile ? activeProfile.name : 'Tap to add a vehicle'}
+                    </Text>
                   </View>
                 </View>
-              </Pressable>
-            )}
+              </View>
+            </Pressable>
           </View>
         </View>
 
@@ -853,6 +885,21 @@ const styles = StyleSheet.create({
   },
   profileNameSmall: {
     fontSize: 13,
+  },
+  // Empty profile state styles - attention-grabbing
+  profileCardEmpty: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+  },
+  profileIconContainerEmpty: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+  },
+  profileLabelEmpty: {
+    color: '#f87171',
+  },
+  profileNameEmpty: {
+    color: '#fca5a5',
   },
   // Quick Calibrate Modal Styles
   modalOverlay: {

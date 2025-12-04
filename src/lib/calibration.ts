@@ -42,8 +42,13 @@ export function isLevel(values: { pitch: number; roll: number }, threshold: numb
 
 /**
  * Get level status with color coding
+ * @param values - The pitch and roll values to check
+ * @param threshold - The level threshold from settings (default 0.5)
  */
-export function getLevelStatus(values: { pitch: number; roll: number }): {
+export function getLevelStatus(
+  values: { pitch: number; roll: number },
+  threshold: number = 0.5
+): {
   isLevel: boolean;
   nearLevel: boolean;
   color: string;
@@ -53,28 +58,35 @@ export function getLevelStatus(values: { pitch: number; roll: number }): {
   const absRoll = Math.abs(values.roll);
   const maxAngle = Math.max(absPitch, absRoll);
 
-  if (maxAngle <= 0.2) {
+  // "Perfect" is within 40% of threshold
+  const perfectThreshold = threshold * 0.4;
+  // "Near level" is within 2x threshold
+  const nearThreshold = threshold * 2;
+  // "Warning" is within 4x threshold
+  const warningThreshold = threshold * 4;
+
+  if (maxAngle <= perfectThreshold) {
     return {
       isLevel: true,
       nearLevel: true,
       color: '#10b981', // green
       description: 'Perfect Level!',
     };
-  } else if (maxAngle <= 0.5) {
+  } else if (maxAngle <= threshold) {
     return {
       isLevel: true,
       nearLevel: true,
       color: '#22c55e', // light green
       description: 'Level',
     };
-  } else if (maxAngle <= 1.0) {
+  } else if (maxAngle <= nearThreshold) {
     return {
       isLevel: false,
       nearLevel: true,
       color: '#eab308', // yellow
       description: 'Nearly Level',
     };
-  } else if (maxAngle <= 2.0) {
+  } else if (maxAngle <= warningThreshold) {
     return {
       isLevel: false,
       nearLevel: false,

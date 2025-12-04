@@ -117,24 +117,29 @@ export class RVLevelingCalculator {
     } else {
       // MOTORHOME/VAN GEOMETRY: Two axles (4 wheels total)
       // Front axle is wheelbaseInches forward of rear axle (origin)
+      //
+      // Roll convention: +roll = right side UP, -roll = left side UP
+      // If right side is UP, LEFT side needs lift (positive roll -> positive left lift)
+      // If left side is UP, RIGHT side needs lift (negative roll -> positive right lift)
 
       // Rear Left Wheel: only affected by roll (at origin for pitch)
       lifts.push({
         location: 'rear_left',
-        liftInches: -halfTrack * Math.tan(rollRad),
+        liftInches: halfTrack * Math.tan(rollRad),
         description: 'Rear Left Wheel',
       });
 
       // Rear Right Wheel: only affected by roll (at origin for pitch)
       lifts.push({
         location: 'rear_right',
-        liftInches: halfTrack * Math.tan(rollRad),
+        liftInches: -halfTrack * Math.tan(rollRad),
         description: 'Rear Right Wheel',
       });
 
       // Front Left Wheel: affected by both pitch and roll
-      const frontLeftPitch = wheelbaseInches * Math.tan(pitchRad);
-      const frontLeftRoll = -halfTrack * Math.tan(rollRad);
+      // Pitch convention: +pitch (nose up) means front is HIGH, so front needs LESS lift (negative)
+      const frontLeftPitch = -wheelbaseInches * Math.tan(pitchRad);
+      const frontLeftRoll = halfTrack * Math.tan(rollRad);
       lifts.push({
         location: 'front_left',
         liftInches: frontLeftPitch + frontLeftRoll,
@@ -142,8 +147,8 @@ export class RVLevelingCalculator {
       });
 
       // Front Right Wheel: affected by both pitch and roll
-      const frontRightPitch = wheelbaseInches * Math.tan(pitchRad);
-      const frontRightRoll = halfTrack * Math.tan(rollRad);
+      const frontRightPitch = -wheelbaseInches * Math.tan(pitchRad);
+      const frontRightRoll = -halfTrack * Math.tan(rollRad);
       lifts.push({
         location: 'front_right',
         liftInches: frontRightPitch + frontRightRoll,
@@ -245,7 +250,7 @@ export class RVLevelingCalculator {
 
     if (totalSlope > maxSafeSlope) {
       warnings.push(
-        `Total slope (${totalSlope.toFixed(1)}°) exceeds safe limit (${maxSafeSlope}°)`
+        `Steep slope warning: The ground is tilted ${totalSlope.toFixed(1)}° which exceeds the ${maxSafeSlope}° safe limit. Use extra caution with wheel chocks and stabilizers.`
       );
     }
 
@@ -256,6 +261,7 @@ export class RVLevelingCalculator {
     // Create block stacks for each wheel/jack point
     const blockStacks: Record<string, BlockStack> = {};
     let isLevelable = true;
+    const blockShortages: string[] = []; // Collect shortage info for combined message
 
     // Create a copy of inventory for each calculation
     for (const lift of wheelLifts) {
@@ -280,11 +286,21 @@ export class RVLevelingCalculator {
       if (heightDifference > 0.25) {
         // 1/4" tolerance for feasibility
         isLevelable = false;
-        warnings.push(
-          `Cannot achieve ${lift.liftInches.toFixed(2)}" lift for ${lift.description} ` +
-            `(achieved ${stack.totalHeight.toFixed(2)}", difference ${heightDifference.toFixed(2)}")`
-        );
+        // Format the difference nicely
+        const diffFormatted =
+          heightDifference < 1
+            ? `${heightDifference.toFixed(1)}"`
+            : `${Math.floor(heightDifference / 12)}' ${(heightDifference % 12).toFixed(1)}"`;
+        blockShortages.push(`${lift.description} (${diffFormatted} short)`);
       }
+    }
+
+    // Create combined user-friendly message for block shortages
+    if (blockShortages.length > 0) {
+      const shortageList = blockShortages.join(' and ');
+      warnings.push(
+        `Not enough blocks for perfect leveling. ${shortageList}. Consider adding more blocks to your inventory.`
+      );
     }
 
     // Check total block usage
@@ -296,7 +312,7 @@ export class RVLevelingCalculator {
     const totalBlocksAvailable = inventory.reduce((sum, item) => sum + item.quantity, 0);
 
     if (totalBlocksUsed > totalBlocksAvailable) {
-      warnings.push('Insufficient blocks available for complete leveling');
+      warnings.push("You don't have enough blocks in your inventory for complete leveling.");
       isLevelable = false;
     }
 

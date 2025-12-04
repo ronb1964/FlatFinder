@@ -129,7 +129,9 @@ export const BubbleLevel = memo(function BubbleLevel({
 
   useEffect(() => {
     // Calculate target offset from center
-    const rawX = (-roll / maxAngle) * maxOffset;
+    // Bubble floats to the HIGH side: +roll (right high) -> bubble moves right (+X)
+    const rawX = (roll / maxAngle) * maxOffset;
+    // +pitch (nose up/front high) -> bubble moves up (-Y in screen coords)
     const rawY = (-pitch / maxAngle) * maxOffset;
     const distance = Math.sqrt(rawX * rawX + rawY * rawY);
 

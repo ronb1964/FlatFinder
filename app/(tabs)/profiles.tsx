@@ -10,8 +10,8 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Trash2, Check, HelpCircle, AlertTriangle } from 'lucide-react-native';
-import { TrailerIcon, MotorhomeIcon, VanIcon } from '../../src/components/icons/VehicleIcons';
+import { Plus, Trash2, Check, HelpCircle, AlertTriangle, Caravan } from 'lucide-react-native';
+import { MotorhomeIcon, VanIcon } from '../../src/components/icons/VehicleIcons';
 import { useAppStore, VehicleProfile } from '../../src/state/appStore';
 import { BlockInventory } from '../../src/lib/rvLevelingMath';
 import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
@@ -140,7 +140,7 @@ export default function ProfilesScreen() {
     const color = '#a3a3a3';
     switch (type) {
       case 'trailer':
-        return <TrailerIcon size={22} color={color} />;
+        return <Caravan size={22} color={color} />;
       case 'motorhome':
         return <MotorhomeIcon size={24} color={color} />;
       case 'van':
@@ -156,10 +156,12 @@ export default function ProfilesScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Vehicle Profiles</Text>
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowSetupWizard(true)}>
-            <Plus size={18} color={THEME.colors.primary} />
-            <Text style={styles.addButtonText}>Add Vehicle</Text>
-          </TouchableOpacity>
+          {profiles.length > 0 && (
+            <TouchableOpacity style={styles.addButton} onPress={() => setShowSetupWizard(true)}>
+              <Plus size={18} color={THEME.colors.primary} />
+              <Text style={styles.addButtonText}>Add Vehicle</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -171,10 +173,9 @@ export default function ProfilesScreen() {
                   <View style={styles.welcomeContent}>
                     <MotorhomeIcon size={48} color="#3b82f6" />
                     <View style={styles.welcomeTextContainer}>
-                      <Text style={styles.welcomeTitle}>Welcome to FlatFinder!</Text>
+                      <Text style={styles.welcomeTitle}>Add Your First Vehicle</Text>
                       <Text style={styles.welcomeDescription}>
-                        To get started, you&apos;ll need to set up a profile for your RV, trailer,
-                        or van.
+                        Set up a profile for your RV, trailer, or van to get started with leveling.
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -182,7 +183,7 @@ export default function ProfilesScreen() {
                       onPress={() => setShowSetupWizard(true)}
                     >
                       <Plus size={18} color={THEME.colors.primary} />
-                      <Text style={styles.setupButtonText}>Set Up My Vehicle</Text>
+                      <Text style={styles.setupButtonText}>Add Vehicle</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
