@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Pressable,
   ScrollView,
   TextInput,
   Switch,
@@ -11,7 +10,6 @@ import {
   Platform,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -27,6 +25,7 @@ import {
   Trash2,
   Plus,
   Compass,
+  Check,
 } from 'lucide-react-native';
 import { TrailerIcon, MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
 import { useAppStore } from '../src/state/appStore';
@@ -78,21 +77,20 @@ const VEHICLE_TYPES = [
     name: 'Motorhome/RV',
     description: 'Self-contained with engine, drives itself',
     Icon: MotorhomeIcon,
-    iconSize: 34, // Slightly larger to match visual weight of other icons
+    iconSize: 32,
   },
   {
     id: 'van',
     name: 'Van/Camper Van',
     description: 'Converted van or small RV',
     Icon: VanIcon,
-    iconSize: 28,
+    iconSize: 32,
   },
 ];
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const { updateSettings, addProfile, setActiveProfile } = useAppStore();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -225,14 +223,6 @@ export default function OnboardingScreen() {
       }
     }, 100);
 
-    router.replace('/(tabs)');
-  };
-
-  const skipOnboarding = () => {
-    updateSettings({
-      hasCompletedOnboarding: true,
-      onboardingStep: STEPS.length,
-    });
     router.replace('/(tabs)');
   };
 
@@ -558,6 +548,7 @@ export default function OnboardingScreen() {
                   placeholderTextColor="#737373"
                   value={setupData.vehicleName}
                   onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
+                  selectTextOnFocus={true}
                 />
               </View>
 
@@ -614,7 +605,7 @@ export default function OnboardingScreen() {
                           : `${typical.track} cm`}
                       </Text>
                       <Text style={styles.measurementHint}>
-                        Distance between wheels (side to side)
+                        Distance between left and right wheels
                       </Text>
                     </View>
                     {/* Hitch Offset - only for trailers (single axle + tongue jack) */}
@@ -627,7 +618,7 @@ export default function OnboardingScreen() {
                             : `${typical.hitch} cm`}
                         </Text>
                         <Text style={styles.measurementHint}>
-                          Distance from trailer axle to hitch ball
+                          Distance from rear axle center to hitch ball
                         </Text>
                       </View>
                     )}
@@ -664,6 +655,7 @@ export default function OnboardingScreen() {
                               scrollViewRef.current?.scrollToEnd({ animated: true });
                             }, 300);
                           }}
+                          selectTextOnFocus={true}
                         />
                         <Text style={styles.inputHint}>Distance between front and rear axles</Text>
                       </View>
@@ -695,8 +687,9 @@ export default function OnboardingScreen() {
                             scrollViewRef.current?.scrollToEnd({ animated: true });
                           }, 300);
                         }}
+                        selectTextOnFocus={true}
                       />
-                      <Text style={styles.inputHint}>Distance between wheels (side to side)</Text>
+                      <Text style={styles.inputHint}>Distance between left and right wheels</Text>
                     </View>
                   </View>
 
@@ -726,9 +719,10 @@ export default function OnboardingScreen() {
                               scrollViewRef.current?.scrollToEnd({ animated: true });
                             }, 300);
                           }}
+                          selectTextOnFocus={true}
                         />
                         <Text style={styles.inputHint}>
-                          Distance from trailer axle to hitch ball
+                          Distance from rear axle center to hitch ball
                         </Text>
                       </View>
                     </View>
@@ -742,22 +736,8 @@ export default function OnboardingScreen() {
     );
   }
 
-  // Track last tap time per button to prevent double-fires
-  const lastTapTime = useRef<Record<string, number>>({});
-
-  // Helper function to update block quantity with debounce to prevent double-fires
+  // Helper function to update block quantity
   const updateBlockQuantity = useCallback((height: number, delta: number) => {
-    const key = `${height}_${delta}`;
-    const now = Date.now();
-    const lastTap = lastTapTime.current[key] || 0;
-
-    // Ignore taps within 100ms of the last tap (prevents double-fire)
-    if (now - lastTap < 100) {
-      return;
-    }
-    lastTapTime.current[key] = now;
-
-    // Direct state update - one tap = one increment
     setSetupData((prev) => {
       const currentQty = prev.blockQuantities[height] || 0;
       const newQty = Math.max(0, Math.min(20, currentQty + delta));
@@ -868,7 +848,11 @@ export default function OnboardingScreen() {
                       trackColor={{ false: '#555', true: '#3b82f6' }}
                       thumbColor="#fff"
                     />
-                    <Text style={styles.switchLabel}>I have leveling blocks</Text>
+                    <Text style={styles.switchLabel}>
+                      {setupData.hasLevelingBlocks
+                        ? 'I have leveling blocks'
+                        : "I don't have leveling blocks"}
+                    </Text>
                   </View>
                   <Text style={styles.infoCardText}>
                     {setupData.hasLevelingBlocks
@@ -893,27 +877,29 @@ export default function OnboardingScreen() {
                           style={[styles.blockOption, hasBlocks && styles.blockOptionSelected]}
                         >
                           <View style={styles.blockQuantityRow}>
-                            <Pressable
+                            <TouchableOpacity
                               style={styles.deleteBlockButton}
                               onPress={() => deleteBlockSize(height)}
+                              activeOpacity={0.6}
                             >
                               <Trash2 size={18} color="#ef4444" />
-                            </Pressable>
+                            </TouchableOpacity>
                             <View style={styles.blockInfoSection}>
                               <Text style={styles.optionTitle}>{formatHeight(height)}</Text>
                             </View>
                             <View style={styles.quantityControls}>
-                              <Pressable
-                                style={({ pressed }) => [
+                              <TouchableOpacity
+                                style={[
                                   styles.quantityButton,
                                   quantity === 0 && styles.quantityButtonDisabled,
-                                  pressed && styles.quantityButtonPressed,
                                 ]}
                                 onPress={() => updateBlockQuantity(height, -1)}
                                 disabled={quantity === 0}
+                                activeOpacity={0.6}
+                                delayPressIn={0}
                               >
                                 <Text style={styles.quantityButtonText}>−</Text>
-                              </Pressable>
+                              </TouchableOpacity>
                               <Text
                                 style={[
                                   styles.quantityValue,
@@ -922,15 +908,14 @@ export default function OnboardingScreen() {
                               >
                                 {quantity}
                               </Text>
-                              <Pressable
-                                style={({ pressed }) => [
-                                  styles.quantityButton,
-                                  pressed && styles.quantityButtonPressed,
-                                ]}
+                              <TouchableOpacity
+                                style={styles.quantityButton}
                                 onPress={() => updateBlockQuantity(height, 1)}
+                                activeOpacity={0.6}
+                                delayPressIn={0}
                               >
                                 <Text style={styles.quantityButtonText}>+</Text>
-                              </Pressable>
+                              </TouchableOpacity>
                             </View>
                           </View>
                         </View>
@@ -980,6 +965,7 @@ export default function OnboardingScreen() {
                             }, 300);
                           }}
                           autoFocus
+                          selectTextOnFocus={true}
                         />
                         <TouchableOpacity
                           style={styles.addBlockConfirmButton}
@@ -1078,125 +1064,96 @@ export default function OnboardingScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.mainContent}>
-          {/* Progress Indicator - compact at top */}
-          {!keyboardVisible && (
-            <View style={styles.progressRow}>
-              {STEPS.map((_, index) => (
-                <View
-                  key={index}
-                  style={[styles.progressDot, index <= currentStep && styles.progressDotActive]}
-                />
-              ))}
-            </View>
-          )}
+        <View style={styles.centeredContainer}>
+          {/* Glass Card Container */}
+          <View style={styles.glassCard}>
+            {/* Top highlight for glass effect */}
+            <View style={styles.glassCardHighlight} />
 
-          {/* Content - fills available space */}
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scrollContentContainer}
-          >
-            <View style={styles.scrollContent}>{currentStepData.component()}</View>
-          </ScrollView>
+            {/* Progress Indicator */}
+            {!keyboardVisible && (
+              <View style={styles.progressSection}>
+                <View style={styles.progressRow}>
+                  {STEPS.map((_, index) => {
+                    const isActive = index === currentStep;
+                    const isComplete = index < currentStep;
+                    const showLine = index < STEPS.length - 1;
 
-          {/* Navigation - hidden when keyboard is visible */}
-          {!keyboardVisible && (
-            <View style={styles.navigation}>
-              <View style={styles.navButtonsRow}>
-                {currentStep > 0 && (
-                  <GlassButton variant="primary" onPress={handleBack} style={styles.navButton}>
-                    <View style={styles.buttonContent}>
-                      <ArrowLeft size={20} color="#fff" />
-                      <Text style={styles.backButtonText}>Back</Text>
-                    </View>
-                  </GlassButton>
-                )}
-
-                <GlassButton
-                  onPress={handleNext}
-                  disabled={!canProceed()}
-                  variant={canProceed() ? 'primary' : 'ghost'}
-                  style={styles.navButton}
-                >
-                  <View style={styles.buttonContent}>
-                    <Text
-                      style={[
-                        styles.nextButtonText,
-                        !canProceed() && styles.nextButtonTextDisabled,
-                      ]}
-                    >
-                      {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
-                    </Text>
-                    {currentStep < STEPS.length - 1 ? (
-                      <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
-                    ) : (
-                      <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
-                    )}
-                  </View>
-                </GlassButton>
+                    return (
+                      <View key={index} style={styles.progressDotWrapper}>
+                        <View
+                          style={[
+                            styles.progressDot,
+                            isComplete && styles.progressDotComplete,
+                            isActive && styles.progressDotActive,
+                          ]}
+                        >
+                          {isComplete && <Check size={10} color="#000" />}
+                        </View>
+                        {isActive && <View style={styles.progressDotGlow} />}
+                        {showLine && (
+                          <View
+                            style={[styles.progressLine, isComplete && styles.progressLineComplete]}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+                {/* Step indicator text */}
+                <Text style={styles.stepIndicator}>
+                  Step {currentStep + 1} of {STEPS.length}: {currentStepData.title}
+                </Text>
               </View>
+            )}
 
-              {/* Skip Option - glass styled */}
-              <GlassButton
-                variant="default"
-                size="sm"
-                onPress={() => setShowSkipConfirm(true)}
-                style={styles.skipButton}
-              >
-                Skip Tutorial
-              </GlassButton>
+            {/* Content - scrollable area */}
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContentContainer}
+            >
+              <View style={styles.scrollContent}>{currentStepData.component()}</View>
+            </ScrollView>
 
-              {/* Step Counter */}
-              <Text style={styles.stepCounter}>
-                {currentStep + 1} of {STEPS.length}
-              </Text>
-            </View>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+            {/* Navigation buttons - inside the card */}
+            {!keyboardVisible && (
+              <View style={styles.navigation}>
+                <View style={styles.navButtonsRow}>
+                  {currentStep > 0 && (
+                    <GlassButton
+                      variant="warning"
+                      onPress={handleBack}
+                      style={styles.navButton}
+                      icon={<ArrowLeft size={20} color="#fff" />}
+                    >
+                      Back
+                    </GlassButton>
+                  )}
 
-      {/* Skip Tutorial Confirmation Modal */}
-      <Modal
-        visible={showSkipConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSkipConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Skip Tutorial?</Text>
-            <Text style={styles.modalText}>
-              The tutorial helps you set up your vehicle and understand how FlatFinder works. You
-              can always access settings later, but the guided setup is recommended for first-time
-              users.
-            </Text>
-            <View style={styles.modalButtons}>
-              <GlassButton
-                variant="primary"
-                size="md"
-                onPress={() => setShowSkipConfirm(false)}
-                style={styles.modalButton}
-              >
-                Continue Tutorial
-              </GlassButton>
-              <GlassButton
-                variant="default"
-                size="md"
-                onPress={() => {
-                  setShowSkipConfirm(false);
-                  skipOnboarding();
-                }}
-                style={styles.modalButton}
-              >
-                Skip Anyway
-              </GlassButton>
-            </View>
+                  <GlassButton
+                    onPress={handleNext}
+                    disabled={!canProceed()}
+                    variant={canProceed() ? 'primary' : 'ghost'}
+                    style={styles.navButton}
+                    rightIcon={
+                      currentStep < STEPS.length - 1 ? (
+                        <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                      ) : (
+                        <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                      )
+                    }
+                  >
+                    {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
+                  </GlassButton>
+                </View>
+              </View>
+            )}
           </View>
         </View>
-      </Modal>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1209,56 +1166,101 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
-  mainContent: {
+  centeredContainer: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  glassCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '95%',
+    backgroundColor: 'rgba(26, 26, 26, 0.85)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(59, 130, 246, 0.3)',
+    overflow: 'hidden',
+  },
+  glassCardHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  progressSection: {
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   progressRow: {
     flexDirection: 'row',
-    gap: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 20,
+  },
+  progressDotWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   progressDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: THEME.colors.secondary,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   progressDotActive: {
+    borderColor: THEME.colors.primary,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  progressDotComplete: {
+    backgroundColor: THEME.colors.success,
+    borderColor: THEME.colors.success,
+  },
+  progressDotGlow: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: THEME.colors.primary,
-    // Glow effect for active dot
-    ...Platform.select({
-      ios: {
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0 0 12px rgba(59, 130, 246, 0.6)',
-      },
-    }),
+    opacity: 0.3,
+    left: -5,
+    top: -5,
+  },
+  progressLine: {
+    width: 16,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginHorizontal: 2,
+  },
+  progressLineComplete: {
+    backgroundColor: THEME.colors.success,
+  },
+  stepIndicator: {
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    fontSize: 13,
   },
   scrollView: {
     flex: 1,
   },
   scrollContentContainer: {
     flexGrow: 1,
+    padding: 16,
   },
   scrollContent: {
-    gap: 16,
-    paddingBottom: 16,
+    gap: 12,
   },
   stepContent: {
-    gap: 16,
+    gap: 12,
     alignItems: 'center',
   },
   iconContainer: {
@@ -1772,10 +1774,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   navigation: {
-    gap: 6,
-    paddingTop: 8,
+    padding: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   navButtonsRow: {
     flexDirection: 'row',
@@ -1815,14 +1817,6 @@ const styles = StyleSheet.create({
   nextButtonTextDisabled: {
     color: THEME.colors.textSecondary,
   },
-  skipButton: {
-    alignSelf: 'center',
-  },
-  stepCounter: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-  },
 
   // Glass-styled icon box
   iconBox: {
@@ -1852,44 +1846,7 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-
-  // Skip confirmation modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: THEME.colors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 340,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: THEME.colors.text,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  modalText: {
-    fontSize: 15,
-    color: THEME.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  modalButtons: {
-    gap: 10,
-  },
-  modalButton: {
-    width: '100%',
+    gap: 8,
   },
 });

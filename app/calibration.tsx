@@ -48,9 +48,9 @@ export default function CalibrationScreen() {
 
     setShowWizard(false);
 
-    // Navigate to main screen after a brief moment
+    // Navigate to main screen and show leveling assistant
     globalThis.setTimeout(() => {
-      router.back();
+      router.replace('/?showLeveling=true');
     }, 500);
   };
 

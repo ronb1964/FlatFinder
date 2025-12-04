@@ -21,7 +21,7 @@ import {
   CheckCircle,
   User,
 } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -47,6 +47,7 @@ export default function LevelScreen() {
   const { pitchDeg, rollDeg, yawDeg, isAvailable, isReliable, permissionStatus, errorMessage } =
     useDeviceAttitude();
   const { activeProfile, settings, calibrateActiveProfile } = useAppStore();
+  const { showLeveling } = useLocalSearchParams<{ showLeveling?: string }>();
   const { height: screenHeight } = useWindowDimensions();
 
   // Responsive sizing based on screen height
@@ -65,6 +66,15 @@ export default function LevelScreen() {
   // Halo animations for status text
   const perfectGlowOpacity = useRef(new Animated.Value(0)).current;
   const nearlyGlowOpacity = useRef(new Animated.Value(0)).current;
+
+  // Check if we should show leveling assistant (from calibration completion)
+  useEffect(() => {
+    if (showLeveling === 'true') {
+      setShowLevelingAssistant(true);
+      // Clear the param from URL to prevent re-triggering on refresh
+      router.setParams({ showLeveling: undefined });
+    }
+  }, [showLeveling]);
 
   const requestSensorPermission = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

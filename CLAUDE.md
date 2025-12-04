@@ -35,6 +35,14 @@ This keeps continuity between sessions so you don't start fresh every time.
    - Never use trial-and-error guessing with random values
    - Show the calculation before making changes
 
+5. **Verify centering and alignment during development** - Don't overlook visual details:
+   - When creating buttons, cards, or any UI element with content inside, verify centering immediately
+   - Use consistent icon sizes across similar components (don't mix 24px, 28px, 32px icons in the same row)
+   - When icons vary in size, wrap them in fixed-height containers with `justifyContent: 'center'`
+   - For GlassButton: use the `icon` and `rightIcon` props instead of custom View structures inside children
+   - Measure centering programmatically when in doubt - don't rely on "looks okay"
+   - Fix alignment issues as you build, not after - it's much harder to backtrack
+
 ---
 
 ## Project Overview

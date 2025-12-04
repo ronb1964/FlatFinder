@@ -15,6 +15,7 @@ interface GlassButtonProps {
   variant?: 'default' | 'primary' | 'secondary' | 'warning' | 'success' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export function GlassButton({
@@ -26,6 +27,7 @@ export function GlassButton({
   variant = 'default',
   size = 'md',
   icon,
+  rightIcon,
 }: GlassButtonProps) {
   const scale = useSharedValue(1);
 
@@ -126,6 +128,7 @@ export function GlassButton({
         <Text style={[styles.text, { color: colors.text, fontSize: sizing.fontSize }, textStyle]}>
           {children}
         </Text>
+        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
       </View>
     </LinearGradient>
   );
@@ -159,6 +162,7 @@ export function GlassButton({
             >
               {children}
             </Text>
+            {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
           </View>
         </View>
       </AnimatedPressable>
@@ -217,6 +221,9 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 8,
+  },
+  rightIcon: {
+    marginLeft: 8,
   },
   text: {
     fontWeight: '600',
