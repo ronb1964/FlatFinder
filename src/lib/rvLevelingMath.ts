@@ -213,21 +213,34 @@ export class RVLevelingCalculator {
 
     // Check if we're within tolerance
     if (remainingHeight > maxTolerance) {
-      // Try to get closer with smaller blocks (excluding zero-thickness)
+      // Try to get closer with available blocks
+      // Find the best block: one that gets us closest to target (either under or slightly over)
+      let bestBlock: BlockInventory | null = null;
+      let bestDifference = remainingHeight; // Start with current shortfall
+
       for (const block of sortedBlocks) {
-        if (
-          block.quantity > 0 &&
-          block.thickness > 0 &&
-          block.thickness <= remainingHeight + maxTolerance
-        ) {
-          result.blocks.push({
-            thickness: block.thickness,
-            count: 1,
-          });
-          result.totalHeight += block.thickness;
-          result.totalBlocks += 1;
-          break;
+        if (block.quantity > 0 && block.thickness > 0) {
+          // Calculate how close this block would get us to target
+          const newRemaining = remainingHeight - block.thickness;
+          const difference = Math.abs(newRemaining);
+
+          // Accept this block if it gets us closer to target than current state
+          if (difference < bestDifference) {
+            bestBlock = block;
+            bestDifference = difference;
+          }
         }
+      }
+
+      // Use the best block if found
+      if (bestBlock) {
+        result.blocks.push({
+          thickness: bestBlock.thickness,
+          count: 1,
+        });
+        result.totalHeight += bestBlock.thickness;
+        result.totalBlocks += 1;
+        bestBlock.quantity -= 1;
       }
     }
 

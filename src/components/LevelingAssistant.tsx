@@ -9,7 +9,7 @@ import Svg, {
   Defs,
   RadialGradient,
   Stop,
-  Ellipse,
+  Rect,
   Text as SvgText,
 } from 'react-native-svg';
 import { router } from 'expo-router';
@@ -44,6 +44,112 @@ interface WheelIndicatorProps {
   y: number;
   status: 'ground' | 'solution' | 'warning';
   isAnimating?: boolean;
+}
+
+// Trailer wheel component - ellipse shape that IS the indicator (with pulsing halo for warning)
+interface TrailerWheelProps {
+  x: number;
+  y: number;
+  status: 'ground' | 'solution' | 'warning';
+}
+
+function TrailerWheel({ x, y, status }: TrailerWheelProps) {
+  const [pulseOpacity, setPulseOpacity] = useState(0.3);
+  const isWarning = status === 'warning';
+
+  useEffect(() => {
+    if (!isWarning) {
+      setPulseOpacity(0.3);
+      return;
+    }
+
+    // Pulse animation for warning status
+    let increasing = true;
+    const interval = global.setInterval(() => {
+      setPulseOpacity((prev) => {
+        if (increasing) {
+          if (prev >= 0.6) {
+            increasing = false;
+            return prev - 0.02;
+          }
+          return prev + 0.02;
+        } else {
+          if (prev <= 0.2) {
+            increasing = true;
+            return prev + 0.02;
+          }
+          return prev - 0.02;
+        }
+      });
+    }, 50);
+
+    return () => global.clearInterval(interval);
+  }, [isWarning]);
+
+  const statusColors = {
+    ground: {
+      fill: 'rgba(34, 197, 94, 0.8)',
+      stroke: 'rgba(34, 197, 94, 0.9)',
+      highlight: 'rgba(120, 255, 150, 0.4)',
+      glow: 'rgba(34, 197, 94, 0.6)',
+    },
+    solution: {
+      fill: 'rgba(59, 130, 246, 0.8)',
+      stroke: 'rgba(59, 130, 246, 0.9)',
+      highlight: 'rgba(140, 180, 255, 0.4)',
+      glow: 'rgba(59, 130, 246, 0.6)',
+    },
+    warning: {
+      fill: 'rgba(234, 179, 8, 0.8)',
+      stroke: 'rgba(234, 179, 8, 0.9)',
+      highlight: 'rgba(255, 220, 100, 0.4)',
+      glow: 'rgba(234, 179, 8, 0.6)',
+    },
+  };
+
+  const colors = statusColors[status];
+
+  // Rounded rectangle dimensions for tire shape
+  const width = 36;
+  const height = 14;
+  const cornerRadius = 4;
+
+  return (
+    <G>
+      {/* Pulsing halo - only visible for warning status */}
+      {isWarning && (
+        <Rect
+          x={x - (width + 12) / 2}
+          y={y - (height + 8) / 2}
+          width={width + 12}
+          height={height + 8}
+          rx={cornerRadius + 2}
+          fill={colors.glow}
+          opacity={pulseOpacity}
+        />
+      )}
+      {/* Main wheel - rounded rectangle */}
+      <Rect
+        x={x - width / 2}
+        y={y - height / 2}
+        width={width}
+        height={height}
+        rx={cornerRadius}
+        fill={colors.fill}
+        stroke={colors.stroke}
+        strokeWidth={1.5}
+      />
+      {/* Glass highlight */}
+      <Rect
+        x={x - 12}
+        y={y - height / 2 + 2}
+        width={24}
+        height={5}
+        rx={2}
+        fill={colors.highlight}
+      />
+    </G>
+  );
 }
 
 function WheelIndicator({ x, y, status, isAnimating = false }: WheelIndicatorProps) {
@@ -145,32 +251,23 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
 
         {/* Outer glow */}
         <Path
-          d="M 60 36 L 280 36 Q 304 36 304 60 L 304 140 Q 304 164 280 164 L 60 164 Q 36 164 36 140 L 36 60 Q 36 36 60 36 Z"
+          d="M 90 36 L 280 36 Q 304 36 304 60 L 304 140 Q 304 164 280 164 L 90 164 Q 66 164 66 140 L 66 60 Q 66 36 90 36 Z"
           fill="none"
           stroke="rgba(59, 130, 246, 0.12)"
           strokeWidth={8}
         />
 
-        {/* Trailer body */}
+        {/* Trailer body - shortened to make room for longer hitch */}
         <Path
-          d="M 60 40 L 280 40 Q 300 40 300 60 L 300 140 Q 300 160 280 160 L 60 160 Q 40 160 40 140 L 40 60 Q 40 40 60 40 Z"
+          d="M 90 40 L 280 40 Q 300 40 300 60 L 300 140 Q 300 160 280 160 L 90 160 Q 70 160 70 140 L 70 60 Q 70 40 90 40 Z"
           fill="url(#trailerBodyGradient)"
           stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={1.5}
         />
 
-        {/* Glass highlight */}
+        {/* Tongue/A-frame - extended for longer hitch */}
         <Path
-          d="M 65 42 L 275 42 Q 295 42 297 58"
-          fill="none"
-          stroke="rgba(255,255,255,0.25)"
-          strokeWidth={1}
-          strokeLinecap="round"
-        />
-
-        {/* Tongue/A-frame */}
-        <Path
-          d="M 40 88 L 18 100 L 40 112"
+          d="M 70 88 L 22 100 L 70 112"
           fill="rgba(59, 130, 246, 0.05)"
           stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={2}
@@ -178,7 +275,7 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           strokeLinejoin="round"
         />
 
-        {/* Hitch coupler */}
+        {/* Hitch coupler - moved further from body */}
         <Circle
           cx={12}
           cy={100}
@@ -189,30 +286,16 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
         />
         <Circle cx={12} cy={100} r={3} fill="rgba(59, 130, 246, 0.3)" />
 
-        {/* Wheel wells */}
-        <Ellipse cx={260} cy={150} rx={22} ry={7} fill="url(#trailerWheelWell)" />
-        <Ellipse cx={260} cy={50} rx={22} ry={7} fill="url(#trailerWheelWell)" />
+        {/* Colored wheel indicators - wheel shape IS the status indicator */}
+        <TrailerWheel x={190} y={40} status={getWheelStatus('right')} />
+        <TrailerWheel x={190} y={160} status={getWheelStatus('left')} />
 
         {/* Interior detail lines */}
         <Path
-          d="M 80 100 L 240 100"
+          d="M 95 100 L 260 100"
           stroke="rgba(255,255,255,0.06)"
           strokeWidth={1}
           strokeDasharray="6 4"
-        />
-
-        {/* Wheel indicators */}
-        <WheelIndicator
-          x={260}
-          y={50}
-          status={getWheelStatus('right')}
-          isAnimating={getWheelStatus('right') === 'warning'}
-        />
-        <WheelIndicator
-          x={260}
-          y={150}
-          status={getWheelStatus('left')}
-          isAnimating={getWheelStatus('left') === 'warning'}
         />
         <WheelIndicator
           x={12}
@@ -223,8 +306,8 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
 
         {/* Labels */}
         <SvgText
-          x="260"
-          y="26"
+          x="190"
+          y="18"
           textAnchor="middle"
           fill="rgba(59, 130, 246, 0.7)"
           fontSize="11"
@@ -233,8 +316,8 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           Right
         </SvgText>
         <SvgText
-          x="260"
-          y="180"
+          x="190"
+          y="186"
           textAnchor="middle"
           fill="rgba(59, 130, 246, 0.7)"
           fontSize="11"
@@ -297,7 +380,7 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           strokeWidth={8}
         />
 
-        {/* Main van body */}
+        {/* Van body - rectangular box */}
         <Path
           d="M 95 44
              L 260 44
@@ -305,27 +388,26 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
              L 282 126
              Q 282 148 260 148
              L 95 148
+             L 95 44
              Z"
           fill="url(#vanBodyGradient)"
           stroke="rgba(34, 197, 94, 0.4)"
           strokeWidth={1.5}
         />
 
-        {/* Hood/cab area - tapered front */}
+        {/* Hood/cab area - tapered front, no partition stroke */}
         <Path
           d="M 95 44
-             L 95 148
-             L 70 152
-             Q 50 150 40 140
-             L 32 130
-             Q 28 120 28 96
-             Q 28 72 32 62
-             L 40 52
-             Q 50 42 70 40
-             L 95 44
-             Z"
+             L 70 44
+             Q 50 44 40 54
+             L 32 64
+             Q 28 74 28 96
+             Q 28 118 32 128
+             L 40 138
+             Q 50 148 70 148
+             L 95 148"
           fill="url(#vanHoodGradient)"
-          stroke="rgba(34, 197, 94, 0.45)"
+          stroke="rgba(34, 197, 94, 0.4)"
           strokeWidth={1.5}
         />
 
@@ -354,15 +436,6 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           strokeLinecap="round"
         />
 
-        {/* Glass highlight on body */}
-        <Path
-          d="M 100 46 L 255 46 Q 278 46 280 64"
-          fill="none"
-          stroke="rgba(255,255,255,0.2)"
-          strokeWidth={1}
-          strokeLinecap="round"
-        />
-
         {/* Center line */}
         <Path
           d="M 50 96 L 260 96"
@@ -370,12 +443,6 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           strokeWidth={1}
           strokeDasharray="6 4"
         />
-
-        {/* Wheel wells */}
-        <Ellipse cx={75} cy={44} rx={18} ry={5} fill="url(#vanWheelWell)" />
-        <Ellipse cx={75} cy={148} rx={18} ry={5} fill="url(#vanWheelWell)" />
-        <Ellipse cx={235} cy={44} rx={18} ry={5} fill="url(#vanWheelWell)" />
-        <Ellipse cx={235} cy={148} rx={18} ry={5} fill="url(#vanWheelWell)" />
 
         {/* Front/Rear labels - consistent spacing from edges */}
         <SvgText
@@ -421,40 +488,20 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
           Driver (Left)
         </SvgText>
 
-        {/* Wheel indicators - left wheels at bottom (y=148), right wheels at top (y=44) */}
-        <WheelIndicator
-          x={75}
-          y={148}
-          status={getWheelStatus('front_left')}
-          isAnimating={getWheelStatus('front_left') === 'warning'}
-        />
-        <WheelIndicator
-          x={75}
-          y={44}
-          status={getWheelStatus('front_right')}
-          isAnimating={getWheelStatus('front_right') === 'warning'}
-        />
-        <WheelIndicator
-          x={235}
-          y={148}
-          status={getWheelStatus('rear_left')}
-          isAnimating={getWheelStatus('rear_left') === 'warning'}
-        />
-        <WheelIndicator
-          x={235}
-          y={44}
-          status={getWheelStatus('rear_right')}
-          isAnimating={getWheelStatus('rear_right') === 'warning'}
-        />
+        {/* Wheel indicators - rounded rectangle style */}
+        <TrailerWheel x={75} y={148} status={getWheelStatus('front_left')} />
+        <TrailerWheel x={75} y={44} status={getWheelStatus('front_right')} />
+        <TrailerWheel x={235} y={148} status={getWheelStatus('rear_left')} />
+        <TrailerWheel x={235} y={44} status={getWheelStatus('rear_right')} />
       </Svg>
     );
   }
 
-  // MOTORHOME: Class C style with truck cab and box body
+  // MOTORHOME: Simplified Class C - cab-over bulge, clean body, no interior clutter
   return (
     <Svg width={VEHICLE_WIDTH} height={VEHICLE_HEIGHT} viewBox="0 0 320 192">
       <Defs>
-        <RadialGradient id="mhBodyGradient" cx="30%" cy="20%" r="80%">
+        <RadialGradient id="mhBodyGradient" cx="30%" cy="20%" r="85%">
           <Stop offset="0%" stopColor="rgba(168, 85, 247, 0.15)" />
           <Stop offset="50%" stopColor="rgba(168, 85, 247, 0.08)" />
           <Stop offset="100%" stopColor="rgba(168, 85, 247, 0.02)" />
@@ -469,127 +516,96 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
         </RadialGradient>
       </Defs>
 
-      {/* Outer glow */}
+      {/* Outer glow - follows the extended body shape */}
       <Path
-        d="M 20 55 Q 15 70 15 96 Q 15 122 20 137 L 30 147 Q 45 158 65 158 L 270 158 Q 295 158 295 133 L 295 59 Q 295 34 270 34 L 65 34 Q 45 34 30 45 Z"
+        d="M 75 34
+           L 275 34
+           Q 302 34 302 59
+           L 302 133
+           Q 302 158 275 158
+           L 75 158
+           L 50 158
+           Q 34 158 30 148
+           L 24 133
+           Q 18 114 18 96
+           Q 18 78 24 59
+           L 30 44
+           Q 34 34 50 34
+           L 75 34
+           Z"
         fill="none"
         stroke="rgba(168, 85, 247, 0.1)"
         strokeWidth={8}
       />
 
-      {/* Main box body */}
+      {/* Main box body - extended for Class C look */}
       <Path
-        d="M 85 38
-           L 265 38
-           Q 288 38 288 61
-           L 288 131
-           Q 288 154 265 154
-           L 85 154
+        d="M 75 38
+           L 270 38
+           Q 298 38 298 63
+           L 298 129
+           Q 298 154 270 154
+           L 75 154
            Z"
         fill="url(#mhBodyGradient)"
         stroke="rgba(168, 85, 247, 0.4)"
         strokeWidth={1.5}
       />
 
-      {/* Cab-over section (extends above cab) */}
+      {/* Cab/chassis section - wider to encompass front wheels, with cab-over bulge */}
       <Path
-        d="M 85 38 L 85 55 L 35 55 Q 28 55 28 62 L 28 130 Q 28 137 35 137 L 85 137 L 85 154"
+        d="M 75 38
+           L 50 38
+           Q 38 38 34 48
+           L 28 63
+           Q 22 78 22 96
+           Q 22 114 28 129
+           L 34 144
+           Q 38 154 50 154
+           L 75 154"
         fill="url(#mhCabGradient)"
         stroke="rgba(168, 85, 247, 0.45)"
         strokeWidth={1.5}
       />
 
-      {/* Truck cab hood - narrower, extends forward */}
+      {/* Windshield curve */}
       <Path
-        d="M 35 62
-           L 35 130
-           Q 28 125 23 115
-           L 20 105
-           Q 18 96 20 87
-           L 23 77
-           Q 28 67 35 62
-           Z"
-        fill="url(#mhCabGradient)"
-        stroke="rgba(168, 85, 247, 0.5)"
-        strokeWidth={1.5}
-      />
-
-      {/* Windshield */}
-      <Path
-        d="M 28 75 Q 22 85 22 96 Q 22 107 28 117"
+        d="M 38 78 Q 30 88 30 96 Q 30 104 38 114"
         fill="none"
         stroke="rgba(168, 85, 247, 0.4)"
         strokeWidth={2}
         strokeLinecap="round"
       />
 
-      {/* Hood detail lines */}
+      {/* Glass highlight on box body */}
       <Path
-        d="M 32 72 L 50 60"
-        fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M 32 120 L 50 132"
-        fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={1}
-        strokeLinecap="round"
-      />
-
-      {/* Glass highlight on box */}
-      <Path
-        d="M 90 40 L 260 40 Q 284 40 286 58"
+        d="M 80 40 L 265 40 Q 294 40 296 60"
         fill="none"
         stroke="rgba(255,255,255,0.2)"
         strokeWidth={1}
         strokeLinecap="round"
       />
 
-      {/* Cab-over bed area outline */}
+      {/* Cab-over highlight */}
       <Path
-        d="M 40 60 L 80 60 L 80 132 L 40 132"
+        d="M 55 60 L 72 42"
         fill="none"
-        stroke="rgba(168, 85, 247, 0.15)"
+        stroke="rgba(255,255,255,0.15)"
         strokeWidth={1}
-        strokeDasharray="4 3"
-      />
-
-      {/* Roof AC unit */}
-      <Path
-        d="M 160 55 L 210 55 Q 215 55 215 60 L 215 78 Q 215 83 210 83 L 160 83 Q 155 83 155 78 L 155 60 Q 155 55 160 55"
-        fill="rgba(168, 85, 247, 0.08)"
-        stroke="rgba(168, 85, 247, 0.2)"
-        strokeWidth={1}
+        strokeLinecap="round"
       />
 
       {/* Center line */}
       <Path
-        d="M 45 96 L 270 96"
+        d="M 50 96 L 280 96"
         stroke="rgba(255,255,255,0.05)"
         strokeWidth={1}
         strokeDasharray="6 4"
       />
 
-      {/* Entry door */}
-      <Path
-        d="M 110 154 L 110 125 Q 110 120 115 120 L 145 120 Q 150 120 150 125 L 150 154"
-        fill="none"
-        stroke="rgba(168, 85, 247, 0.2)"
-        strokeWidth={1}
-      />
-
-      {/* Wheel wells */}
-      <Ellipse cx={65} cy={38} rx={18} ry={5} fill="url(#mhWheelWell)" />
-      <Ellipse cx={65} cy={154} rx={18} ry={5} fill="url(#mhWheelWell)" />
-      <Ellipse cx={250} cy={38} rx={18} ry={5} fill="url(#mhWheelWell)" />
-      <Ellipse cx={250} cy={154} rx={18} ry={5} fill="url(#mhWheelWell)" />
-
-      {/* Front/Rear labels */}
+      {/* Front/Rear labels - consistent spacing from vehicle body */}
       <SvgText
-        x="8"
+        x="5"
         y="100"
         textAnchor="middle"
         fill="rgba(255, 255, 255, 0.6)"
@@ -599,7 +615,7 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
         F
       </SvgText>
       <SvgText
-        x="308"
+        x="313"
         y="100"
         textAnchor="middle"
         fill="rgba(255, 255, 255, 0.6)"
@@ -609,31 +625,33 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
         R
       </SvgText>
 
-      {/* Wheel indicators */}
-      <WheelIndicator
-        x={65}
-        y={38}
-        status={getWheelStatus('front_left')}
-        isAnimating={getWheelStatus('front_left') === 'warning'}
-      />
-      <WheelIndicator
-        x={65}
-        y={154}
-        status={getWheelStatus('front_right')}
-        isAnimating={getWheelStatus('front_right') === 'warning'}
-      />
-      <WheelIndicator
-        x={250}
-        y={38}
-        status={getWheelStatus('rear_left')}
-        isAnimating={getWheelStatus('rear_left') === 'warning'}
-      />
-      <WheelIndicator
-        x={250}
-        y={154}
-        status={getWheelStatus('rear_right')}
-        isAnimating={getWheelStatus('rear_right') === 'warning'}
-      />
+      {/* Left/Right labels */}
+      <SvgText
+        x="160"
+        y="16"
+        textAnchor="middle"
+        fill="rgba(255, 255, 255, 0.5)"
+        fontSize="10"
+        fontWeight="500"
+      >
+        Passenger (Right)
+      </SvgText>
+      <SvgText
+        x="160"
+        y="186"
+        textAnchor="middle"
+        fill="rgba(255, 255, 255, 0.5)"
+        fontSize="10"
+        fontWeight="500"
+      >
+        Driver (Left)
+      </SvgText>
+
+      {/* Wheel indicators - rounded rectangle style */}
+      <TrailerWheel x={72} y={38} status={getWheelStatus('front_right')} />
+      <TrailerWheel x={72} y={154} status={getWheelStatus('front_left')} />
+      <TrailerWheel x={252} y={38} status={getWheelStatus('rear_right')} />
+      <TrailerWheel x={252} y={154} status={getWheelStatus('rear_left')} />
     </Svg>
   );
 }
@@ -872,7 +890,10 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             {/* Vehicle Diagram */}
             <GlassCard>
               <View style={styles.diagramContainer}>
-                <Text style={styles.diagramTitle}>Vehicle Overview</Text>
+                <View style={styles.diagramHeader}>
+                  <Text style={styles.diagramTitle}>Vehicle Overview</Text>
+                  <Text style={styles.profileLabel}>{activeProfile.name}</Text>
+                </View>
                 <View style={styles.diagramWrapper}>
                   {levelingPlan && (
                     <VehicleDiagram
@@ -1029,11 +1050,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  diagramHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
   diagramTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-    alignSelf: 'flex-start',
+  },
+  profileLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: THEME.colors.textSecondary,
   },
   diagramWrapper: {
     alignItems: 'center',

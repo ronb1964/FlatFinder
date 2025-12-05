@@ -225,8 +225,8 @@ export default function ProfilesScreen() {
                         <Text style={styles.profileDetails}>
                           {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} •{' '}
                           {profile.type === 'trailer'
-                            ? `Track: ${profile.trackWidthInches}" • Hitch: ${profile.hitchOffsetInches || 0}"`
-                            : `Wheelbase: ${profile.wheelbaseInches}" • Track: ${profile.trackWidthInches}"`}
+                            ? `Track: ${Math.round(profile.trackWidthInches)}" • Hitch: ${Math.round(profile.hitchOffsetInches || 0)}"`
+                            : `Wheelbase: ${Math.round(profile.wheelbaseInches)}" • Track: ${Math.round(profile.trackWidthInches)}"`}
                         </Text>
                       </View>
                     </View>

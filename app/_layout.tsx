@@ -3,10 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme, Platform, View, StyleSheet } from 'react-native';
 import { OnboardingGate } from '../src/components/OnboardingGate';
 import { DebugControls } from '../src/components/DebugControls';
+import { useAppStore } from '../src/state/appStore';
 import { useEffect } from 'react';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const loadProfiles = useAppStore((state) => state.loadProfiles);
+  const loadSettings = useAppStore((state) => state.loadSettings);
+
+  // Load profiles and settings on app startup
+  useEffect(() => {
+    loadProfiles();
+    loadSettings();
+  }, [loadProfiles, loadSettings]);
 
   // Proper mobile viewport setup
   useEffect(() => {
