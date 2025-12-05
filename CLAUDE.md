@@ -111,51 +111,51 @@ Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### 1. Implement Block Tolerance Threshold (Quick Fix)
+### 1. Discuss & Implement Block Tolerance Threshold
 
-Currently, wheels show yellow (warning) if blocks don't EXACTLY match the lift needed. This means almost every wheel shows yellow. Need to implement a tolerance threshold.
+Currently, wheels show yellow (warning) if blocks don't EXACTLY match the lift needed. This means almost every wheel shows yellow. Need a tolerance threshold.
 
-**Recommended tolerance:** 0.5" (based on research - see below)
+**Discussion needed with Ron:**
 
-**Changes needed in `src/components/LevelingAssistant.tsx`:**
+- How much tolerance is acceptable? Options:
+  - 0.5" (tight - for users who want precision)
+  - 1.0" (moderate - most users)
+  - 1.5" (loose - for users with limited block inventory)
+- Should this be user-configurable in Settings?
+- Consider: modern fridges are more tolerant, experienced users care less about perfection
 
-In `getWheelStatus()` function (~line 90) and `WheelCard` component (~line 472), change the "solution" check from exact match to within tolerance:
+**Current code already has a constant defined at top of LevelingAssistant.tsx:**
 
 ```javascript
-// Current (too strict):
-if (stack.totalHeight >= lift.liftInches - 0.1)
-
-// Change to (with tolerance for overshoot too):
-const tolerance = 0.5; // inches
-if (Math.abs(stack.totalHeight - lift.liftInches) <= tolerance)
+const BLOCK_TOLERANCE_INCHES = 0.5;
 ```
 
-Also consider allowing slight OVERSHOOT (blocks provide more than needed) as acceptable - being 0.3" high is fine.
+Just need to use it in `getWheelStatus()` and `WheelCard` component.
 
-### 2. Implement Calibration → Leveling Flow
+### 2. Review Trailer and Motorhome Diagrams
+
+Van diagram is done. Still need to verify:
+
+- Trailer diagram (has tongue/hitch graphic)
+- Motorhome diagram (has cab-over section)
+
+Create test profiles for each type and verify wheel positions/labels are correct.
+
+### 3. Implement Calibration → Leveling Flow (Later)
 
 When user taps "Leveling Assistant" from home screen:
 
-- If never calibrated → Prompt with options: "Quick Calibrate" / "Full Calibration"
-- If previously calibrated → Show options: "Quick Calibrate" / "Full Calibration" / "Use Last Calibration"
+- If never calibrated → Prompt: "Quick Calibrate" / "Full Calibration"
+- If previously calibrated → Options: "Quick Calibrate" / "Full Calibration" / "Use Last Calibration"
 
 After completing calibration wizard:
 
 - Show two buttons: "View Leveling Plan" / "Go Home"
 
-**Key messaging to include:**
+**Key messaging:**
 
 - "If your vehicle has moved since last calibration, please calibrate again"
 - For Quick Calibrate: "Only use if phone is on a known level surface"
-
-### 3. Review Trailer and Motorhome Diagrams
-
-Van diagram is done and looks good. Still need to verify:
-
-- Trailer diagram (has tongue/hitch graphic)
-- Motorhome diagram (has cab-over section)
-
-Create test profiles for each type and verify diagrams display correctly.
 
 ---
 

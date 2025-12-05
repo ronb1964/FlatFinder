@@ -17,13 +17,8 @@ export default function CalibrationScreen() {
 
   const { activeProfile, calibrateActiveProfile, addProfile, setActiveProfile } = useAppStore();
 
-  const handleCalibrationComplete = (
-    calibration: Calibration,
-    _vehicleTilt: { pitch: number; roll: number }
-  ) => {
-    // Vehicle tilt is available for future use (e.g., leveling assistant)
-    // Currently we only store the device bias calibration
-
+  // Helper to save calibration to profile
+  const saveCalibration = (calibration: Calibration) => {
     if (!activeProfile) {
       // Create a default profile if none exists
       addProfile({
@@ -45,12 +40,33 @@ export default function CalibrationScreen() {
     } else {
       calibrateActiveProfile(calibration);
     }
+  };
 
+  // "View Leveling Plan" - saves calibration and shows leveling assistant
+  const handleCalibrationComplete = (
+    calibration: Calibration,
+    _vehicleTilt: { pitch: number; roll: number }
+  ) => {
+    saveCalibration(calibration);
     setShowWizard(false);
 
     // Navigate to main screen and show leveling assistant
     globalThis.setTimeout(() => {
       router.replace('/?showLeveling=true');
+    }, 500);
+  };
+
+  // "Go Home" - saves calibration but returns to home without leveling assistant
+  const handleGoHome = (
+    calibration: Calibration,
+    _vehicleTilt: { pitch: number; roll: number }
+  ) => {
+    saveCalibration(calibration);
+    setShowWizard(false);
+
+    // Navigate to main screen without showing leveling assistant
+    globalThis.setTimeout(() => {
+      router.replace('/');
     }, 500);
   };
 
@@ -151,6 +167,7 @@ export default function CalibrationScreen() {
             isVisible={showWizard}
             onComplete={handleCalibrationComplete}
             onCancel={handleCancelWizard}
+            onGoHome={handleGoHome}
           />
         )}
       </LinearGradient>

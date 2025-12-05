@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
-import { Target, RotateCw, Check } from 'lucide-react-native';
+import { Target, RotateCw, Check, Home } from 'lucide-react-native';
 import { GlassButton } from './ui/GlassButton';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
 import {
@@ -26,6 +26,7 @@ import Animated, {
 interface CalibrationWizardProps {
   onComplete: (calibration: Calibration, vehicleTilt: { pitch: number; roll: number }) => void;
   onCancel: () => void;
+  onGoHome?: (calibration: Calibration, vehicleTilt: { pitch: number; roll: number }) => void;
   isVisible: boolean;
 }
 
@@ -213,7 +214,12 @@ function ProgressIndicator({ currentStep }: { currentStep: CalibrationStep }) {
   );
 }
 
-export function CalibrationWizard({ onComplete, onCancel, isVisible }: CalibrationWizardProps) {
+export function CalibrationWizard({
+  onComplete,
+  onCancel,
+  onGoHome,
+  isVisible,
+}: CalibrationWizardProps) {
   const [currentStep, setCurrentStep] = useState<CalibrationStep>('welcome');
   const [readings, setReadings] = useState<OrientedCalibrationReading[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -353,6 +359,23 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
 
     onComplete(calibration, result.vehicleTilt);
   }, [result, onComplete]);
+
+  // Handle "Go Home" - save calibration but don't show leveling assistant
+  const handleGoHome = useCallback(() => {
+    if (!result) return;
+
+    const calibration = createCalibration({
+      pitchOffsetDegrees: result.deviceBias.pitch,
+      rollOffsetDegrees: result.deviceBias.roll,
+    });
+
+    if (onGoHome) {
+      onGoHome(calibration, result.vehicleTilt);
+    } else {
+      // Fallback to onComplete if no onGoHome provided
+      onComplete(calibration, result.vehicleTilt);
+    }
+  }, [result, onComplete, onGoHome]);
 
   const containerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${containerRotation.value}deg` }],
@@ -613,25 +636,38 @@ export function CalibrationWizard({ onComplete, onCancel, isVisible }: Calibrati
                 )}
 
               {currentStep === 'complete' && (
-                <GlassButton
-                  variant="success"
-                  size="lg"
-                  onPress={handleComplete}
-                  icon={<Check size={20} color="#fff" />}
-                  style={styles.fullWidthButton}
-                >
-                  View Leveling Plan
-                </GlassButton>
+                <>
+                  <GlassButton
+                    variant="success"
+                    size="lg"
+                    onPress={handleComplete}
+                    icon={<Check size={20} color="#fff" />}
+                    style={styles.fullWidthButton}
+                  >
+                    View Leveling Plan
+                  </GlassButton>
+                  <GlassButton
+                    variant="default"
+                    size="md"
+                    onPress={handleGoHome}
+                    icon={<Home size={18} color="#fff" />}
+                    style={[styles.fullWidthButton, { marginTop: 10 }]}
+                  >
+                    Go Home
+                  </GlassButton>
+                </>
               )}
 
-              <GlassButton
-                variant="danger"
-                size="md"
-                onPress={() => setShowCancelConfirm(true)}
-                style={[styles.fullWidthButton, { marginTop: 16 }]}
-              >
-                Cancel
-              </GlassButton>
+              {currentStep !== 'complete' && (
+                <GlassButton
+                  variant="danger"
+                  size="md"
+                  onPress={() => setShowCancelConfirm(true)}
+                  style={[styles.fullWidthButton, { marginTop: 16 }]}
+                >
+                  Cancel
+                </GlassButton>
+              )}
             </View>
           )}
         </Animated.View>

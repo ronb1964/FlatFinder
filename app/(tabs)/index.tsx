@@ -18,6 +18,7 @@ import {
   Zap,
   AlertTriangle,
   X,
+  Check,
   CheckCircle,
   Caravan,
 } from 'lucide-react-native';
@@ -67,6 +68,9 @@ export default function LevelScreen() {
   const [cautionDismissed, setCautionDismissed] = useState(false);
   const [safetyWarningDismissed, setSafetyWarningDismissed] = useState(false);
   const [showQuickCalModal, setShowQuickCalModal] = useState(false);
+  const [showCalibrationPrompt, setShowCalibrationPrompt] = useState(false);
+  const [calibrationPromptAnimation] = useState(new Animated.Value(0));
+  const [justCalibratedFromHome, setJustCalibratedFromHome] = useState(false);
   const [modalAnimation] = useState(new Animated.Value(0));
 
   // Halo animations for status text
@@ -189,8 +193,75 @@ export default function LevelScreen() {
     router.push('/calibration');
   };
 
+  // Check if profile has been calibrated (non-zero offsets)
+  const hasCalibration =
+    activeProfile?.calibration &&
+    (activeProfile.calibration.pitchOffsetDegrees !== 0 ||
+      activeProfile.calibration.rollOffsetDegrees !== 0);
+
+  // Open calibration prompt modal
+  const openCalibrationPrompt = () => {
+    setShowCalibrationPrompt(true);
+    Animated.spring(calibrationPromptAnimation, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Close calibration prompt modal
+  const closeCalibrationPrompt = () => {
+    Animated.timing(calibrationPromptAnimation, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowCalibrationPrompt(false);
+    });
+  };
+
   const handleShowLevelingAssistant = () => {
-    setShowLevelingAssistant(true);
+    // If we just calibrated from the home screen, skip the prompt and go directly to leveling assistant
+    if (justCalibratedFromHome) {
+      setJustCalibratedFromHome(false); // Clear the flag
+      setShowLevelingAssistant(true);
+      return;
+    }
+    // Otherwise show calibration prompt modal
+    openCalibrationPrompt();
+  };
+
+  // Use last calibration and show leveling assistant
+  const handleUseLastCalibration = () => {
+    closeCalibrationPrompt();
+    globalThis.setTimeout(() => {
+      setShowLevelingAssistant(true);
+    }, 200);
+  };
+
+  // Quick calibrate from prompt, then show leveling
+  const handleQuickCalibrateFromPrompt = () => {
+    closeCalibrationPrompt();
+    setIsCalibrating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const offsets = calculateCalibrationOffsets({ pitch: pitchDeg, roll: rollDeg });
+    calibrateActiveProfile(offsets);
+
+    globalThis.setTimeout(() => {
+      setIsCalibrating(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowLevelingAssistant(true);
+    }, 500);
+  };
+
+  // Full calibration from prompt
+  const handleFullCalibrationFromPrompt = () => {
+    closeCalibrationPrompt();
+    globalThis.setTimeout(() => {
+      router.push('/calibration');
+    }, 200);
   };
 
   // Open the Quick Calibrate confirmation modal with animation
@@ -226,6 +297,7 @@ export default function LevelScreen() {
 
     globalThis.setTimeout(() => {
       setIsCalibrating(false);
+      setJustCalibratedFromHome(true); // Skip calibration prompt if they tap Leveling Assistant next
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 500);
   };
@@ -590,6 +662,105 @@ export default function LevelScreen() {
                     <CheckCircle size={18} color="#fff" />
                     <Text style={styles.modalConfirmText}>Calibrate</Text>
                   </Pressable>
+                </View>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </Modal>
+
+        {/* Calibration Prompt Modal - shows options before entering Leveling Assistant */}
+        <Modal
+          visible={showCalibrationPrompt}
+          transparent
+          animationType="none"
+          onRequestClose={closeCalibrationPrompt}
+        >
+          <Pressable style={styles.modalOverlay} onPress={closeCalibrationPrompt}>
+            <Animated.View
+              style={[
+                styles.calibrationPromptModal,
+                {
+                  opacity: calibrationPromptAnimation,
+                  transform: [
+                    {
+                      scale: calibrationPromptAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.9, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                {/* Modal Header */}
+                <View style={styles.calibrationPromptHeader}>
+                  <Zap size={28} color="#3b82f6" />
+                  <Text style={styles.calibrationPromptTitle}>Leveling Assistant</Text>
+                  <Pressable style={styles.modalCloseBtn} onPress={closeCalibrationPrompt}>
+                    <X size={22} color="#737373" />
+                  </Pressable>
+                </View>
+
+                {/* Message based on calibration status */}
+                {hasCalibration ? (
+                  <View style={styles.calibrationPromptMessage}>
+                    <AlertTriangle size={18} color="#eab308" />
+                    <Text style={styles.calibrationPromptMessageText}>
+                      If your vehicle has moved since last calibration, please calibrate again for
+                      accurate results.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.calibrationPromptWarning}>
+                    <AlertTriangle size={18} color="#ef4444" />
+                    <Text style={styles.calibrationPromptWarningText}>
+                      Calibration required for accurate leveling measurements.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Action Buttons */}
+                <View style={styles.calibrationPromptButtons}>
+                  {hasCalibration && (
+                    <Pressable
+                      style={styles.calibrationPromptPrimaryBtn}
+                      onPress={handleUseLastCalibration}
+                    >
+                      <Check size={18} color="#fff" />
+                      <Text style={styles.calibrationPromptBtnText}>Use Last Calibration</Text>
+                    </Pressable>
+                  )}
+
+                  <View style={styles.calibrationOptionGroup}>
+                    <Pressable
+                      style={[
+                        styles.calibrationPromptSecondaryBtn,
+                        !hasCalibration && styles.calibrationPromptPrimaryBtn,
+                      ]}
+                      onPress={handleQuickCalibrateFromPrompt}
+                      disabled={!isReliable}
+                    >
+                      <Target size={18} color="#fff" />
+                      <Text style={styles.calibrationPromptBtnText}>Quick Calibrate</Text>
+                    </Pressable>
+                    <Text style={styles.calibrationOptionDesc}>
+                      Sets current position as level. Place phone on a surface you know is level.
+                    </Text>
+                  </View>
+
+                  <View style={styles.calibrationOptionGroup}>
+                    <Pressable
+                      style={styles.calibrationPromptSecondaryBtn}
+                      onPress={handleFullCalibrationFromPrompt}
+                    >
+                      <Settings size={18} color="#fff" />
+                      <Text style={styles.calibrationPromptBtnText}>Full Calibration</Text>
+                    </Pressable>
+                    <Text style={styles.calibrationOptionDesc}>
+                      3-step process that works on any surface. Most accurate option.
+                    </Text>
+                  </View>
                 </View>
               </Pressable>
             </Animated.View>
@@ -996,5 +1167,113 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Calibration Prompt Modal Styles
+  calibrationPromptModal: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  calibrationPromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  calibrationPromptTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fafafa',
+  },
+  calibrationPromptMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.25)',
+  },
+  calibrationPromptMessageText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#eab308',
+    lineHeight: 20,
+  },
+  calibrationPromptWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  calibrationPromptWarningText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#f87171',
+    lineHeight: 20,
+  },
+  calibrationPromptButtons: {
+    gap: 10,
+    marginBottom: 12,
+  },
+  calibrationPromptPrimaryBtn: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+    gap: 8,
+  },
+  calibrationPromptSecondaryBtn: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    gap: 8,
+  },
+  calibrationPromptBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  calibrationPromptHelper: {
+    fontSize: 12,
+    color: '#737373',
+    textAlign: 'center',
+  },
+  calibrationOptionGroup: {
+    gap: 4,
+  },
+  calibrationOptionDesc: {
+    fontSize: 12,
+    color: '#737373',
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
 });

@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Modal } from 'react-native';
 // Note: Using global setInterval/clearInterval which are available in React Native runtime
-import { AlertCircle, ArrowLeft, Check, AlertTriangle, Caravan, Plus } from 'lucide-react-native';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  AlertTriangle,
+  Caravan,
+  Plus,
+  RefreshCw,
+} from 'lucide-react-native';
 import Svg, {
   Path,
   Circle,
@@ -748,34 +756,67 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const { pitchDeg, rollDeg } = useDeviceAttitude();
   const [levelingPlan, setLevelingPlan] = useState<LevelingPlan | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0);
 
-  // Force initial calculation on mount
-  useEffect(() => {
-    setForceUpdate((prev) => prev + 1);
-  }, []);
-
-  // Apply calibration to sensor readings
-  const calibratedReadings = activeProfile?.calibration
-    ? applyCalibration({ pitch: pitchDeg, roll: rollDeg }, activeProfile.calibration)
-    : { pitch: pitchDeg, roll: rollDeg };
-
-  // Normalize attitude to canonical coordinate system
-  const normalizedAttitude = normalizeAttitude(
-    { pitch: calibratedReadings.pitch, roll: calibratedReadings.roll },
-    SENSOR_NORMALIZATION_PRESETS.WEB_DEVICE_ORIENTATION
+  // FROZEN readings - captured on mount, used for leveling plan
+  const [frozenReadings, setFrozenReadings] = useState<{ pitch: number; roll: number } | null>(
+    null
   );
 
-  // Convert to leveling measurement format
-  const physicalReadings = attitudeToLevelingMeasurement(normalizedAttitude);
+  // Check Level mode - when user wants to verify results after placing blocks
+  const [showOrientationPrompt, setShowOrientationPrompt] = useState(false);
+  const [isCheckingLevel, setIsCheckingLevel] = useState(false);
+  const [checkLevelReadings, setCheckLevelReadings] = useState<{
+    pitch: number;
+    roll: number;
+  } | null>(null);
+  const [checkLevelPlan, setCheckLevelPlan] = useState<LevelingPlan | null>(null);
 
-  // Rounded values for dependency tracking (prevent excessive recalculations)
-  const roundedPitch = Math.round(pitchDeg * 10) / 10;
-  const roundedRoll = Math.round(rollDeg * 10) / 10;
-
-  // Real-time leveling plan calculation
+  // Capture and freeze readings on mount
   useEffect(() => {
-    if (!activeProfile) return;
+    if (!frozenReadings && activeProfile?.calibration) {
+      // Capture the initial readings when component mounts
+      const calibrated = applyCalibration(
+        { pitch: pitchDeg, roll: rollDeg },
+        activeProfile.calibration
+      );
+      const normalized = normalizeAttitude(
+        calibrated,
+        SENSOR_NORMALIZATION_PRESETS.WEB_DEVICE_ORIENTATION
+      );
+      const physical = attitudeToLevelingMeasurement(normalized);
+      setFrozenReadings({ pitch: physical.pitchDegrees, roll: physical.rollDegrees });
+    } else if (!frozenReadings && !activeProfile?.calibration) {
+      // No calibration - use raw values
+      const normalized = normalizeAttitude(
+        { pitch: pitchDeg, roll: rollDeg },
+        SENSOR_NORMALIZATION_PRESETS.WEB_DEVICE_ORIENTATION
+      );
+      const physical = attitudeToLevelingMeasurement(normalized);
+      setFrozenReadings({ pitch: physical.pitchDegrees, roll: physical.rollDegrees });
+    }
+    // Only run once on mount - intentionally not including pitchDeg/rollDeg in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile]);
+
+  // Get current live readings (for Check Level mode)
+  const getLiveReadings = () => {
+    const calibrated = activeProfile?.calibration
+      ? applyCalibration({ pitch: pitchDeg, roll: rollDeg }, activeProfile.calibration)
+      : { pitch: pitchDeg, roll: rollDeg };
+    const normalized = normalizeAttitude(
+      calibrated,
+      SENSOR_NORMALIZATION_PRESETS.WEB_DEVICE_ORIENTATION
+    );
+    const physical = attitudeToLevelingMeasurement(normalized);
+    return { pitch: physical.pitchDegrees, roll: physical.rollDegrees };
+  };
+
+  // Use frozen readings for displaying the plan
+  const displayReadings = frozenReadings || { pitch: 0, roll: 0 };
+
+  // Calculate leveling plan from FROZEN readings (only when frozen readings are set)
+  useEffect(() => {
+    if (!activeProfile || !frozenReadings) return;
 
     const calculatePlan = () => {
       setIsCalculating(true);
@@ -787,7 +828,12 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
           hitchOffsetInches: activeProfile.hitchOffsetInches,
         };
         const inventory = activeProfile.blockInventory || [];
-        const plan = RVLevelingCalculator.createLevelingPlan(geometry, physicalReadings, inventory);
+        // Use frozen readings for calculation
+        const measurement = {
+          pitchDegrees: frozenReadings.pitch,
+          rollDegrees: frozenReadings.roll,
+        };
+        const plan = RVLevelingCalculator.createLevelingPlan(geometry, measurement, inventory);
         setLevelingPlan(plan);
       } catch (error) {
         console.error('Error calculating leveling plan:', error);
@@ -799,12 +845,65 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
     const timeoutId = globalThis.setTimeout(calculatePlan, 100);
     return () => globalThis.clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roundedPitch, roundedRoll, activeProfile, forceUpdate]);
+  }, [frozenReadings, activeProfile]);
 
-  // Check if near level
-  const isNearLevel =
-    Math.abs(physicalReadings.pitchDegrees) < 0.5 && Math.abs(physicalReadings.rollDegrees) < 0.5;
+  // Handle Check Level button press - show orientation instructions first
+  const handleCheckLevel = () => {
+    setShowOrientationPrompt(true);
+  };
+
+  // Actually take the reading after confirming orientation
+  const handleConfirmCheckLevel = () => {
+    const live = getLiveReadings();
+    setCheckLevelReadings(live);
+
+    // Calculate new leveling plan based on current readings
+    if (activeProfile) {
+      try {
+        const geometry = {
+          wheelbaseInches: activeProfile.wheelbaseInches,
+          trackWidthInches: activeProfile.trackWidthInches,
+          hitchOffsetInches: activeProfile.hitchOffsetInches,
+        };
+        const inventory = activeProfile.blockInventory || [];
+        const measurement = { pitchDegrees: live.pitch, rollDegrees: live.roll };
+        const newPlan = RVLevelingCalculator.createLevelingPlan(geometry, measurement, inventory);
+        setCheckLevelPlan(newPlan);
+      } catch (error) {
+        console.error('Error calculating check level plan:', error);
+        setCheckLevelPlan(null);
+      }
+    }
+
+    setShowOrientationPrompt(false);
+    setIsCheckingLevel(true);
+  };
+
+  // Go back to viewing the plan
+  const handleBackToPlan = () => {
+    setShowOrientationPrompt(false);
+    setIsCheckingLevel(false);
+    setCheckLevelReadings(null);
+    setCheckLevelPlan(null);
+  };
+
+  // Check if near level (using check readings if in check mode, otherwise frozen)
+  const readingsToCheck =
+    isCheckingLevel && checkLevelReadings ? checkLevelReadings : displayReadings;
+
+  // Calculate total deviation from level (pythagorean of pitch and roll)
+  const totalDeviation = Math.sqrt(readingsToCheck.pitch ** 2 + readingsToCheck.roll ** 2);
+
+  // Level status thresholds (based on RV industry standards):
+  // - < 0.5° = Perfect level
+  // - 0.5° - 2° = Close enough (acceptable for comfort and most appliances)
+  // - > 2° = Needs adjustment (approaching fridge safety limit of 3°)
+  const isLevel = totalDeviation < 0.5;
+  const isCloseEnough = totalDeviation >= 0.5 && totalDeviation <= 2.0;
+  const isNearLevel = isLevel; // Keep for backward compatibility with "Level!" banner
+
+  // Calculate percentage (3° = 0%, 0° = 100%)
+  const levelPercentage = Math.max(0, Math.min(100, 100 - (totalDeviation / 3) * 100));
 
   // Memoize wheel lifts that need attention
   const activeLifts = useMemo(() => {
@@ -917,22 +1016,22 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                     <Text style={styles.legendText}>Attention</Text>
                   </View>
                 </View>
-                {/* Compact Pitch/Roll readings */}
+                {/* Compact Pitch/Roll readings - FROZEN values */}
                 <View style={styles.compactReadings}>
                   <Text style={styles.compactReadingText}>
-                    Pitch: {Math.abs(physicalReadings.pitchDegrees).toFixed(1)}°
-                    {physicalReadings.pitchDegrees > 0.1
+                    Pitch: {Math.abs(displayReadings.pitch).toFixed(1)}°
+                    {displayReadings.pitch > 0.1
                       ? ' nose up'
-                      : physicalReadings.pitchDegrees < -0.1
+                      : displayReadings.pitch < -0.1
                         ? ' nose down'
                         : ''}
                   </Text>
                   <Text style={styles.compactReadingDivider}>•</Text>
                   <Text style={styles.compactReadingText}>
-                    Roll: {Math.abs(physicalReadings.rollDegrees).toFixed(1)}°
-                    {physicalReadings.rollDegrees > 0.1
+                    Roll: {Math.abs(displayReadings.roll).toFixed(1)}°
+                    {displayReadings.roll > 0.1
                       ? ' right up'
-                      : physicalReadings.rollDegrees < -0.1
+                      : displayReadings.roll < -0.1
                         ? ' left up'
                         : ''}
                   </Text>
@@ -990,6 +1089,181 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Footer - Check Level Button (part of normal layout flow, not absolute) */}
+      {!isNearLevel && !showOrientationPrompt && !isCheckingLevel && levelingPlan && (
+        <View style={styles.checkLevelFooter}>
+          <GlassButton
+            variant="primary"
+            size="lg"
+            onPress={handleCheckLevel}
+            icon={<RefreshCw size={20} color="#fff" />}
+          >
+            Check Level
+          </GlassButton>
+        </View>
+      )}
+
+      {/* Orientation Instructions Modal */}
+      <Modal
+        visible={showOrientationPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBackToPlan}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.orientationTitle}>Position Your Phone</Text>
+            <View style={styles.orientationInstructions}>
+              <View style={styles.orientationStep}>
+                <Text style={styles.orientationNumber}>1</Text>
+                <Text style={styles.orientationText}>
+                  Place phone flat on a surface inside your vehicle
+                </Text>
+              </View>
+              <View style={styles.orientationStep}>
+                <Text style={styles.orientationNumber}>2</Text>
+                <Text style={styles.orientationText}>
+                  Point the TOP of your phone toward the FRONT of the vehicle
+                </Text>
+              </View>
+              <View style={styles.orientationStep}>
+                <Text style={styles.orientationNumber}>3</Text>
+                <Text style={styles.orientationText}>Keep phone still while checking</Text>
+              </View>
+            </View>
+            <View style={styles.modalButtons}>
+              <GlassButton variant="secondary" size="md" onPress={handleBackToPlan}>
+                Cancel
+              </GlassButton>
+              <GlassButton
+                variant="success"
+                size="md"
+                onPress={handleConfirmCheckLevel}
+                icon={<Check size={18} color="#fff" />}
+              >
+                Check Level Now
+              </GlassButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Check Level Results Modal */}
+      <Modal
+        visible={isCheckingLevel && checkLevelReadings !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBackToPlan}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              isLevel && styles.modalContentSuccess,
+              isCloseEnough && styles.modalContentCloseEnough,
+            ]}
+          >
+            {/* Perfect Level */}
+            {isLevel && (
+              <>
+                <Text style={[styles.checkResultsTitle, styles.checkResultsTitleSuccess]}>
+                  ✓ Level Achieved!
+                </Text>
+                <Text style={styles.levelAchievedText}>
+                  Your RV is perfectly level. You&apos;re all set!
+                </Text>
+              </>
+            )}
+
+            {/* Close Enough */}
+            {isCloseEnough && (
+              <>
+                <Text style={[styles.checkResultsTitle, styles.checkResultsTitleCloseEnough]}>
+                  Close Enough!
+                </Text>
+                <View style={styles.percentageContainer}>
+                  <Text style={styles.percentageValue}>{Math.round(levelPercentage)}%</Text>
+                  <Text style={styles.percentageLabel}>Level</Text>
+                </View>
+                <Text style={styles.closeEnoughText}>
+                  You&apos;re within {totalDeviation.toFixed(1)}° of perfectly level. This is
+                  acceptable for comfort and safe for your fridge and appliances.
+                </Text>
+                <View style={styles.closeEnoughHint}>
+                  <Check size={16} color={THEME.colors.success} />
+                  <Text style={styles.closeEnoughHintText}>Good to go!</Text>
+                </View>
+              </>
+            )}
+
+            {/* Needs More Adjustment */}
+            {!isLevel && !isCloseEnough && (
+              <>
+                <Text style={styles.checkResultsTitle}>Adjustment Needed</Text>
+                <View style={styles.percentageContainer}>
+                  <Text style={[styles.percentageValue, styles.percentageValueWarning]}>
+                    {Math.round(levelPercentage)}%
+                  </Text>
+                  <Text style={styles.percentageLabel}>Level</Text>
+                </View>
+                <Text style={styles.adjustmentNeededText}>
+                  {totalDeviation.toFixed(1)}° from level. Add more blocks to reach safe operating
+                  range.
+                </Text>
+
+                {/* Show new block instructions */}
+                {checkLevelPlan && (
+                  <View style={styles.newInstructionsContainer}>
+                    <Text style={styles.newInstructionsLabel}>Additional blocks needed:</Text>
+                    {checkLevelPlan.wheelLifts
+                      .filter((lift) => lift.liftInches > 0.125)
+                      .map((lift) => {
+                        const stack = checkLevelPlan.blockStacks[lift.location];
+                        const hasBlocks = stack && stack.blocks.length > 0;
+                        return (
+                          <View key={lift.location} style={styles.newInstructionRow}>
+                            <Text style={styles.newInstructionWheel}>{lift.description}</Text>
+                            <Text style={styles.newInstructionAmount}>
+                              {hasBlocks
+                                ? stack.blocks
+                                    .filter((b) => b.count > 0)
+                                    .map((b) => `${b.count}×${b.thickness}"`)
+                                    .join(' + ')
+                                : `${lift.liftInches.toFixed(1)}" needed`}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    {checkLevelPlan.wheelLifts.filter((lift) => lift.liftInches > 0.125).length ===
+                      0 && (
+                      <Text style={styles.newInstructionHint}>
+                        Minor adjustment - reposition existing blocks
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </>
+            )}
+
+            <View style={styles.modalButtons}>
+              <GlassButton variant="secondary" size="md" onPress={handleBackToPlan}>
+                {isLevel || isCloseEnough ? 'Done' : 'View Original Plan'}
+              </GlassButton>
+              {!isLevel && (
+                <GlassButton
+                  variant="primary"
+                  size="md"
+                  onPress={handleCheckLevel}
+                  icon={<RefreshCw size={16} color="#fff" />}
+                >
+                  Check Again
+                </GlassButton>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1280,7 +1554,239 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   bottomSpacer: {
-    height: 100, // Extra space for bottom tab bar
+    height: 16, // Small padding at end of scroll content
+  },
+  // Check Level styles
+  checkResultsContainer: {
+    gap: 16,
+    alignItems: 'center',
+  },
+  checkResultsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  checkResultsReadings: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingVertical: 8,
+  },
+  checkResultItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  checkResultLabel: {
+    fontSize: 13,
+    color: THEME.colors.textMuted,
+    marginBottom: 4,
+  },
+  checkResultValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  checkResultValueGood: {
+    color: THEME.colors.success,
+  },
+  checkResultHint: {
+    fontSize: 12,
+    color: THEME.colors.textSecondary,
+    marginTop: 2,
+  },
+  checkResultDivider: {
+    width: 1,
+    height: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  checkResultsAdvice: {
+    fontSize: 14,
+    color: THEME.colors.warning,
+    textAlign: 'center',
+  },
+  checkResultsButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  // Orientation prompt styles
+  orientationContainer: {
+    gap: 16,
+  },
+  orientationTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  orientationInstructions: {
+    gap: 12,
+  },
+  orientationStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  orientationNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+    overflow: 'hidden',
+  },
+  orientationText: {
+    flex: 1,
+    fontSize: 15,
+    color: THEME.colors.textSecondary,
+    lineHeight: 22,
+  },
+  orientationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  // Footer for Check Level button (part of normal flex layout)
+  checkLevelFooter: {
+    backgroundColor: 'rgba(10, 10, 15, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 100, // Account for tab bar + safe area
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    gap: 20,
+  },
+  modalContentSuccess: {
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  checkResultsTitleSuccess: {
+    color: THEME.colors.success,
+  },
+  checkResultsTitleCloseEnough: {
+    color: THEME.colors.primary,
+  },
+  modalContentCloseEnough: {
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+  },
+  // Percentage display
+  percentageContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  percentageValue: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: THEME.colors.success,
+  },
+  percentageValueWarning: {
+    color: THEME.colors.warning,
+  },
+  percentageLabel: {
+    fontSize: 14,
+    color: THEME.colors.textMuted,
+    marginTop: -4,
+  },
+  // Close enough messaging
+  closeEnoughText: {
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  closeEnoughHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  closeEnoughHintText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.colors.success,
+  },
+  // Adjustment needed messaging
+  adjustmentNeededText: {
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Level achieved text
+  levelAchievedText: {
+    fontSize: 15,
+    color: THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  // New instructions in check level modal
+  newInstructionsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    width: '100%',
+  },
+  newInstructionsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.colors.textMuted,
+    marginBottom: 4,
+  },
+  newInstructionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  newInstructionWheel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  newInstructionAmount: {
+    fontSize: 14,
+    color: THEME.colors.primary,
+    fontWeight: '600',
+  },
+  newInstructionHint: {
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
 
