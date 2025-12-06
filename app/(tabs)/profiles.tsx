@@ -276,7 +276,12 @@ export default function ProfilesScreen() {
       )}
 
       {/* Delete Confirmation Modal */}
-      <Modal visible={showDeleteConfirm} animationType="fade" transparent>
+      <Modal
+        visible={showDeleteConfirm}
+        animationType="fade"
+        transparent
+        onRequestClose={cancelDelete}
+      >
         <View style={styles.deleteModalOverlay}>
           <View style={styles.deleteModalContainer}>
             <View style={styles.deleteModalIcon}>
