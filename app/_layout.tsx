@@ -46,7 +46,7 @@ export default function RootLayout() {
             headerShown: false,
           }}
         />
-        <DebugControls />
+        {Platform.OS === 'web' && <DebugControls />}
       </OnboardingGate>
     </View>
   );

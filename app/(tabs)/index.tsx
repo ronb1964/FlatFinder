@@ -7,10 +7,19 @@ import {
   useWindowDimensions,
   Modal,
   Animated,
+  ScrollView,
 } from 'react-native';
+import Svg, {
+  Path,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  RadialGradient,
+  Stop,
+  Ellipse,
+} from 'react-native-svg';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaSimulator } from '../../src/components/SafeAreaSimulator';
 import {
   RefreshCw,
   Target,
@@ -28,6 +37,7 @@ import { Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useDeviceAttitude } from '../../src/hooks/useDeviceAttitude';
+import { useSafeInsets } from '../../src/hooks/useSafeInsets';
 import { BubbleLevel } from '../../src/components/BubbleLevel';
 import { LevelingAssistant } from '../../src/components/LevelingAssistant';
 import { GlassCard } from '../../src/components/ui/GlassCard';
@@ -45,6 +55,13 @@ function KeepAwakeWrapper() {
   return null;
 }
 
+// Get cardinal direction from heading
+function getCardinalDirection(heading: number): string {
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const index = Math.round(heading / 45) % 8;
+  return directions[index];
+}
+
 export default function LevelScreen() {
   const { pitchDeg, rollDeg, yawDeg, isAvailable, isReliable, permissionStatus, errorMessage } =
     useDeviceAttitude();
@@ -56,10 +73,29 @@ export default function LevelScreen() {
     setShowLevelingAssistant,
   } = useAppStore();
   const { showLeveling } = useLocalSearchParams<{ showLeveling?: string }>();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const insets = useSafeInsets();
 
-  // Responsive sizing based on screen height
-  const isSmallScreen = screenHeight < 700;
+  // Calculate actual usable height (screen height minus safe areas and tab bar)
+  // Tab bar is approximately 49px on iOS
+  const TAB_BAR_HEIGHT = 49;
+  const usableHeight = screenHeight - insets.top - insets.bottom - TAB_BAR_HEIGHT;
+
+  // Responsive sizing based on USABLE height (not full screen height)
+  // This ensures layouts work correctly on actual devices
+  const isSmallScreen = usableHeight < 550; // ~700 - 150 (safe areas + tab)
+  const isVerySmallScreen = usableHeight < 480;
+
+  // Calculate max bubble size to fit within usable space
+  // Reserve space for: status text (~40), pitch/roll arc (~50),
+  // Quick+Full buttons (~120), Leveling Assistant (~55), Active Profile (~65), padding (~20)
+  // Total reserved = ~350px
+  const reservedVerticalSpace = isSmallScreen ? 320 : 350;
+  const maxBubbleSize = Math.min(
+    usableHeight - reservedVerticalSpace,
+    screenWidth - 32, // 16px padding on each side
+    260 // Larger cap for better visibility
+  );
 
   const [calibratedValues, setCalibratedValues] = useState({ pitch: 0, roll: 0 });
   const [levelStatus, setLevelStatus] = useState(getLevelStatus({ pitch: 0, roll: 0 }));
@@ -304,24 +340,24 @@ export default function LevelScreen() {
 
   if (isAvailable === false) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaSimulator style={styles.container}>
         <View style={styles.centerContent}>
           <Text style={styles.errorTitle}>Device sensors not available</Text>
           <Text style={styles.errorText}>
             This device does not support motion sensors required for leveling.
           </Text>
         </View>
-      </SafeAreaView>
+      </SafeAreaSimulator>
     );
   }
 
   if (isAvailable === null) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaSimulator style={styles.container}>
         <View style={styles.centerContent}>
           <Text style={styles.loadingText}>Checking sensor availability...</Text>
         </View>
-      </SafeAreaView>
+      </SafeAreaSimulator>
     );
   }
 
@@ -338,8 +374,12 @@ export default function LevelScreen() {
   return (
     <LinearGradient colors={['#0a0a0f', '#111118', '#0d0d12']} style={styles.gradient}>
       {Platform.OS !== 'web' && settings.keepAwake && <KeepAwakeWrapper />}
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
+      <SafeAreaSimulator style={styles.safeArea} showIndicators={false}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Caution Warning (yellow) - 6° to 10° */}
           {showCaution && (
             <Pressable onPress={() => setCautionDismissed(true)} style={styles.warningContainer}>
@@ -388,19 +428,68 @@ export default function LevelScreen() {
           )}
 
           {/* Level Display Group - Header + Bubble + Readings (stay together) */}
-          <View style={styles.levelDisplayGroup}>
+          <View
+            style={[
+              styles.levelDisplayGroup,
+              isSmallScreen && styles.levelDisplayGroupSmall,
+              isVerySmallScreen && styles.levelDisplayGroupVerySmall,
+            ]}
+          >
             {/* Header with halo effect */}
             <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
               <View style={styles.statusContainer}>
-                {/* Green glow - for perfect level */}
-                <Animated.View style={[styles.statusGlowGreen, { opacity: perfectGlowOpacity }]} />
-                {/* Yellow glow - for nearly level (smaller) */}
-                <Animated.View style={[styles.statusGlowYellow, { opacity: nearlyGlowOpacity }]} />
+                {/* Green glow - CSS blur for web, SVG gradient for native */}
+                {Platform.OS === 'web' ? (
+                  <Animated.View
+                    style={[styles.statusGlowGreenWeb, { opacity: perfectGlowOpacity }]}
+                  />
+                ) : (
+                  <Animated.View
+                    style={[styles.statusGlowWrapper, { opacity: perfectGlowOpacity }]}
+                  >
+                    <Svg width={400} height={160} viewBox="0 0 400 160">
+                      <Defs>
+                        <RadialGradient id="greenGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+                          <Stop offset="0%" stopColor="#22c55e" stopOpacity="1.0" />
+                          <Stop offset="15%" stopColor="#22c55e" stopOpacity="0.85" />
+                          <Stop offset="35%" stopColor="#22c55e" stopOpacity="0.55" />
+                          <Stop offset="55%" stopColor="#22c55e" stopOpacity="0.3" />
+                          <Stop offset="75%" stopColor="#22c55e" stopOpacity="0.12" />
+                          <Stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                        </RadialGradient>
+                      </Defs>
+                      <Ellipse cx="200" cy="80" rx="200" ry="80" fill="url(#greenGlow)" />
+                    </Svg>
+                  </Animated.View>
+                )}
+                {/* Yellow glow - CSS blur for web, SVG gradient for native */}
+                {Platform.OS === 'web' ? (
+                  <Animated.View
+                    style={[styles.statusGlowYellowWeb, { opacity: nearlyGlowOpacity }]}
+                  />
+                ) : (
+                  <Animated.View style={[styles.statusGlowWrapper, { opacity: nearlyGlowOpacity }]}>
+                    <Svg width={380} height={150} viewBox="0 0 380 150">
+                      <Defs>
+                        <RadialGradient id="yellowGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+                          <Stop offset="0%" stopColor="#eab308" stopOpacity="1.0" />
+                          <Stop offset="15%" stopColor="#eab308" stopOpacity="0.8" />
+                          <Stop offset="35%" stopColor="#eab308" stopOpacity="0.5" />
+                          <Stop offset="55%" stopColor="#eab308" stopOpacity="0.25" />
+                          <Stop offset="75%" stopColor="#eab308" stopOpacity="0.1" />
+                          <Stop offset="100%" stopColor="#eab308" stopOpacity="0" />
+                        </RadialGradient>
+                      </Defs>
+                      <Ellipse cx="190" cy="75" rx="190" ry="75" fill="url(#yellowGlow)" />
+                    </Svg>
+                  </Animated.View>
+                )}
                 <Text
                   style={[
                     styles.statusText,
                     { color: levelStatus.color },
                     isSmallScreen && styles.statusTextSmall,
+                    isVerySmallScreen && styles.statusTextVerySmall,
                   ]}
                 >
                   {levelStatus.description}
@@ -416,75 +505,284 @@ export default function LevelScreen() {
                 isLevel={levelStatus.isLevel}
                 nearLevel={levelStatus.nearLevel}
                 heading={yawDeg}
+                showHeading={false}
                 size="full"
+                maxSize={maxBubbleSize}
               />
             </View>
 
-            {/* Numeric Display - Glass Card (close to bubble) */}
-            <View style={[styles.cardContainer, isSmallScreen && styles.cardContainerSmall]}>
-              <GlassCard
-                variant={levelStatus.isLevel ? 'success' : 'default'}
-                compact={isSmallScreen}
-              >
-                <View style={[styles.numericDisplay, isSmallScreen && styles.numericDisplaySmall]}>
-                  <View style={styles.valueColumn}>
-                    <Text style={[styles.valueLabel, isSmallScreen && styles.valueLabelSmall]}>
-                      Pitch
-                    </Text>
-                    <Text
-                      style={[
-                        styles.valueNumber,
-                        { color: levelStatus.color },
-                        isSmallScreen && styles.valueNumberSmall,
-                      ]}
-                    >
+            {/* Pitch/Roll Triangles - RIGHT ANGLE triangles on each side of bubble */}
+            {(() => {
+              // Match bubble geometry
+              const bubblePadding = maxBubbleSize * 0.1;
+              const bubbleViewBoxSize = maxBubbleSize + bubblePadding * 2;
+              const bubbleViewBoxRadius = bubbleViewBoxSize / 2;
+              const visibleRimRadius = bubbleViewBoxRadius * 0.833;
+
+              // SVG wider than bubble to accommodate triangle extending outward
+              const horizontalPadding = 50; // Extra space on each side
+              const svgWidth = bubbleViewBoxSize + horizontalPadding * 2;
+              const centerX = svgWidth / 2;
+
+              // Triangle outer edges - gap from bubble rim
+              const outwardShift = 45; // Moved left 10px more to increase area
+              const leftEdge = centerX - visibleRimRadius - outwardShift;
+              const rightEdge = centerX + visibleRimRadius + outwardShift;
+
+              // Triangle size
+              const legLength = 155; // Increased from 135 to make room for text
+              const topPadding = 30; // Extra space at top for shifted triangles (must be >= leftYOffset)
+              const svgHeight = legLength + topPadding;
+
+              // Gap between curved hypotenuse and bubble rim (adjustable)
+              const gapFromRim = 15; // Increased from 10
+
+              // marginTop controls how much triangles overlap with bubble
+              const marginTop = -155;
+
+              // Triangle vertices - left triangle shifted up to center hypotenuse on bubble arc
+              // Now using topPadding as baseline instead of 0
+              const leftYOffset = 30; // Offset from top padding (larger = higher)
+              const bottomOffset = 5; // Move bottom edge up by this amount
+              const topCutoff = 80; // Calculated: L1.y = 80 gives 10px above text, matching 10px below
+              const L1 = { x: leftEdge, y: topPadding - leftYOffset + topCutoff };
+              const L2 = { x: leftEdge, y: topPadding - leftYOffset + legLength - bottomOffset };
+              const L3 = {
+                x: leftEdge + legLength,
+                y: topPadding - leftYOffset + legLength - bottomOffset,
+              };
+
+              // Right card mirrors left card
+              const R1 = { x: rightEdge, y: topPadding - leftYOffset + topCutoff }; // Same Y as L1
+              const R2 = { x: rightEdge, y: topPadding - leftYOffset + legLength - bottomOffset }; // Same Y as L2
+              const R3 = {
+                x: rightEdge - legLength,
+                y: topPadding - leftYOffset + legLength - bottomOffset,
+              }; // Same Y as L3
+
+              // Calculate bubble center in triangles' coordinate system
+              const bubbleCenterY = Math.abs(marginTop) - bubbleViewBoxRadius;
+
+              // The curved part follows bubble rim at gapFromRim distance
+              const curveRadius = visibleRimRadius + gapFromRim;
+
+              // For horizontal top edge: find where horizontal line at L1.y intersects the arc
+              // Circle equation: (x - centerX)² + (y - bubbleCenterY)² = curveRadius²
+              // Solve for x at y = L1.y
+              const topY = L1.y;
+              const dy = topY - bubbleCenterY;
+              const arcStartX =
+                centerX - Math.sqrt(Math.max(0, curveRadius * curveRadius - dy * dy));
+              const arcStart = { x: arcStartX, y: topY };
+
+              // For L3, calculate angle-based intersection as before
+              const angleToL3 = Math.atan2(L3.y - bubbleCenterY, L3.x - centerX);
+              const arcEnd = {
+                x: centerX + curveRadius * Math.cos(angleToL3),
+                y: bubbleCenterY + curveRadius * Math.sin(angleToL3),
+              };
+
+              // Corner radius for the 90° corner (matches GlassButton)
+              const buttonRadius = 12;
+
+              // Points for rounded corner at L2 (bottom-left, 90° corner)
+              const L2_beforeCorner = { x: L2.x + buttonRadius, y: L2.y }; // Coming from right
+              const L2_afterCorner = { x: L2.x, y: L2.y - buttonRadius }; // Going up
+
+              // Points for rounded corner at L1 (top-left corner)
+              const L1_beforeCorner = { x: L1.x, y: L1.y + buttonRadius }; // Coming from below
+              const L1_afterCorner = { x: L1.x + buttonRadius, y: L1.y }; // Going right
+
+              // Roundover at top-right corner where flat top meets concave arc
+              const roundoverRadius = 8;
+
+              // Calculate point on arc slightly past arcStart (toward arcEnd)
+              // Arc goes counterclockwise, which in SVG Y-down means DECREASING angle
+              const arcStartAngle = Math.atan2(arcStart.y - bubbleCenterY, arcStart.x - centerX);
+              const angleDecrement = roundoverRadius / curveRadius;
+              const arcRoundoverEnd = {
+                x: centerX + curveRadius * Math.cos(arcStartAngle - angleDecrement),
+                y: bubbleCenterY + curveRadius * Math.sin(arcStartAngle - angleDecrement),
+              };
+
+              // Q curve: from (arcStart.x - r, arcStart.y) with control at arcStart to arcRoundoverEnd
+              const leftPath = `
+                M ${L1_afterCorner.x} ${L1_afterCorner.y}
+                L ${arcStart.x - roundoverRadius} ${arcStart.y}
+                Q ${arcStart.x} ${arcStart.y} ${arcRoundoverEnd.x} ${arcRoundoverEnd.y}
+                A ${curveRadius} ${curveRadius} 0 0 0 ${arcEnd.x} ${arcEnd.y}
+                L ${L3.x} ${L3.y}
+                L ${L2_beforeCorner.x} ${L2_beforeCorner.y}
+                Q ${L2.x} ${L2.y} ${L2_afterCorner.x} ${L2_afterCorner.y}
+                L ${L1_beforeCorner.x} ${L1_beforeCorner.y}
+                Q ${L1.x} ${L1.y} ${L1_afterCorner.x} ${L1_afterCorner.y}
+                Z
+              `;
+
+              // Right card arc calculations (mirrored - arc on LEFT side of card)
+              // Arc start: where horizontal line at R1.y intersects arc (on RIGHT side of circle, so +sqrt)
+              const rightTopY = R1.y;
+              const rightDy = rightTopY - bubbleCenterY;
+              const rightArcStartX =
+                centerX + Math.sqrt(Math.max(0, curveRadius * curveRadius - rightDy * rightDy));
+              const rightArcStart = { x: rightArcStartX, y: rightTopY };
+
+              // Arc end: where arc meets R3 area
+              const angleToR3 = Math.atan2(R3.y - bubbleCenterY, R3.x - centerX);
+              const rightArcEnd = {
+                x: centerX + curveRadius * Math.cos(angleToR3),
+                y: bubbleCenterY + curveRadius * Math.sin(angleToR3),
+              };
+
+              // Rounded corners for right card
+              // R2 = bottom-right (90° corner)
+              const R2_beforeCorner = { x: R2.x - buttonRadius, y: R2.y }; // Coming from left
+              const R2_afterCorner = { x: R2.x, y: R2.y - buttonRadius }; // Going up
+
+              // R1 = top-right corner
+              const R1_beforeCorner = { x: R1.x, y: R1.y + buttonRadius }; // Coming from below
+              const R1_afterCorner = { x: R1.x - buttonRadius, y: R1.y }; // Going left
+
+              // Roundover at top-left corner of right card (where flat top meets concave arc)
+              // Arc goes clockwise on right side, which in SVG Y-down means INCREASING angle
+              const rightArcStartAngle = Math.atan2(
+                rightArcStart.y - bubbleCenterY,
+                rightArcStart.x - centerX
+              );
+              const rightAngleIncrement = roundoverRadius / curveRadius;
+              const rightArcRoundoverEnd = {
+                x: centerX + curveRadius * Math.cos(rightArcStartAngle + rightAngleIncrement),
+                y: bubbleCenterY + curveRadius * Math.sin(rightArcStartAngle + rightAngleIncrement),
+              };
+
+              // Right path: mirrored version of left path
+              // Goes: R1 corner -> flat left to arc -> roundover -> arc -> R3 -> R2 corner -> up to R1
+              const rightPath = `
+                M ${R1_afterCorner.x} ${R1_afterCorner.y}
+                L ${rightArcStart.x + roundoverRadius} ${rightArcStart.y}
+                Q ${rightArcStart.x} ${rightArcStart.y} ${rightArcRoundoverEnd.x} ${rightArcRoundoverEnd.y}
+                A ${curveRadius} ${curveRadius} 0 0 1 ${rightArcEnd.x} ${rightArcEnd.y}
+                L ${R3.x} ${R3.y}
+                L ${R2_beforeCorner.x} ${R2_beforeCorner.y}
+                Q ${R2.x} ${R2.y} ${R2_afterCorner.x} ${R2_afterCorner.y}
+                L ${R1_beforeCorner.x} ${R1_beforeCorner.y}
+                Q ${R1.x} ${R1.y} ${R1_afterCorner.x} ${R1_afterCorner.y}
+                Z
+              `;
+
+              return (
+                <View
+                  style={[
+                    styles.trianglesContainer,
+                    { marginTop, width: svgWidth, height: svgHeight },
+                  ]}
+                >
+                  <Svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
+                    <Defs>
+                      <SvgLinearGradient id="glassGradientTri" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.08)" />
+                        <Stop offset="100%" stopColor="rgba(255, 255, 255, 0.02)" />
+                      </SvgLinearGradient>
+                    </Defs>
+
+                    {/* Left Triangle - Pitch */}
+                    <Path
+                      d={leftPath}
+                      fill="#1a1a1a"
+                      fillOpacity={0.9}
+                      stroke="rgba(255, 255, 255, 0.3)"
+                      strokeWidth={1}
+                    />
+
+                    {/* Right Triangle - Roll */}
+                    <Path
+                      d={rightPath}
+                      fill="#1a1a1a"
+                      fillOpacity={0.9}
+                      stroke="rgba(255, 255, 255, 0.3)"
+                      strokeWidth={1}
+                    />
+                  </Svg>
+
+                  {/* Pitch text - positioned near the 90° corner (L2) */}
+                  <View
+                    style={[
+                      styles.triangleContentAbsolute,
+                      {
+                        left: L2.x + 16,
+                        bottom: svgHeight - L2.y + 10,
+                        alignItems: 'flex-start',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.arcValueLabel}>Pitch</Text>
+                    <Text style={[styles.arcValueNumber, { color: levelStatus.color }]}>
                       {calibratedValues.pitch >= 0 ? '+' : ''}
                       {calibratedValues.pitch.toFixed(1)}°
                     </Text>
-                    {!isSmallScreen && (
-                      <Text style={styles.valueHint}>
-                        {calibratedValues.pitch > 0
-                          ? 'Nose Up'
-                          : calibratedValues.pitch < 0
-                            ? 'Nose Down'
-                            : 'Level'}
-                      </Text>
-                    )}
+                    <Text style={styles.arcValueHint}>
+                      {calibratedValues.pitch > 0
+                        ? 'Nose Up'
+                        : calibratedValues.pitch < 0
+                          ? 'Nose Down'
+                          : 'Level'}
+                    </Text>
                   </View>
 
-                  <View style={[styles.divider, isSmallScreen && styles.dividerSmall]} />
-
-                  <View style={styles.valueColumn}>
-                    <Text style={[styles.valueLabel, isSmallScreen && styles.valueLabelSmall]}>
-                      Roll
-                    </Text>
-                    <Text
-                      style={[
-                        styles.valueNumber,
-                        { color: levelStatus.color },
-                        isSmallScreen && styles.valueNumberSmall,
-                      ]}
-                    >
+                  {/* Roll text - positioned near the 90° corner (R2), mirrored alignment */}
+                  <View
+                    style={[
+                      styles.triangleContentAbsolute,
+                      {
+                        right: svgWidth - R2.x + 16,
+                        bottom: svgHeight - R2.y + 10,
+                        alignItems: 'flex-end',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.arcValueLabel}>Roll</Text>
+                    <Text style={[styles.arcValueNumber, { color: levelStatus.color }]}>
                       {calibratedValues.roll >= 0 ? '+' : ''}
                       {calibratedValues.roll.toFixed(1)}°
                     </Text>
-                    {!isSmallScreen && (
-                      <Text style={styles.valueHint}>
-                        {calibratedValues.roll > 0
-                          ? 'Right High'
-                          : calibratedValues.roll < 0
-                            ? 'Left High'
-                            : 'Level'}
+                    <Text style={styles.arcValueHint}>
+                      {calibratedValues.roll > 0
+                        ? 'Right Up'
+                        : calibratedValues.roll < 0
+                          ? 'Left Up'
+                          : 'Level'}
+                    </Text>
+                  </View>
+
+                  {/* Heading Card - centered at bottom where cards meet, overlays everything */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: svgHeight - L3.y - 5,
+                      left: 0,
+                      right: 0,
+                      alignItems: 'center',
+                      zIndex: 10,
+                    }}
+                  >
+                    <View style={styles.externalHeadingCard}>
+                      <Text style={styles.externalHeadingValue}>
+                        {Math.round(((yawDeg % 360) + 360) % 360)}°
                       </Text>
-                    )}
+                      <Text style={styles.externalHeadingDirection}>
+                        {getCardinalDirection(((yawDeg % 360) + 360) % 360)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </GlassCard>
-            </View>
+              );
+            })()}
           </View>
 
           {/* Action Buttons Group - Separate from level display */}
-          <View style={styles.actionButtonsGroup}>
+          <View
+            style={[styles.actionButtonsGroup, isSmallScreen && styles.actionButtonsGroupSmall]}
+          >
             {/* Sensor Permission Button */}
             {(permissionStatus === 'denied' ||
               (!isReliable && errorMessage?.includes('sensor'))) && (
@@ -502,49 +800,48 @@ export default function LevelScreen() {
 
             {/* Action Buttons - Glass Style */}
             <View style={[styles.buttonContainer, isSmallScreen && styles.buttonContainerSmall]}>
-              <View style={styles.buttonRow}>
-                <View style={styles.buttonHalf}>
-                  <GlassButton
-                    variant={isCalibrating ? 'success' : 'warning'}
-                    size={isSmallScreen ? 'sm' : 'md'}
-                    onPress={openQuickCalModal}
-                    disabled={isCalibrating || !isReliable}
-                    icon={
-                      isCalibrating ? (
-                        <RefreshCw size={16} color="#fff" />
-                      ) : (
-                        <Target size={16} color="#fff" />
-                      )
-                    }
-                  >
-                    {isCalibrating ? 'Calibrating...' : 'Quick Calibrate'}
-                  </GlassButton>
-                </View>
+              <GlassButton
+                variant={isCalibrating ? 'success' : 'warning'}
+                size={isSmallScreen ? 'sm' : 'md'}
+                onPress={openQuickCalModal}
+                disabled={isCalibrating || !isReliable}
+                icon={
+                  isCalibrating ? (
+                    <RefreshCw size={16} color="#fff" />
+                  ) : (
+                    <Target size={16} color="#fff" />
+                  )
+                }
+              >
+                {isCalibrating ? 'Calibrating...' : 'Quick Calibrate'}
+              </GlassButton>
 
-                <View style={styles.buttonHalf}>
-                  <GlassButton
-                    variant="secondary"
-                    size={isSmallScreen ? 'sm' : 'md'}
-                    onPress={handleCalibrate}
-                    icon={<Settings size={16} color="#fff" />}
-                  >
-                    Calibration
-                  </GlassButton>
-                </View>
-              </View>
+              <GlassButton
+                variant="secondary"
+                size={isSmallScreen ? 'sm' : 'md'}
+                onPress={handleCalibrate}
+                icon={<Settings size={16} color="#fff" />}
+              >
+                Full Calibration
+              </GlassButton>
             </View>
 
             {/* Leveling Assistant - Main feature, separated from calibration tools */}
-            <View style={styles.assistantContainer}>
+            <View
+              style={[styles.assistantContainer, isSmallScreen && styles.assistantContainerSmall]}
+            >
               <GlassButton
                 variant="primary"
                 size={isSmallScreen ? 'md' : 'lg'}
                 onPress={handleShowLevelingAssistant}
-                icon={<Zap size={18} color="#fff" />}
+                icon={<Zap size={isSmallScreen ? 16 : 18} color="#fff" />}
               >
                 Leveling Assistant
               </GlassButton>
             </View>
+
+            {/* Spacer to push profile card down on web (native handles this automatically) */}
+            {Platform.OS === 'web' && <View style={styles.webSpacer} />}
 
             {/* Active Profile Indicator */}
             <Pressable
@@ -604,7 +901,7 @@ export default function LevelScreen() {
               </View>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
 
         {/* Quick Calibrate Confirmation Modal */}
         <Modal
@@ -766,7 +1063,7 @@ export default function LevelScreen() {
             </Animated.View>
           </Pressable>
         </Modal>
-      </SafeAreaView>
+      </SafeAreaSimulator>
     </LinearGradient>
   );
 }
@@ -782,10 +1079,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
-    justifyContent: 'flex-start',
+    paddingBottom: 90, // Account for tab bar (70px) + spacing (20px)
+    flexGrow: 1,
   },
   centerContent: {
     flex: 1,
@@ -847,15 +1147,24 @@ const styles = StyleSheet.create({
   levelDisplayGroup: {
     // This group contains bubble level + pitch/roll card - they stay together
     alignItems: 'center',
-    paddingTop: 24,
+    paddingTop: 6,
   },
-  levelDisplayGroupLarge: {
-    paddingTop: 20,
+  levelDisplayGroupSmall: {
+    paddingTop: 8,
+  },
+  levelDisplayGroupVerySmall: {
+    paddingTop: 4,
   },
   actionButtonsGroup: {
-    // Action buttons below level display
-    marginTop: 16,
-    paddingBottom: 16, // Minimal padding, tab bar has its own space
+    // Action buttons below level display - flex to fill available space
+    marginTop: -23,
+    paddingBottom: 8,
+    flexGrow: 1,
+    justifyContent: 'flex-start',
+  },
+  actionButtonsGroupSmall: {
+    marginTop: 8,
+    paddingBottom: 8,
   },
   header: {
     alignItems: 'center',
@@ -869,29 +1178,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 8,
   },
-  statusGlowGreen: {
+  // SVG glow wrapper - absolutely fills container, centers SVG (for native)
+  statusGlowWrapper: {
     position: 'absolute',
-    // Centered behind the text - larger glow for perfect level
-    top: -15,
-    left: -30,
-    right: -30,
-    bottom: -15,
-    borderRadius: 50,
-    backgroundColor: 'rgba(34, 197, 94, 0.4)',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Allow glow to extend beyond container bounds
+    overflow: 'visible',
+  },
+  // Web-specific glow using CSS blur (works great on web)
+  statusGlowGreenWeb: {
+    position: 'absolute',
+    top: -8,
+    left: -20,
+    right: -20,
+    bottom: -8,
+    borderRadius: 30,
+    backgroundColor: 'rgba(34, 197, 94, 0.25)',
     // @ts-expect-error - filter works on web
     filter: 'blur(20px)',
   },
-  statusGlowYellow: {
+  statusGlowYellowWeb: {
     position: 'absolute',
-    // Smaller, tighter glow for nearly level
-    top: -4,
-    left: -12,
-    right: -12,
-    bottom: -4,
-    borderRadius: 30,
-    backgroundColor: 'rgba(234, 179, 8, 0.35)',
+    top: -6,
+    left: -16,
+    right: -16,
+    bottom: -6,
+    borderRadius: 25,
+    backgroundColor: 'rgba(234, 179, 8, 0.22)',
     // @ts-expect-error - filter works on web
-    filter: 'blur(12px)',
+    filter: 'blur(18px)',
   },
   statusText: {
     fontSize: 32,
@@ -907,36 +1227,97 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardContainer: {
-    marginTop: 8,
+    marginTop: 4,
     marginHorizontal: 4,
     width: '100%',
+  },
+  // Arc card that wraps under the bubble with curved top
+  arcCardWrapper: {
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  arcCardSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  arcCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 0, // Controlled by inline style
+    paddingBottom: 6,
+    paddingHorizontal: 12,
+  },
+  arcValueLeft: {
+    alignItems: 'center',
+  },
+  arcValueRight: {
+    alignItems: 'center',
+  },
+  arcValueLabel: {
+    fontSize: 9,
+    color: '#a3a3a3',
+    marginBottom: 1,
+  },
+  arcValueNumber: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 1,
+  },
+  arcValueHint: {
+    fontSize: 8,
+    color: '#737373',
+  },
+  valueNumberCompact: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   numericDisplay: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    paddingVertical: 2,
   },
   valueColumn: {
     alignItems: 'center',
     flex: 1,
   },
   valueLabel: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#a3a3a3',
-    marginBottom: 4,
+    marginBottom: 1,
+  },
+  valueLabelSmall: {
+    fontSize: 10,
+    color: '#a3a3a3',
+    marginBottom: 1,
   },
   valueNumber: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 1,
+  },
+  valueNumberSmall: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 1,
   },
   valueHint: {
-    fontSize: 12,
+    fontSize: 10,
+    color: '#737373',
+  },
+  valueHintSmall: {
+    fontSize: 9,
     color: '#737373',
   },
   divider: {
     width: 1,
-    height: 50,
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dividerSmall: {
+    width: 1,
+    height: 28,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   // Responsive styles for small screens
@@ -945,7 +1326,10 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   statusTextSmall: {
-    fontSize: 28,
+    fontSize: 26,
+  },
+  statusTextVerySmall: {
+    fontSize: 22,
   },
   cardContainerSmall: {
     marginTop: 8,
@@ -956,16 +1340,6 @@ const styles = StyleSheet.create({
   numericDisplaySmall: {
     paddingVertical: 0,
   },
-  valueLabelSmall: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  valueNumberSmall: {
-    fontSize: 22,
-  },
-  dividerSmall: {
-    height: 35,
-  },
   buttonContainerSmall: {
     marginTop: 8,
     gap: 8,
@@ -975,7 +1349,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   buttonContainer: {
-    marginTop: 28,
+    marginTop: 12,
     gap: 10,
   },
   buttonRow: {
@@ -986,7 +1360,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   assistantContainer: {
+    marginTop: 24,
+  },
+  assistantContainerSmall: {
     marginTop: 12,
+  },
+  // Spacer for web to push profile card down to match native layout
+  webSpacer: {
+    flexGrow: 1,
+    minHeight: 20,
   },
   profileContainer: {
     marginTop: 16,
@@ -997,7 +1379,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     overflow: 'hidden',
     position: 'relative',
@@ -1275,5 +1657,47 @@ const styles = StyleSheet.create({
     color: '#737373',
     textAlign: 'center',
     paddingHorizontal: 8,
+  },
+  // Triangle styles for pitch/roll
+  trianglesContainer: {
+    position: 'relative',
+    alignSelf: 'center',
+  },
+  trianglesSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  triangleContentAbsolute: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  // External heading card styles (matches original BubbleLevel heading)
+  externalHeadingContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  externalHeadingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(17, 17, 17, 0.85)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    borderWidth: 1,
+    gap: 6,
+  },
+  externalHeadingValue: {
+    color: '#fafafa',
+    fontSize: 16,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  externalHeadingDirection: {
+    color: '#60a5fa',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

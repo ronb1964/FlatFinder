@@ -86,9 +86,9 @@ export function GlassButton({
   };
 
   const sizeStyles = {
-    sm: { height: 36, paddingHorizontal: 12, fontSize: 14 },
-    md: { height: 48, paddingHorizontal: 16, fontSize: 16 },
-    lg: { height: 56, paddingHorizontal: 20, fontSize: 18 },
+    sm: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
+    md: { minHeight: 48, paddingHorizontal: 16, paddingVertical: 10, fontSize: 16 },
+    lg: { minHeight: 56, paddingHorizontal: 20, paddingVertical: 12, fontSize: 18 },
   };
 
   const colors = variantStyles[variant];
@@ -115,8 +115,9 @@ export function GlassButton({
         styles.gradient,
         {
           borderColor: colors.border,
-          height: sizing.height,
+          minHeight: sizing.minHeight,
           paddingHorizontal: sizing.paddingHorizontal,
+          paddingVertical: sizing.paddingVertical,
           opacity: disabled ? 0.5 : 1,
         },
       ]}
@@ -148,8 +149,9 @@ export function GlassButton({
             styles.webFallback,
             {
               borderColor: colors.border,
-              height: sizing.height,
+              minHeight: sizing.minHeight,
               paddingHorizontal: sizing.paddingHorizontal,
+              paddingVertical: sizing.paddingVertical,
               backgroundColor: colors.bg,
               opacity: disabled ? 0.5 : 1,
             },
@@ -218,6 +220,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 1,
   },
   icon: {
     marginRight: 8,
@@ -227,6 +230,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '600',
+    textAlign: 'center',
+    flexShrink: 1,
   },
 });
 

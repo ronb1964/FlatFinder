@@ -414,6 +414,7 @@ export const BubbleLevel = memo(function BubbleLevel({
         />
 
         {/* Compass Ring - rotates with heading, but letters counter-rotate to stay upright */}
+        {/* Negative rotation: when heading is 132° (SE), N should appear to the left so SE is at top */}
         {showCompass && (
           <G rotation={-heading} origin={`${center}, ${center}`}>
             {/* Cardinal direction markers - counter-rotate to stay readable */}
@@ -424,7 +425,7 @@ export const BubbleLevel = memo(function BubbleLevel({
               const x = center + Math.cos(rad) * textRadius;
               const y = center + Math.sin(rad) * textRadius;
               const isNorth = dir === 'N';
-              // Counter-rotate by adding heading back to keep text upright
+              // Counter-rotate to keep text upright (compensates for G rotation of -heading)
               const textRotation = heading;
               return (
                 <SvgText
@@ -451,7 +452,7 @@ export const BubbleLevel = memo(function BubbleLevel({
               const textRadius = rimRadius * 0.78;
               const x = center + Math.cos(rad) * textRadius;
               const y = center + Math.sin(rad) * textRadius;
-              // Counter-rotate by adding heading back to keep text upright
+              // Counter-rotate to keep text upright (compensates for G rotation of -heading)
               const textRotation = heading;
               return (
                 <SvgText

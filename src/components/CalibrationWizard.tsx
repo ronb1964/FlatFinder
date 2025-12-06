@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Target, RotateCw, Check, Home } from 'lucide-react-native';
 import { GlassButton } from './ui/GlassButton';
 import { useDeviceAttitude } from '../hooks/useDeviceAttitude';
@@ -227,7 +228,6 @@ export function CalibrationWizard({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { pitchDeg, rollDeg, isReliable } = useDeviceAttitude();
-
   // Animation values
   const containerRotation = useSharedValue(0);
   const contentOpacity = useSharedValue(1);
@@ -403,7 +403,7 @@ export function CalibrationWizard({
   if (!isVisible) return null;
 
   return (
-    <View style={styles.overlay}>
+    <SafeAreaView style={styles.overlay}>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
         <Animated.View
           style={[isRotatedStep ? styles.contentLandscape : styles.content, contentAnimatedStyle]}
@@ -586,9 +586,9 @@ export function CalibrationWizard({
               {currentStep === 'welcome' && (
                 <GlassButton
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onPress={handleStartCalibration}
-                  icon={<Target size={20} color="#fff" />}
+                  icon={<Target size={18} color="#fff" />}
                   style={styles.fullWidthButton}
                 >
                   Start Calibration
@@ -599,9 +599,9 @@ export function CalibrationWizard({
               {isTransitionStep && (
                 <GlassButton
                   variant="primary"
-                  size="lg"
+                  size="md"
                   onPress={handleProceed}
-                  icon={<RotateCw size={20} color="#fff" />}
+                  icon={<RotateCw size={18} color="#fff" />}
                   style={styles.fullWidthButton}
                 >
                   Next
@@ -623,9 +623,9 @@ export function CalibrationWizard({
                         disabled={!isReliable || isCapturing}
                       >
                         {isCapturing ? (
-                          <RotateCw size={24} color="#fff" />
+                          <RotateCw size={18} color="#fff" />
                         ) : (
-                          <Target size={24} color="#fff" />
+                          <Target size={18} color="#fff" />
                         )}
                         <Text style={styles.captureButtonText}>
                           {isCapturing ? 'Capturing...' : 'Capture Reading'}
@@ -639,19 +639,19 @@ export function CalibrationWizard({
                 <>
                   <GlassButton
                     variant="success"
-                    size="lg"
+                    size="md"
                     onPress={handleComplete}
-                    icon={<Check size={20} color="#fff" />}
+                    icon={<Check size={18} color="#fff" />}
                     style={styles.fullWidthButton}
                   >
                     View Leveling Plan
                   </GlassButton>
                   <GlassButton
                     variant="default"
-                    size="md"
+                    size="sm"
                     onPress={handleGoHome}
-                    icon={<Home size={18} color="#fff" />}
-                    style={[styles.fullWidthButton, { marginTop: 10 }]}
+                    icon={<Home size={16} color="#fff" />}
+                    style={[styles.fullWidthButton, { marginTop: 8 }]}
                   >
                     Go Home
                   </GlassButton>
@@ -661,9 +661,9 @@ export function CalibrationWizard({
               {currentStep !== 'complete' && (
                 <GlassButton
                   variant="danger"
-                  size="md"
+                  size="sm"
                   onPress={() => setShowCancelConfirm(true)}
-                  style={[styles.fullWidthButton, { marginTop: 16 }]}
+                  style={[styles.fullWidthButton, { marginTop: 10 }]}
                 >
                   Cancel
                 </GlassButton>
@@ -715,7 +715,7 @@ export function CalibrationWizard({
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -731,17 +731,17 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 12,
   },
   content: {
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
     backgroundColor: 'rgba(26, 26, 26, 0.85)',
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 24,
+    padding: 16,
     // Top highlight effect
     borderTopColor: 'rgba(59, 130, 246, 0.3)',
   },
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   progressDotWrapper: {
     flexDirection: 'row',
@@ -1045,24 +1045,74 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: THEME.colors.primary,
     fontWeight: '600',
   },
   phoneIndicator: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   phoneBody: {
+    width: 70,
+    height: 110,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: THEME.colors.primary,
+    padding: 4,
+    shadowColor: THEME.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+  },
+  phoneScreen: {
+    flex: 1,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  phoneNotch: {
+    position: 'absolute',
+    top: 4,
+    width: 22,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+  },
+  phoneArrow: {
+    fontSize: 28,
+    color: THEME.colors.primary,
+    fontWeight: '700',
+  },
+  phoneLabel: {
+    fontSize: 11,
+    color: THEME.colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  // Large looping phone animation styles
+  loopingPhoneContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    marginTop: 8,
+    position: 'relative',
+  },
+  phoneIndicatorLarge: {
+    // No margin - container handles spacing
+  },
+  phoneBodyLarge: {
     width: 90,
     height: 150,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -1072,93 +1122,43 @@ const styles = StyleSheet.create({
     padding: 6,
     shadowColor: THEME.colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-  },
-  phoneScreen: {
-    flex: 1,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  phoneNotch: {
-    position: 'absolute',
-    top: 6,
-    width: 30,
-    height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 3,
-  },
-  phoneArrow: {
-    fontSize: 36,
-    color: THEME.colors.primary,
-    fontWeight: '700',
-  },
-  phoneLabel: {
-    fontSize: 14,
-    color: THEME.colors.textSecondary,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  // Large looping phone animation styles
-  loopingPhoneContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    marginTop: 20, // Shift phone to the right in user's rotated view
-    position: 'relative',
-  },
-  phoneIndicatorLarge: {
-    // No margin - container handles spacing
-  },
-  phoneBodyLarge: {
-    width: 120,
-    height: 200,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: THEME.colors.primary,
-    padding: 8,
-    shadowColor: THEME.colors.primary,
-    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 16,
+    shadowRadius: 12,
   },
   phoneScreenLarge: {
     flex: 1,
     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderRadius: 14,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   phoneNotchLarge: {
     position: 'absolute',
-    top: 8,
-    width: 40,
-    height: 6,
+    top: 6,
+    width: 30,
+    height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 3,
+    borderRadius: 2,
   },
   phoneArrowLarge: {
-    fontSize: 48,
+    fontSize: 36,
     color: THEME.colors.primary,
     fontWeight: '700',
   },
   phoneLabelLarge: {
-    fontSize: 18,
+    fontSize: 14,
     color: THEME.colors.textSecondary,
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 4,
   },
   rotationArrowContainer: {
     position: 'absolute',
-    right: -100,
+    right: -70,
     top: '48%',
-    transform: [{ translateY: -20 }],
+    transform: [{ translateY: -16 }],
   },
   rotationArrow: {
-    fontSize: 48,
+    fontSize: 36,
     color: THEME.colors.primary,
     opacity: 0.7,
   },
@@ -1167,43 +1167,43 @@ const styles = StyleSheet.create({
   },
   instructionCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 20,
+    padding: 12,
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   instruction: {
-    fontSize: 16,
+    fontSize: 14,
     color: THEME.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
   },
   resultContainer: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   resultRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   resultItem: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 6,
+    borderRadius: 10,
+    padding: 10,
+    marginHorizontal: 4,
     alignItems: 'center',
   },
   resultLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: THEME.colors.textMuted,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   resultValue: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
   },
@@ -1283,27 +1283,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(59, 130, 246, 0.3)',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(96, 165, 250, 0.5)',
     width: '100%',
-    gap: 8,
+    gap: 6,
   },
   captureButtonDisabled: {
     opacity: 0.5,
   },
   captureButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },
   cancelButton: {
-    marginTop: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 10,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.4)',
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#f87171',
   },

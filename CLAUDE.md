@@ -28,12 +28,17 @@ This keeps continuity between sessions so you don't start fresh every time.
 
 3. **Don't jump ahead** - Make changes, report what you did, then stop and wait for feedback.
 
-4. **Calculate, don't guess** - For layout/positioning problems, ALWAYS do the math first:
-   - Know the container dimensions
-   - Know the element sizes
-   - Calculate exact positions mathematically
-   - Never use trial-and-error guessing with random values
-   - Show the calculation before making changes
+4. **Calculate, don't guess** - For layout/positioning problems, follow this checklist:
+
+   **BEFORE writing any code:**
+   - State the current/known dimensions (container size, element size, etc.)
+   - Show the calculation with actual numbers
+   - State the expected result
+
+   **AFTER taking a screenshot:**
+   - Describe what you ACTUALLY see (not what you expected)
+   - If it doesn't match expectations, say so immediately
+   - Never claim something is fixed if it visually isn't
 
 5. **Verify centering and alignment during development** - Don't overlook visual details:
    - When creating buttons, cards, or any UI element with content inside, verify centering immediately
@@ -42,6 +47,16 @@ This keeps continuity between sessions so you don't start fresh every time.
    - For GlassButton: use the `icon` and `rightIcon` props instead of custom View structures inside children
    - Measure centering programmatically when in doubt - don't rely on "looks okay"
    - Fix alignment issues as you build, not after - it's much harder to backtrack
+
+6. **SCREENSHOT ANALYSIS IS MANDATORY** - When you take a screenshot or Ron provides one:
+   - **STOP and carefully examine the ACTUAL visual content in the image**
+   - **DO NOT assume code renders as written** - describe what you ACTUALLY see
+   - **TAKE MEASUREMENTS** - Use browser evaluation tools to measure element positions, dimensions, and gaps
+   - Report SPECIFIC measurements with numbers (e.g., "gap at center is 35px, gap at edges is 8px")
+   - Compare measurements against expected values from the code/design
+   - If measurements don't match expectations, state the discrepancy explicitly with numbers
+   - **Screenshots cost tokens and money** - analyze them thoroughly the first time
+   - **Example:** "The gap at center is -35px (overlapping), card width is 254px but should be 305px" NOT "looks parallel"
 
 ---
 
@@ -84,78 +99,116 @@ This keeps the app simple, minimal dependencies, and consistent.
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 4, 2025)
+## Current State (as of Dec 5, 2025)
 
-**Onboarding UI Overhaul - COMPLETE**
+**Core Functionality - WORKING:**
 
-**Calibration Wizard - COMPLETE**
+- Roll sensor inversion fixed for native devices (`invertRoll: true` in EXPO_DEVICE_MOTION preset)
+- Bubble correctly floats to HIGH side on actual phone
+- Check Level feature with percentage feedback implemented
+- Calibration → Leveling flow with prompt modal implemented
 
-**Leveling Plan Screen - MOSTLY COMPLETE:**
+**Home Screen Changes This Session:**
 
-- Vehicle diagrams working for trailer, van, motorhome (glass-themed SVGs)
-- Diagram shows correct orientation: F (front) left, R (rear) right, Driver (Left) at bottom, Passenger (Right) at top
-- Color-coded wheel indicators: Green (ground), Blue (blocks sufficient), Yellow (needs attention)
-- Yellow wheels pulse to draw attention
-- Block instruction cards match wheel colors
-- Cards show "Lift needed" and "Blocks provide" for clarity
-- Left/Right (Driver/Passenger) labels on diagram for user clarity
+- Stacked Quick Calibrate / Full Calibration buttons (was side-by-side, text was truncated)
+- Debug controls hidden on native devices (only show on web)
+- Pitch/roll card made more compact
+- Added ScrollView for scrolling
 
-**Bubble Level & Math - FIXED THIS SESSION:**
+**UI Sizing Issue Discovered:**
 
-- Bubble now correctly floats to HIGH side (was inverted)
-- Roll math corrected: +roll = right high → left wheels need lift
-- Pitch math corrected: +pitch = nose up → rear wheels need lift
-- Display text matches: "Right High" / "Left High" / "Nose Up" / "Nose Down"
+- Browser testing at 430x932 does NOT match actual iPhone 14 Pro Max
+- Safe areas (~93px) + tab bar (~83px) = ~176px of lost space
+- Actual usable height is ~756px, not 932px
+- Elements that fit in browser are too large on device
+- CalibrationWizard and other screens need sizing adjustments for real device
 
 Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### 1. Discuss & Implement Block Tolerance Threshold
+### 1. Fix UI Sizing for Actual Device (PRIORITY)
 
-Currently, wheels show yellow (warning) if blocks don't EXACTLY match the lift needed. This means almost every wheel shows yellow. Need a tolerance threshold.
+The UI looks good in browser but elements are too large on actual iPhone. Need to resize for real device constraints.
 
-**Discussion needed with Ron:**
+**Approach:**
 
-- How much tolerance is acceptable? Options:
-  - 0.5" (tight - for users who want precision)
-  - 1.0" (moderate - most users)
-  - 1.5" (loose - for users with limited block inventory)
-- Should this be user-configurable in Settings?
-- Consider: modern fridges are more tolerant, experienced users care less about perfection
+1. Ron sends screenshot of what's wrong on his phone
+2. Identify what's cut off / too big / overlapping
+3. Adjust sizes specifically for actual device behavior
 
-**Current code already has a constant defined at top of LevelingAssistant.tsx:**
+**Key insight:** Browser viewport 430x932 doesn't account for:
 
-```javascript
-const BLOCK_TOLERANCE_INCHES = 0.5;
-```
+- Dynamic Island: ~59px
+- Home indicator: ~34px
+- Tab bar: ~83px
+- Total lost: ~176px
+- Actual usable: ~756px
 
+**Consider using `useSafeAreaInsets()` hook** to get actual inset values and calculate truly available space.
+
+### 2. Block Tolerance Threshold (After UI is fixed)
+
+Constant already defined: `BLOCK_TOLERANCE_INCHES = 0.5`
 Just need to use it in `getWheelStatus()` and `WheelCard` component.
 
-### 2. Review Trailer and Motorhome Diagrams
+### 3. Verify Trailer/Motorhome Diagrams (After UI is fixed)
 
-Van diagram is done. Still need to verify:
+Create test profiles for each vehicle type and verify wheel positions/labels.
 
-- Trailer diagram (has tongue/hitch graphic)
-- Motorhome diagram (has cab-over section)
+---
 
-Create test profiles for each type and verify wheel positions/labels are correct.
+## UI Development Rules - ENFORCED PATTERNS
 
-### 3. Implement Calibration → Leveling Flow (Later)
+### 1. Always Use `useSafeInsets()` for Layout Calculations
 
-When user taps "Leveling Assistant" from home screen:
+```typescript
+// CORRECT - use our custom hook
+import { useSafeInsets } from '../hooks/useSafeInsets';
+const insets = useSafeInsets();
+const usableHeight = screenHeight - insets.top - insets.bottom - TAB_BAR_HEIGHT;
 
-- If never calibrated → Prompt: "Quick Calibrate" / "Full Calibration"
-- If previously calibrated → Options: "Quick Calibrate" / "Full Calibration" / "Use Last Calibration"
+// WRONG - raw screen dimensions without safe area consideration
+const { height } = useWindowDimensions(); // Don't use this alone for sizing!
+```
 
-After completing calibration wizard:
+### 2. Always Use `SafeAreaSimulator` Instead of `SafeAreaView` on Screens
 
-- Show two buttons: "View Leveling Plan" / "Go Home"
+```typescript
+// CORRECT - shows accurate preview on web
+import { SafeAreaSimulator } from '../components/SafeAreaSimulator';
+<SafeAreaSimulator showIndicators={Platform.OS === 'web'}>
 
-**Key messaging:**
+// WRONG - returns 0 insets on web, misleading preview
+import { SafeAreaView } from 'react-native-safe-area-context';
+```
 
-- "If your vehicle has moved since last calibration, please calibrate again"
-- For Quick Calibrate: "Only use if phone is on a known level surface"
+### 3. Size Elements Based on Usable Space, Not Screen Size
+
+```typescript
+// CORRECT - calculate what actually fits
+const reservedSpace = 350; // status + card + buttons + padding
+const maxBubbleSize = Math.min(usableHeight - reservedSpace, 280);
+
+// WRONG - assume full screen is available
+const bubbleSize = screenHeight * 0.4; // Will overflow on real device!
+```
+
+### 4. Test Button Text Fits Before Committing
+
+Before creating buttons with text:
+
+1. Calculate available width: `screenWidth - margins - padding`
+2. If two buttons side-by-side: `(availableWidth - gap) / 2`
+3. If text is longer than ~10 characters, consider stacking vertically
+
+### 5. Always Verify Centering Visually
+
+When creating centered elements:
+
+- Use `alignItems: 'center'` and `justifyContent: 'center'` together
+- For buttons with icons: use the `icon` prop, not custom View structures
+- Check the browser preview shows proper centering before moving on
 
 ---
 
@@ -272,9 +325,10 @@ Playwright MCP is configured to use **Chrome**. Firefox has issues with Wayland 
 
 ### Important Notes
 
-- **Don't click the blue "Cancel" banner** at the top of Chrome - that's the Playwright MCP connection indicator. Clicking it disconnects Playwright.
-- The white area on the sides of narrow viewport is normal - it's browser chrome outside the app viewport.
-- Screenshots from Playwright show only the viewport (the app), not the browser chrome.
+- **Browser testing is NOT pixel-accurate** - Safe areas, tab bar, and platform rendering differences mean the actual device will look different
+- **Test on actual device for layout work** - Use `npx expo start --tunnel` and scan QR with Expo Go
+- Browser testing is still useful for logic/flow testing, just not for pixel-perfect layout
+- Don't click the blue "Cancel" banner at the top of Chrome - that's the Playwright MCP connection indicator
 
 ### Common Device Viewport Sizes
 
