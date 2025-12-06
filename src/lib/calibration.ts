@@ -1,3 +1,16 @@
+/**
+ * Calibration Module
+ *
+ * Handles device calibration for accurate leveling measurements.
+ * Calibration accounts for phone mounting position on the RV surface,
+ * compensating for any inherent tilt in how the phone is placed.
+ *
+ * Key functions:
+ * - applyCalibration(): Converts raw sensor values to calibrated values
+ * - calculateCalibrationOffsets(): Creates calibration from current position
+ * - getLevelStatus(): Returns level state with color coding for UI
+ */
+
 import { applyCalibratedValues, createCalibration, type Calibration } from './levelingMath';
 
 export interface CalibratedValues {

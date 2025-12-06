@@ -1,2 +1,0 @@
-find: ‘/home/ron/.config/user-share’: Permission denied
-/home/ron/.cache/ms-playwright-go/1.50.1/node

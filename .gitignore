@@ -41,3 +41,6 @@ debug-*.js
 test-*.js
 /tmp/
 *.tmp
+
+# Playwright MCP screenshots (testing artifacts)
+.playwright-mcp/

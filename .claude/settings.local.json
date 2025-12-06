@@ -56,7 +56,10 @@
       "Bash(npx -y expo-mcp --help)",
       "mcp__memory__create_entities",
       "Bash(git push:*)",
-      "mcp__playwright__browser_handle_dialog"
+      "mcp__playwright__browser_handle_dialog",
+      "Bash(npx:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

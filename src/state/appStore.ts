@@ -1,3 +1,16 @@
+/**
+ * App Store (Zustand)
+ *
+ * Central state management for FlatFinder. Persists to AsyncStorage.
+ *
+ * Key state:
+ * - profiles: Vehicle profiles with dimensions and calibration data
+ * - activeProfile: Currently selected vehicle for leveling
+ * - settings: User preferences (units, haptics, thresholds, etc.)
+ *
+ * Persistence: Profile and settings changes are auto-saved to device storage.
+ */
+
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calibration, createCalibration } from '../lib/levelingMath';

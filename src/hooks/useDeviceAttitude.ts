@@ -1,3 +1,19 @@
+/**
+ * useDeviceAttitude Hook
+ *
+ * Provides real-time device orientation data (pitch, roll, heading/yaw) from
+ * the device's motion sensors. This is the core sensor hook for the leveling feature.
+ *
+ * Features:
+ * - Automatic sensor initialization and permission handling
+ * - Platform-specific sensor adaptation (iOS/Android/Web)
+ * - Debug mode override for testing without physical device tilting
+ * - Graceful error handling for unavailable/denied sensors
+ *
+ * Usage:
+ *   const { pitchDeg, rollDeg, yawDeg, isReliable } = useDeviceAttitude();
+ */
+
 import { useEffect, useState, useRef } from 'react';
 import {
   createDefaultAttitudeAdapter,
