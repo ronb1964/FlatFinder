@@ -29,13 +29,15 @@ export interface VehicleProfile {
   updatedAt: Date;
 }
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export interface AppSettings {
   units: 'degrees' | 'percent';
   measurementUnits: 'imperial' | 'metric';
   hapticsEnabled: boolean;
   audioEnabled: boolean;
   levelThreshold: number;
-  nightMode: boolean;
+  themePreference: ThemePreference;
   keepAwake: boolean;
   hasCompletedOnboarding: boolean;
   onboardingStep: number;
@@ -60,6 +62,7 @@ interface AppState {
   updateProfile: (id: string, updates: Partial<VehicleProfile>) => void;
   deleteProfile: (id: string) => void;
   setActiveProfile: (id: string) => void;
+  isProfileNameTaken: (name: string, excludeId?: string) => boolean;
 
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
@@ -78,7 +81,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hapticsEnabled: true,
   audioEnabled: false,
   levelThreshold: 1.0,
-  nightMode: false,
+  themePreference: 'system',
   keepAwake: true,
   hasCompletedOnboarding: false,
   onboardingStep: 0,
@@ -253,11 +256,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().saveProfiles();
   },
 
+  // Check if a profile name is already taken (case-insensitive)
+  // excludeId allows checking during edit (exclude the profile being edited)
+  isProfileNameTaken: (name, excludeId) => {
+    const { profiles } = get();
+    const normalizedName = name.trim().toLowerCase();
+    return profiles.some(
+      (p) => p.name.trim().toLowerCase() === normalizedName && p.id !== excludeId
+    );
+  },
+
   loadSettings: async () => {
     try {
       const settingsJson = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
       if (settingsJson) {
         const loadedSettings = JSON.parse(settingsJson);
+
+        // Migrate legacy nightMode to themePreference
+        if ('nightMode' in loadedSettings && !('themePreference' in loadedSettings)) {
+          loadedSettings.themePreference = loadedSettings.nightMode ? 'dark' : 'system';
+          delete loadedSettings.nightMode;
+        }
+
         // Merge with defaults to ensure new fields are present for existing users
         const mergedSettings = { ...DEFAULT_SETTINGS, ...loadedSettings };
         set({ settings: mergedSettings });
@@ -293,9 +313,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         hasCompletedOnboarding: false,
         onboardingStep: 0,
       },
+      // Clear all profiles for a complete fresh start
+      profiles: [],
+      activeProfileId: null,
     }));
 
     get().saveSettings();
+    get().saveProfiles();
   },
 
   calibrateActiveProfile: (offsets) => {

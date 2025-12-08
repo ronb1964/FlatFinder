@@ -7,24 +7,40 @@ import {
   Volume2,
   Moon,
   Sun,
+  Smartphone,
   Activity,
   Gauge,
   RotateCcw,
   Ruler,
 } from 'lucide-react-native';
 
+import { ThemePreference } from '../../src/state/appStore';
+
 import { useAppStore } from '../../src/state/appStore';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
 import { GlassToggle } from '../../src/components/ui/GlassToggle';
-import { THEME } from '../../src/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 
 export default function SettingsScreen() {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
   const { settings, updateSettings, loadSettings, resetOnboarding } = useAppStore();
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // Theme-aware colors for inline styles
+  const colors = {
+    iconWrapperBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    divider: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+    unitButtonBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    unitButtonBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    unitButtonActiveBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+    unitButtonActiveBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.3)',
+    unitRadioBorder: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+  };
 
   const SettingRow = ({
     icon,
@@ -39,10 +55,14 @@ export default function SettingsScreen() {
   }) => (
     <View style={styles.settingRow}>
       <View style={styles.settingRowLeft}>
-        <View style={styles.iconWrapper}>{icon}</View>
+        <View style={[styles.iconWrapper, { backgroundColor: colors.iconWrapperBg }]}>{icon}</View>
         <View style={styles.settingTextContainer}>
-          <Text style={styles.settingTitle}>{title}</Text>
-          {description && <Text style={styles.settingDescription}>{description}</Text>}
+          <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{title}</Text>
+          {description && (
+            <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+              {description}
+            </Text>
+          )}
         </View>
       </View>
       {children}
@@ -50,14 +70,16 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={styles.pageTitle}>Settings</Text>
+          <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Settings</Text>
 
           {/* Feedback Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>FEEDBACK</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+              FEEDBACK
+            </Text>
             <GlassCard>
               <View style={styles.cardContent}>
                 <SettingRow
@@ -73,7 +95,7 @@ export default function SettingsScreen() {
                   />
                 </SettingRow>
 
-                <View style={styles.cardDivider} />
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
 
                 <SettingRow
                   icon={<Volume2 size={20} color={settings.audioEnabled ? '#3b82f6' : '#737373'} />}
@@ -91,27 +113,76 @@ export default function SettingsScreen() {
 
           {/* Display Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>DISPLAY</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+              DISPLAY
+            </Text>
             <GlassCard>
               <View style={styles.cardContent}>
-                <SettingRow
-                  icon={
-                    settings.nightMode ? (
+                {/* Theme Selection */}
+                <View style={styles.themeSection}>
+                  <View style={styles.themeSectionHeader}>
+                    {settings.themePreference === 'dark' ? (
                       <Moon size={20} color="#818cf8" />
-                    ) : (
+                    ) : settings.themePreference === 'light' ? (
                       <Sun size={20} color="#fbbf24" />
-                    )
-                  }
-                  title="Night Mode"
-                  description="Dark theme for night use"
-                >
-                  <GlassToggle
-                    value={settings.nightMode}
-                    onValueChange={(checked) => updateSettings({ nightMode: checked })}
-                  />
-                </SettingRow>
+                    ) : (
+                      <Smartphone size={20} color="#3b82f6" />
+                    )}
+                    <View style={styles.settingTextContainer}>
+                      <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Theme</Text>
+                      <Text
+                        style={[styles.settingDescription, { color: theme.colors.textSecondary }]}
+                      >
+                        {settings.themePreference === 'system'
+                          ? 'Follows your device setting'
+                          : settings.themePreference === 'light'
+                            ? 'Always use light theme'
+                            : 'Always use dark theme'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.themeRow}>
+                    {(['system', 'light', 'dark'] as ThemePreference[]).map((option) => {
+                      const isActive = settings.themePreference === option;
+                      const Icon =
+                        option === 'system' ? Smartphone : option === 'light' ? Sun : Moon;
+                      const activeColor =
+                        option === 'system'
+                          ? '#3b82f6'
+                          : option === 'light'
+                            ? '#fbbf24'
+                            : '#818cf8';
 
-                <View style={styles.cardDivider} />
+                      return (
+                        <TouchableOpacity
+                          key={option}
+                          style={[
+                            styles.themeButton,
+                            {
+                              backgroundColor: isActive ? `${activeColor}15` : colors.unitButtonBg,
+                              borderColor: isActive ? `${activeColor}40` : colors.unitButtonBorder,
+                            },
+                          ]}
+                          onPress={() => updateSettings({ themePreference: option })}
+                        >
+                          <Icon size={18} color={isActive ? activeColor : theme.colors.textMuted} />
+                          <Text
+                            style={[
+                              styles.themeButtonText,
+                              {
+                                color: isActive ? theme.colors.text : theme.colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {option.charAt(0).toUpperCase() + option.slice(1)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
 
                 <SettingRow
                   icon={<Activity size={20} color={settings.keepAwake ? '#f97316' : '#737373'} />}
@@ -129,7 +200,9 @@ export default function SettingsScreen() {
 
           {/* Measurement Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEASUREMENTS</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+              MEASUREMENTS
+            </Text>
             <GlassCard>
               <View style={styles.cardContent}>
                 {/* Units Selection */}
@@ -137,8 +210,10 @@ export default function SettingsScreen() {
                   <View style={styles.unitsSectionHeader}>
                     <Ruler size={20} color="#3b82f6" />
                     <View style={styles.settingTextContainer}>
-                      <Text style={styles.settingTitle}>Units</Text>
-                      <Text style={styles.settingDescription}>
+                      <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Units</Text>
+                      <Text
+                        style={[styles.settingDescription, { color: theme.colors.textSecondary }]}
+                      >
                         Choose your preferred measurement system
                       </Text>
                     </View>
@@ -147,14 +222,28 @@ export default function SettingsScreen() {
                     <TouchableOpacity
                       style={[
                         styles.unitButton,
-                        settings.measurementUnits === 'imperial' && styles.unitButtonActive,
+                        {
+                          backgroundColor:
+                            settings.measurementUnits === 'imperial'
+                              ? colors.unitButtonActiveBg
+                              : colors.unitButtonBg,
+                          borderColor:
+                            settings.measurementUnits === 'imperial'
+                              ? colors.unitButtonActiveBorder
+                              : colors.unitButtonBorder,
+                        },
                       ]}
                       onPress={() => updateSettings({ measurementUnits: 'imperial' })}
                     >
                       <View
                         style={[
                           styles.unitRadio,
-                          settings.measurementUnits === 'imperial' && styles.unitRadioActive,
+                          {
+                            borderColor:
+                              settings.measurementUnits === 'imperial'
+                                ? '#3b82f6'
+                                : colors.unitRadioBorder,
+                          },
                         ]}
                       >
                         {settings.measurementUnits === 'imperial' && (
@@ -165,26 +254,47 @@ export default function SettingsScreen() {
                         <Text
                           style={[
                             styles.unitText,
-                            settings.measurementUnits === 'imperial' && styles.unitTextActive,
+                            {
+                              color:
+                                settings.measurementUnits === 'imperial'
+                                  ? theme.colors.text
+                                  : theme.colors.textSecondary,
+                            },
                           ]}
                         >
                           Imperial
                         </Text>
-                        <Text style={styles.unitAbbrev}>in / ft</Text>
+                        <Text style={[styles.unitAbbrev, { color: theme.colors.textMuted }]}>
+                          in / ft
+                        </Text>
                       </View>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[
                         styles.unitButton,
-                        settings.measurementUnits === 'metric' && styles.unitButtonActive,
+                        {
+                          backgroundColor:
+                            settings.measurementUnits === 'metric'
+                              ? colors.unitButtonActiveBg
+                              : colors.unitButtonBg,
+                          borderColor:
+                            settings.measurementUnits === 'metric'
+                              ? colors.unitButtonActiveBorder
+                              : colors.unitButtonBorder,
+                        },
                       ]}
                       onPress={() => updateSettings({ measurementUnits: 'metric' })}
                     >
                       <View
                         style={[
                           styles.unitRadio,
-                          settings.measurementUnits === 'metric' && styles.unitRadioActive,
+                          {
+                            borderColor:
+                              settings.measurementUnits === 'metric'
+                                ? '#3b82f6'
+                                : colors.unitRadioBorder,
+                          },
                         ]}
                       >
                         {settings.measurementUnits === 'metric' && (
@@ -195,25 +305,34 @@ export default function SettingsScreen() {
                         <Text
                           style={[
                             styles.unitText,
-                            settings.measurementUnits === 'metric' && styles.unitTextActive,
+                            {
+                              color:
+                                settings.measurementUnits === 'metric'
+                                  ? theme.colors.text
+                                  : theme.colors.textSecondary,
+                            },
                           ]}
                         >
                           Metric
                         </Text>
-                        <Text style={styles.unitAbbrev}>cm / m</Text>
+                        <Text style={[styles.unitAbbrev, { color: theme.colors.textMuted }]}>
+                          cm / m
+                        </Text>
                       </View>
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                <View style={styles.cardDivider} />
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
 
                 {/* Level Threshold Slider */}
                 <View style={styles.sliderSection}>
                   <View style={styles.sliderHeader}>
                     <View style={styles.sliderHeaderLeft}>
                       <Gauge size={20} color="#22c55e" />
-                      <Text style={styles.settingTitle}>Level Threshold</Text>
+                      <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+                        Level Threshold
+                      </Text>
                     </View>
                     <View style={styles.thresholdBadge}>
                       <Text style={styles.thresholdValue}>
@@ -221,7 +340,7 @@ export default function SettingsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.sliderDescription}>
+                  <Text style={[styles.sliderDescription, { color: theme.colors.textSecondary }]}>
                     Tolerance for considering the vehicle level
                   </Text>
                   <View style={styles.sliderContainer}>
@@ -234,8 +353,12 @@ export default function SettingsScreen() {
                       trackColor="#22c55e"
                     />
                     <View style={styles.sliderLabels}>
-                      <Text style={styles.sliderLabel}>Precise</Text>
-                      <Text style={styles.sliderLabel}>Relaxed</Text>
+                      <Text style={[styles.sliderLabel, { color: theme.colors.textSecondary }]}>
+                        Precise
+                      </Text>
+                      <Text style={[styles.sliderLabel, { color: theme.colors.textSecondary }]}>
+                        Relaxed
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -245,15 +368,21 @@ export default function SettingsScreen() {
 
           {/* Developer Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>DEVELOPER</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+              DEVELOPER
+            </Text>
             <GlassCard borderColor="rgba(239, 68, 68, 0.3)">
               <View style={styles.cardContent}>
                 <View style={styles.resetSection}>
                   <View style={styles.resetHeader}>
                     <RotateCcw size={20} color="#ef4444" />
                     <View style={styles.settingTextContainer}>
-                      <Text style={styles.settingTitle}>Reset Onboarding</Text>
-                      <Text style={styles.settingDescription}>
+                      <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+                        Reset Onboarding
+                      </Text>
+                      <Text
+                        style={[styles.settingDescription, { color: theme.colors.textSecondary }]}
+                      >
                         Show the onboarding tutorial again for testing
                       </Text>
                     </View>
@@ -278,19 +407,21 @@ export default function SettingsScreen() {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ABOUT</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>ABOUT</Text>
             <GlassCard variant="primary">
               <View style={styles.aboutContent}>
                 <Text style={styles.aboutTitle}>FlatFinder</Text>
                 <View style={styles.versionBadge}>
                   <Text style={styles.versionText}>Version 1.0.0</Text>
                 </View>
-                <Text style={styles.aboutDescription}>
+                <Text style={[styles.aboutDescription, { color: theme.colors.textSecondary }]}>
                   Professional RV and trailer leveling app with precision sensors and intelligent
                   guidance
                 </Text>
                 <View style={styles.aboutDivider} />
-                <Text style={styles.aboutFooter}>Made with love for RV enthusiasts</Text>
+                <Text style={[styles.aboutFooter, { color: theme.colors.textMuted }]}>
+                  Made with love for RV enthusiasts
+                </Text>
               </View>
             </GlassCard>
           </View>
@@ -306,7 +437,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -318,7 +448,6 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
   },
   section: {
     gap: 12,
@@ -326,7 +455,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.textSecondary,
     letterSpacing: 1,
     marginLeft: 4,
   },
@@ -335,7 +463,6 @@ const styles = StyleSheet.create({
   },
   cardDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     marginVertical: 12,
   },
   settingRow: {
@@ -353,7 +480,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -363,12 +489,37 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
   },
   settingDescription: {
     fontSize: 12,
-    color: THEME.colors.textSecondary,
     marginTop: 2,
+  },
+  // Theme section
+  themeSection: {
+    gap: 12,
+  },
+  themeSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  themeButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   // Units section
   unitsSection: {
@@ -391,25 +542,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  unitButtonActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderColor: 'rgba(59, 130, 246, 0.4)',
   },
   unitRadio: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  unitRadioActive: {
-    borderColor: '#3b82f6',
   },
   unitRadioInner: {
     width: 8,
@@ -423,14 +564,9 @@ const styles = StyleSheet.create({
   unitText: {
     fontSize: 14,
     fontWeight: '500',
-    color: THEME.colors.textSecondary,
-  },
-  unitTextActive: {
-    color: THEME.colors.text,
   },
   unitAbbrev: {
     fontSize: 11,
-    color: THEME.colors.textMuted,
     marginTop: 2,
   },
   // Slider section
@@ -462,7 +598,6 @@ const styles = StyleSheet.create({
   },
   sliderDescription: {
     fontSize: 12,
-    color: THEME.colors.textSecondary,
     marginLeft: 32,
   },
   sliderContainer: {
@@ -477,7 +612,6 @@ const styles = StyleSheet.create({
   sliderLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.colors.textSecondary,
     letterSpacing: 0.5,
   },
   // Reset section
@@ -514,7 +648,6 @@ const styles = StyleSheet.create({
   },
   aboutDescription: {
     fontSize: 14,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 8,
@@ -527,7 +660,6 @@ const styles = StyleSheet.create({
   },
   aboutFooter: {
     fontSize: 12,
-    color: THEME.colors.textMuted,
     fontStyle: 'italic',
   },
   bottomPadding: {

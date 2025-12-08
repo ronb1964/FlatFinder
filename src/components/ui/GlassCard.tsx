@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -14,34 +16,54 @@ interface GlassCardProps {
   compact?: boolean;
 }
 
+// Generate variant colors based on current theme
+function getVariantColors(theme: Theme, borderColor?: string, glowColor?: string) {
+  const isDark = theme.mode === 'dark';
+
+  return {
+    default: {
+      border: borderColor || (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.2)'),
+      glow: glowColor || (isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)'),
+      gradient: isDark
+        ? (['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'] as [string, string])
+        : (['rgba(200, 215, 235, 0.5)', 'rgba(200, 215, 235, 0.3)'] as [string, string]),
+      bg: isDark ? 'rgba(26, 26, 26, 0.8)' : 'rgba(220, 230, 242, 0.95)',
+    },
+    success: {
+      border: borderColor || (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.25)'),
+      glow: glowColor || (isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)'),
+      gradient: isDark
+        ? (['rgba(34, 197, 94, 0.12)', 'rgba(34, 197, 94, 0.04)'] as [string, string])
+        : (['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)'] as [string, string]),
+      bg: isDark ? 'rgba(26, 26, 26, 0.8)' : 'rgba(220, 230, 242, 0.95)',
+    },
+    primary: {
+      border: borderColor || (isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.25)'),
+      glow: glowColor || (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'),
+      gradient: isDark
+        ? (['rgba(59, 130, 246, 0.12)', 'rgba(59, 130, 246, 0.04)'] as [string, string])
+        : (['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)'] as [string, string]),
+      bg: isDark ? 'rgba(26, 26, 26, 0.8)' : 'rgba(220, 230, 242, 0.95)',
+    },
+  };
+}
+
 export function GlassCard({
   children,
   style,
   intensity = 25,
-  tint = 'dark',
+  tint,
   borderColor,
   glowColor,
   variant = 'default',
   compact = false,
 }: GlassCardProps) {
-  const variantColors = {
-    default: {
-      border: borderColor || 'rgba(255, 255, 255, 0.1)',
-      glow: glowColor || 'rgba(59, 130, 246, 0.1)',
-      gradient: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
-    },
-    success: {
-      border: borderColor || 'rgba(34, 197, 94, 0.3)',
-      glow: glowColor || 'rgba(34, 197, 94, 0.15)',
-      gradient: ['rgba(34, 197, 94, 0.12)', 'rgba(34, 197, 94, 0.04)'],
-    },
-    primary: {
-      border: borderColor || 'rgba(59, 130, 246, 0.3)',
-      glow: glowColor || 'rgba(59, 130, 246, 0.15)',
-      gradient: ['rgba(59, 130, 246, 0.12)', 'rgba(59, 130, 246, 0.04)'],
-    },
-  };
+  const theme = useTheme();
 
+  // Use provided tint or default based on theme
+  const blurTint = tint || (theme.mode === 'dark' ? 'dark' : 'light');
+
+  const variantColors = getVariantColors(theme, borderColor, glowColor);
   const colors = variantColors[variant];
 
   const padding = compact ? 10 : 16;
@@ -51,14 +73,14 @@ export function GlassCard({
     return (
       <View style={[styles.container, style]}>
         <LinearGradient
-          colors={colors.gradient as [string, string]}
+          colors={colors.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
             styles.gradient,
             {
               borderColor: colors.border,
-              backgroundColor: 'rgba(26, 26, 26, 0.8)',
+              backgroundColor: colors.bg,
               padding,
             },
           ]}
@@ -73,9 +95,9 @@ export function GlassCard({
 
   return (
     <View style={[styles.container, style]}>
-      <BlurView intensity={intensity} tint={tint} style={styles.blur}>
+      <BlurView intensity={intensity} tint={blurTint} style={styles.blur}>
         <LinearGradient
-          colors={colors.gradient as [string, string]}
+          colors={colors.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.gradient, { borderColor: colors.border, padding }]}

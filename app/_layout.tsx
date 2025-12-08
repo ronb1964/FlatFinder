@@ -1,14 +1,17 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingGate } from '../src/components/OnboardingGate';
 import { DebugControls } from '../src/components/DebugControls';
 import { useAppStore } from '../src/state/appStore';
+import { useTheme } from '../src/hooks/useTheme';
 import { useEffect } from 'react';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  // Get the current theme (respects system + user preference)
+  const theme = useTheme();
+
   const loadProfiles = useAppStore((state) => state.loadProfiles);
   const loadSettings = useAppStore((state) => state.loadSettings);
 
@@ -39,8 +42,11 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+    <GestureHandlerRootView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      {/* StatusBar: light content on dark bg, dark content on light bg */}
+      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       <OnboardingGate>
         <Stack
           screenOptions={{
@@ -56,6 +62,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
   },
 });

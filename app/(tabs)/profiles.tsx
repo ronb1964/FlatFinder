@@ -18,9 +18,37 @@ import { VehicleSetupWizard } from '../../src/components/VehicleSetupWizard';
 import { ProfileEditor } from '../../src/components/ProfileEditor';
 import { GlassButton } from '../../src/components/ui/GlassButton';
 import { createCalibration } from '../../src/lib/levelingMath';
-import { THEME } from '../../src/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 
 export default function ProfilesScreen() {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  // Theme-aware colors for this screen
+  const screenColors = {
+    // Card backgrounds
+    cardBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+    cardBorder: theme.colors.primary,
+    helpCardBg: isDark ? 'rgba(234, 179, 8, 0.1)' : 'rgba(234, 179, 8, 0.08)',
+    helpCardBorder: isDark ? 'rgba(234, 179, 8, 0.5)' : 'rgba(234, 179, 8, 0.4)',
+    helpDescColor: isDark ? 'rgba(234, 179, 8, 0.8)' : 'rgba(180, 140, 0, 0.9)',
+    // Buttons
+    addBtnBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+    addBtnBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.35)',
+    editBtnBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+    editBtnBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+    deleteBtnBg: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.08)',
+    deleteBtnBorder: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.25)',
+    // Profile card
+    profileCardBg: theme.colors.surface,
+    profileCardBorder: theme.colors.border,
+    profileCardActiveBg: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.08)',
+    // Modal
+    modalBorder: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.25)',
+    modalIconBg: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+    // Icon color
+    iconColor: theme.colors.textSecondary,
+  };
   const {
     profiles,
     activeProfileId,
@@ -137,7 +165,7 @@ export default function ProfilesScreen() {
   };
 
   const getVehicleIcon = (type: string) => {
-    const color = '#a3a3a3';
+    const color = screenColors.iconColor;
     switch (type) {
       case 'trailer':
         return <Caravan size={22} color={color} />;
@@ -151,15 +179,21 @@ export default function ProfilesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.pageTitle}>Vehicle Profiles</Text>
+          <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Vehicle Profiles</Text>
           {profiles.length > 0 && (
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowSetupWizard(true)}>
-              <Plus size={18} color={THEME.colors.primary} />
-              <Text style={styles.addButtonText}>Add</Text>
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { backgroundColor: screenColors.addBtnBg, borderColor: screenColors.addBtnBorder },
+              ]}
+              onPress={() => setShowSetupWizard(true)}
+            >
+              <Plus size={18} color={theme.colors.primary} />
+              <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>Add</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -169,32 +203,57 @@ export default function ProfilesScreen() {
             {profiles.length === 0 ? (
               <View style={styles.emptyState}>
                 {/* Welcome Card */}
-                <View style={styles.welcomeCard}>
+                <View
+                  style={[
+                    styles.welcomeCard,
+                    { backgroundColor: screenColors.cardBg, borderColor: screenColors.cardBorder },
+                  ]}
+                >
                   <View style={styles.welcomeContent}>
                     <MotorhomeIcon size={48} color="#3b82f6" />
                     <View style={styles.welcomeTextContainer}>
-                      <Text style={styles.welcomeTitle}>Add Your First Vehicle</Text>
-                      <Text style={styles.welcomeDescription}>
+                      <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>
+                        Add Your First Vehicle
+                      </Text>
+                      <Text
+                        style={[styles.welcomeDescription, { color: theme.colors.textSecondary }]}
+                      >
                         Set up a profile for your RV, trailer, or van to get started with leveling.
                       </Text>
                     </View>
                     <TouchableOpacity
-                      style={styles.setupButton}
+                      style={[
+                        styles.setupButton,
+                        {
+                          backgroundColor: screenColors.addBtnBg,
+                          borderColor: screenColors.addBtnBorder,
+                        },
+                      ]}
                       onPress={() => setShowSetupWizard(true)}
                     >
-                      <Plus size={18} color={THEME.colors.primary} />
-                      <Text style={styles.setupButtonText}>Add Vehicle</Text>
+                      <Plus size={18} color={theme.colors.primary} />
+                      <Text style={[styles.setupButtonText, { color: theme.colors.primary }]}>
+                        Add Vehicle
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Help Card */}
-                <View style={styles.helpCard}>
+                <View
+                  style={[
+                    styles.helpCard,
+                    {
+                      backgroundColor: screenColors.helpCardBg,
+                      borderColor: screenColors.helpCardBorder,
+                    },
+                  ]}
+                >
                   <View style={styles.helpContent}>
                     <HelpCircle size={20} color="#eab308" />
                     <View style={styles.helpTextContainer}>
                       <Text style={styles.helpTitle}>Need help?</Text>
-                      <Text style={styles.helpDescription}>
+                      <Text style={[styles.helpDescription, { color: screenColors.helpDescColor }]}>
                         Don&apos;t worry if you don&apos;t know your exact vehicle measurements. Our
                         setup wizard will guide you through the process and provide typical values
                         for your vehicle type.
@@ -209,7 +268,14 @@ export default function ProfilesScreen() {
                   key={profile.id}
                   style={[
                     styles.profileCard,
-                    activeProfileId === profile.id && styles.profileCardActive,
+                    {
+                      backgroundColor: screenColors.profileCardBg,
+                      borderColor: screenColors.profileCardBorder,
+                    },
+                    activeProfileId === profile.id && [
+                      styles.profileCardActive,
+                      { backgroundColor: screenColors.profileCardActiveBg },
+                    ],
                   ]}
                   onPress={() => setActiveProfile(profile.id)}
                   activeOpacity={0.7}
@@ -219,10 +285,14 @@ export default function ProfilesScreen() {
                       {getVehicleIcon(profile.type)}
                       <View style={styles.profileInfo}>
                         <View style={styles.profileNameRow}>
-                          <Text style={styles.profileName}>{profile.name}</Text>
+                          <Text style={[styles.profileName, { color: theme.colors.text }]}>
+                            {profile.name}
+                          </Text>
                           {activeProfileId === profile.id && <Check size={16} color="#22c55e" />}
                         </View>
-                        <Text style={styles.profileDetails}>
+                        <Text
+                          style={[styles.profileDetails, { color: theme.colors.textSecondary }]}
+                        >
                           {profile.type.charAt(0).toUpperCase() + profile.type.slice(1)} •{' '}
                           {profile.type === 'trailer'
                             ? `Track: ${Math.round(profile.trackWidthInches)}" • Hitch: ${Math.round(profile.hitchOffsetInches || 0)}"`
@@ -232,13 +302,27 @@ export default function ProfilesScreen() {
                     </View>
                     <View style={styles.profileActions}>
                       <TouchableOpacity
-                        style={styles.editButton}
+                        style={[
+                          styles.editButton,
+                          {
+                            backgroundColor: screenColors.editBtnBg,
+                            borderColor: screenColors.editBtnBorder,
+                          },
+                        ]}
                         onPress={() => handleEditProfile(profile)}
                       >
-                        <Text style={styles.editButtonText}>Edit</Text>
+                        <Text style={[styles.editButtonText, { color: theme.colors.primary }]}>
+                          Edit
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.deleteButton}
+                        style={[
+                          styles.deleteButton,
+                          {
+                            backgroundColor: screenColors.deleteBtnBg,
+                            borderColor: screenColors.deleteBtnBorder,
+                          },
+                        ]}
                         onPress={() => handleDeleteProfile(profile.id, profile.name)}
                       >
                         <Trash2 size={20} color="#ef4444" />
@@ -282,13 +366,25 @@ export default function ProfilesScreen() {
         transparent
         onRequestClose={cancelDelete}
       >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={styles.deleteModalIcon}>
+        <View
+          style={[
+            styles.deleteModalOverlay,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' },
+          ]}
+        >
+          <View
+            style={[
+              styles.deleteModalContainer,
+              { backgroundColor: theme.colors.background, borderColor: screenColors.modalBorder },
+            ]}
+          >
+            <View style={[styles.deleteModalIcon, { backgroundColor: screenColors.modalIconBg }]}>
               <AlertTriangle size={32} color="#ef4444" />
             </View>
-            <Text style={styles.deleteModalTitle}>Delete Profile</Text>
-            <Text style={styles.deleteModalMessage}>
+            <Text style={[styles.deleteModalTitle, { color: theme.colors.text }]}>
+              Delete Profile
+            </Text>
+            <Text style={[styles.deleteModalMessage, { color: theme.colors.textSecondary }]}>
               Are you sure you want to delete &quot;{profileToDelete?.name}&quot;? This action
               cannot be undone.
             </Text>
@@ -320,7 +416,6 @@ export default function ProfilesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
   },
   content: {
     flex: 1,
@@ -335,23 +430,19 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
     flexShrink: 1,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
     flexShrink: 0,
   },
   addButtonText: {
-    color: THEME.colors.primary,
     fontWeight: '600',
   },
   scrollView: {
@@ -365,9 +456,7 @@ const styles = StyleSheet.create({
   },
   welcomeCard: {
     padding: 24,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderWidth: 1,
-    borderColor: THEME.colors.primary,
     borderRadius: 12,
   },
   welcomeContent: {
@@ -381,33 +470,26 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: THEME.colors.text,
     textAlign: 'center',
   },
   welcomeDescription: {
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
   },
   setupButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
   },
   setupButtonText: {
-    color: THEME.colors.primary,
     fontWeight: '600',
   },
   helpCard: {
     padding: 16,
-    backgroundColor: 'rgba(234, 179, 8, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.5)',
     borderRadius: 12,
   },
   helpContent: {
@@ -424,19 +506,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   helpDescription: {
-    color: 'rgba(234, 179, 8, 0.8)',
     fontSize: 14,
   },
   profileCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    backgroundColor: THEME.colors.surface,
-    borderColor: THEME.colors.border,
   },
   profileCardActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: THEME.colors.success,
+    borderColor: '#22c55e',
   },
   profileRow: {
     flexDirection: 'row',
@@ -460,10 +538,8 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: THEME.colors.text,
   },
   profileDetails: {
-    color: THEME.colors.textSecondary,
     fontSize: 12,
   },
   profileActions: {
@@ -473,24 +549,19 @@ const styles = StyleSheet.create({
   editButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   editButtonText: {
-    color: THEME.colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
   deleteButton: {
     padding: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   // Delete confirmation modal styles
   deleteModalOverlay: {
@@ -503,10 +574,8 @@ const styles = StyleSheet.create({
   deleteModalContainer: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: THEME.colors.background,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
     padding: 24,
     alignItems: 'center',
     gap: 16,
@@ -515,18 +584,15 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
   },
   deleteModalMessage: {
     fontSize: 14,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

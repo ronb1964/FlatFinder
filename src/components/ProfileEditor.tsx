@@ -8,8 +8,8 @@ import {
   Modal,
   StyleSheet,
 } from 'react-native';
-import { Trash2, Plus, Caravan } from 'lucide-react-native';
-import { MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
+import { Trash2, Plus } from 'lucide-react-native';
+import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
 import { GlassButton } from './ui/GlassButton';
 import { GlassCard } from './ui/GlassCard';
 import { GlassToggle } from './ui/GlassToggle';
@@ -17,6 +17,7 @@ import { useAppStore } from '../state/appStore';
 import { BlockInventory } from '../lib/rvLevelingMath';
 import { convertToInches, convertForDisplay } from '../lib/units';
 import { THEME } from '../theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface ProfileEditorProps {
   profile: {
@@ -40,27 +41,18 @@ interface ProfileEditorProps {
   isVisible: boolean;
 }
 
-// Wrapper for Caravan to match custom icon interface
-const TrailerIconWrapper = ({
-  size = 24,
-  color = '#a3a3a3',
-}: {
-  size?: number;
-  color?: string;
-}) => <Caravan size={size} color={color} />;
-
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
-    Icon: TrailerIconWrapper,
-    iconSize: 28,
+    Icon: TrailerIcon,
+    iconSize: 32, // Slightly larger to match visual weight
   },
   {
     id: 'motorhome',
-    name: 'Motorhome/RV',
+    name: 'Motor Home',
     Icon: MotorhomeIcon,
-    iconSize: 28,
+    iconSize: 40, // Larger to match visual size of other icons
   },
   {
     id: 'van',
@@ -71,8 +63,53 @@ const VEHICLE_TYPES = [
 ];
 
 export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileEditorProps) {
-  const { settings } = useAppStore();
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+  const { settings, isProfileNameTaken } = useAppStore();
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Theme-aware colors
+  const screenColors = {
+    // Overlay and modal
+    overlayBg: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+    modalBg: theme.colors.background,
+    modalBorder: theme.colors.border,
+    // Text colors
+    text: theme.colors.text,
+    textSecondary: theme.colors.textSecondary,
+    textMuted: theme.colors.textMuted,
+    primary: theme.colors.primary,
+    success: theme.colors.success,
+    danger: '#ef4444',
+    // Input backgrounds
+    inputBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
+    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    placeholder: isDark ? '#737373' : '#9ca3af',
+    // Vehicle type option
+    optionBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
+    optionBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    optionSelectedBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.2)',
+    optionSelectedBorder: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.6)',
+    iconColor: isDark ? '#a3a3a3' : '#64748b',
+    // Block item
+    blockItemBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
+    blockItemBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    blockItemActiveBg: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.15)',
+    blockItemActiveBorder: isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.5)',
+    // Quantity buttons
+    quantityBtnBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 215, 235, 0.6)',
+    quantityBtnBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.4)',
+    // Total blocks card
+    totalCardBg: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.15)',
+    totalCardBorder: isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.5)',
+    // Add block button
+    addBtnBg: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.12)',
+    addBtnBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+    addInputBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
+    addInputBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+    addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(220, 230, 242, 0.95)',
+    addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+  };
 
   // Initialize state from profile
   const [name, setName] = useState(profile.name);
@@ -94,6 +131,11 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
   const [newBlockHeight, setNewBlockHeight] = useState('');
 
   const unitLabel = settings.measurementUnits === 'metric' ? 'cm' : 'inches';
+
+  // Check if name is taken (exclude current profile when editing)
+  const isEditingSameName = name.trim().toLowerCase() === profile.name.trim().toLowerCase();
+  const vehicleNameTaken =
+    name.trim() && !isEditingSameName && isProfileNameTaken(name, profile.id);
 
   const updateBlockQuantity = useCallback((height: number, delta: number) => {
     setBlockQuantities((prev) => {
@@ -169,7 +211,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
     });
   };
 
-  const canSave = name.trim().length > 0;
+  const canSave = name.trim().length > 0 && !vehicleNameTaken;
 
   const sortedHeights = Object.keys(blockQuantities)
     .map((h) => parseFloat(h))
@@ -181,11 +223,16 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+      <View style={[styles.overlay, { backgroundColor: screenColors.overlayBg }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: screenColors.modalBg, borderColor: screenColors.modalBorder },
+          ]}
+        >
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Edit Profile</Text>
+          <View style={[styles.header, { borderBottomColor: screenColors.modalBorder }]}>
+            <Text style={[styles.headerTitle, { color: screenColors.text }]}>Edit Profile</Text>
           </View>
 
           {/* Scrollable Content */}
@@ -199,22 +246,36 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
               {/* Vehicle Name Section */}
               <GlassCard>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Vehicle Name</Text>
+                  <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
+                    Vehicle Name
+                  </Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[
+                      styles.textInput,
+                      {
+                        backgroundColor: screenColors.inputBg,
+                        borderColor: vehicleNameTaken ? '#ef4444' : screenColors.inputBorder,
+                        color: screenColors.text,
+                      },
+                    ]}
                     value={name}
                     onChangeText={setName}
                     placeholder="Enter vehicle name"
-                    placeholderTextColor="#737373"
+                    placeholderTextColor={screenColors.placeholder}
                     selectTextOnFocus={true}
                   />
+                  {vehicleNameTaken && (
+                    <Text style={styles.errorText}>A vehicle with this name already exists</Text>
+                  )}
                 </View>
               </GlassCard>
 
               {/* Vehicle Type Section */}
               <GlassCard>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Vehicle Type</Text>
+                  <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
+                    Vehicle Type
+                  </Text>
                   <View style={styles.vehicleTypeRow}>
                     {VEHICLE_TYPES.map((vt) => {
                       const isSelected = vehicleType === vt.id;
@@ -224,20 +285,28 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                           key={vt.id}
                           style={[
                             styles.vehicleTypeOption,
-                            isSelected && styles.vehicleTypeOptionSelected,
+                            {
+                              backgroundColor: screenColors.optionBg,
+                              borderColor: screenColors.optionBorder,
+                            },
+                            isSelected && {
+                              backgroundColor: screenColors.optionSelectedBg,
+                              borderColor: screenColors.optionSelectedBorder,
+                            },
                           ]}
                           onPress={() => setVehicleType(vt.id as 'trailer' | 'motorhome' | 'van')}
                         >
                           <View style={styles.vehicleTypeIconWrapper}>
                             <VehicleIcon
                               size={vt.iconSize}
-                              color={isSelected ? THEME.colors.primary : '#a3a3a3'}
+                              color={isSelected ? screenColors.primary : screenColors.iconColor}
                             />
                           </View>
                           <Text
                             style={[
                               styles.vehicleTypeLabel,
-                              isSelected && styles.vehicleTypeLabelSelected,
+                              { color: screenColors.textSecondary },
+                              isSelected && { color: screenColors.primary, fontWeight: '600' },
                             ]}
                           >
                             {vt.name.split('/')[0]}
@@ -252,14 +321,27 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
               {/* Measurements Section */}
               <GlassCard>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Measurements</Text>
+                  <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
+                    Measurements
+                  </Text>
 
                   {/* Wheelbase - only for motorhomes/vans */}
                   {vehicleType !== 'trailer' && (
                     <View style={styles.measurementRow}>
-                      <Text style={styles.measurementLabel}>Wheelbase ({unitLabel})</Text>
+                      <Text
+                        style={[styles.measurementLabel, { color: screenColors.textSecondary }]}
+                      >
+                        Wheelbase ({unitLabel})
+                      </Text>
                       <TextInput
-                        style={styles.measurementInput}
+                        style={[
+                          styles.measurementInput,
+                          {
+                            backgroundColor: screenColors.inputBg,
+                            borderColor: screenColors.inputBorder,
+                            color: screenColors.text,
+                          },
+                        ]}
                         value={String(
                           convertForDisplay(wheelbaseInches, settings.measurementUnits)
                         )}
@@ -269,10 +351,10 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                         }}
                         keyboardType="decimal-pad"
                         placeholder="240"
-                        placeholderTextColor="#737373"
+                        placeholderTextColor={screenColors.placeholder}
                         selectTextOnFocus={true}
                       />
-                      <Text style={styles.measurementHint}>
+                      <Text style={[styles.measurementHint, { color: screenColors.textMuted }]}>
                         Distance between front and rear axles
                       </Text>
                     </View>
@@ -281,9 +363,20 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                   {/* Hitch Offset - only for trailers (first for trailers) */}
                   {vehicleType === 'trailer' && (
                     <View style={styles.measurementRow}>
-                      <Text style={styles.measurementLabel}>Hitch Offset ({unitLabel})</Text>
+                      <Text
+                        style={[styles.measurementLabel, { color: screenColors.textSecondary }]}
+                      >
+                        Hitch Offset ({unitLabel})
+                      </Text>
                       <TextInput
-                        style={styles.measurementInput}
+                        style={[
+                          styles.measurementInput,
+                          {
+                            backgroundColor: screenColors.inputBg,
+                            borderColor: screenColors.inputBorder,
+                            color: screenColors.text,
+                          },
+                        ]}
                         value={String(
                           convertForDisplay(hitchOffsetInches, settings.measurementUnits)
                         )}
@@ -293,10 +386,10 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                         }}
                         keyboardType="decimal-pad"
                         placeholder="120"
-                        placeholderTextColor="#737373"
+                        placeholderTextColor={screenColors.placeholder}
                         selectTextOnFocus={true}
                       />
-                      <Text style={styles.measurementHint}>
+                      <Text style={[styles.measurementHint, { color: screenColors.textMuted }]}>
                         Distance from rear axle center to hitch ball
                       </Text>
                     </View>
@@ -304,9 +397,18 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
 
                   {/* Track Width - always shown (second for all vehicle types) */}
                   <View style={styles.measurementRow}>
-                    <Text style={styles.measurementLabel}>Track Width ({unitLabel})</Text>
+                    <Text style={[styles.measurementLabel, { color: screenColors.textSecondary }]}>
+                      Track Width ({unitLabel})
+                    </Text>
                     <TextInput
-                      style={styles.measurementInput}
+                      style={[
+                        styles.measurementInput,
+                        {
+                          backgroundColor: screenColors.inputBg,
+                          borderColor: screenColors.inputBorder,
+                          color: screenColors.text,
+                        },
+                      ]}
                       value={String(convertForDisplay(trackWidthInches, settings.measurementUnits))}
                       onChangeText={(text) => {
                         const value = parseFloat(text) || 0;
@@ -314,10 +416,10 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                       }}
                       keyboardType="decimal-pad"
                       placeholder="96"
-                      placeholderTextColor="#737373"
+                      placeholderTextColor={screenColors.placeholder}
                       selectTextOnFocus={true}
                     />
-                    <Text style={styles.measurementHint}>
+                    <Text style={[styles.measurementHint, { color: screenColors.textMuted }]}>
                       Distance between left and right wheels
                     </Text>
                   </View>
@@ -327,11 +429,13 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
               {/* Block Inventory Section */}
               <GlassCard>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Leveling Blocks</Text>
+                  <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
+                    Leveling Blocks
+                  </Text>
 
                   <View style={styles.switchRow}>
                     <GlassToggle value={hasLevelingBlocks} onValueChange={setHasLevelingBlocks} />
-                    <Text style={styles.switchLabel}>
+                    <Text style={[styles.switchLabel, { color: screenColors.text }]}>
                       {hasLevelingBlocks
                         ? 'I have leveling blocks'
                         : "I don't have leveling blocks"}
@@ -349,20 +453,36 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                             return (
                               <View
                                 key={height}
-                                style={[styles.blockItem, hasBlocks && styles.blockItemActive]}
+                                style={[
+                                  styles.blockItem,
+                                  {
+                                    backgroundColor: screenColors.blockItemBg,
+                                    borderColor: screenColors.blockItemBorder,
+                                  },
+                                  hasBlocks && {
+                                    backgroundColor: screenColors.blockItemActiveBg,
+                                    borderColor: screenColors.blockItemActiveBorder,
+                                  },
+                                ]}
                               >
                                 <TouchableOpacity
                                   style={styles.deleteBlockButton}
                                   onPress={() => deleteBlockSize(height)}
                                   activeOpacity={0.6}
                                 >
-                                  <Trash2 size={16} color="#ef4444" />
+                                  <Trash2 size={16} color={screenColors.danger} />
                                 </TouchableOpacity>
-                                <Text style={styles.blockHeight}>{formatHeight(height)}</Text>
+                                <Text style={[styles.blockHeight, { color: screenColors.text }]}>
+                                  {formatHeight(height)}
+                                </Text>
                                 <View style={styles.quantityControls}>
                                   <TouchableOpacity
                                     style={[
                                       styles.quantityButton,
+                                      {
+                                        backgroundColor: screenColors.quantityBtnBg,
+                                        borderColor: screenColors.quantityBtnBorder,
+                                      },
                                       quantity === 0 && styles.quantityButtonDisabled,
                                     ]}
                                     onPress={() => updateBlockQuantity(height, -1)}
@@ -370,23 +490,44 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                                     activeOpacity={0.6}
                                     delayPressIn={0}
                                   >
-                                    <Text style={styles.quantityButtonText}>−</Text>
+                                    <Text
+                                      style={[
+                                        styles.quantityButtonText,
+                                        { color: screenColors.text },
+                                      ]}
+                                    >
+                                      −
+                                    </Text>
                                   </TouchableOpacity>
                                   <Text
                                     style={[
                                       styles.quantityValue,
-                                      hasBlocks && styles.quantityValueActive,
+                                      { color: screenColors.textSecondary },
+                                      hasBlocks && { color: screenColors.success },
                                     ]}
                                   >
                                     {quantity}
                                   </Text>
                                   <TouchableOpacity
-                                    style={styles.quantityButton}
+                                    style={[
+                                      styles.quantityButton,
+                                      {
+                                        backgroundColor: screenColors.quantityBtnBg,
+                                        borderColor: screenColors.quantityBtnBorder,
+                                      },
+                                    ]}
                                     onPress={() => updateBlockQuantity(height, 1)}
                                     activeOpacity={0.6}
                                     delayPressIn={0}
                                   >
-                                    <Text style={styles.quantityButtonText}>+</Text>
+                                    <Text
+                                      style={[
+                                        styles.quantityButtonText,
+                                        { color: screenColors.text },
+                                      ]}
+                                    >
+                                      +
+                                    </Text>
                                   </TouchableOpacity>
                                 </View>
                               </View>
@@ -394,14 +535,22 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                           })}
                         </View>
                       ) : (
-                        <Text style={styles.noBlocksText}>
+                        <Text style={[styles.noBlocksText, { color: screenColors.textMuted }]}>
                           No block sizes added. Tap below to add some.
                         </Text>
                       )}
 
                       {totalBlocks > 0 && (
-                        <View style={styles.totalBlocksCard}>
-                          <Text style={styles.totalBlocksText}>
+                        <View
+                          style={[
+                            styles.totalBlocksCard,
+                            {
+                              backgroundColor: screenColors.totalCardBg,
+                              borderColor: screenColors.totalCardBorder,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.totalBlocksText, { color: screenColors.success }]}>
                             Total: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} (
                             {sortedHeights.length} size{sortedHeights.length !== 1 ? 's' : ''})
                           </Text>
@@ -411,23 +560,50 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                       {/* Add Block Size */}
                       {!showAddBlockInput ? (
                         <TouchableOpacity
-                          style={styles.addBlockButton}
+                          style={[
+                            styles.addBlockButton,
+                            {
+                              backgroundColor: screenColors.addBtnBg,
+                              borderColor: screenColors.addBtnBorder,
+                            },
+                          ]}
                           onPress={() => setShowAddBlockInput(true)}
                         >
-                          <Plus size={18} color={THEME.colors.primary} />
-                          <Text style={styles.addBlockButtonText}>Add Block Size</Text>
+                          <Plus size={18} color={screenColors.primary} />
+                          <Text
+                            style={[styles.addBlockButtonText, { color: screenColors.primary }]}
+                          >
+                            Add Block Size
+                          </Text>
                         </TouchableOpacity>
                       ) : (
-                        <View style={styles.addBlockInputContainer}>
+                        <View
+                          style={[
+                            styles.addBlockInputContainer,
+                            {
+                              backgroundColor: screenColors.addInputBg,
+                              borderColor: screenColors.addInputBorder,
+                            },
+                          ]}
+                        >
                           <View style={styles.addBlockInputGroup}>
-                            <Text style={styles.addBlockLabel}>
+                            <Text
+                              style={[styles.addBlockLabel, { color: screenColors.textSecondary }]}
+                            >
                               Height ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'}):
                             </Text>
                             <View style={styles.addBlockInputRow}>
                               <TextInput
-                                style={styles.addBlockInput}
+                                style={[
+                                  styles.addBlockInput,
+                                  {
+                                    backgroundColor: screenColors.addInputFieldBg,
+                                    borderColor: screenColors.addInputFieldBorder,
+                                    color: screenColors.text,
+                                  },
+                                ]}
                                 placeholder="e.g., 2"
-                                placeholderTextColor="#737373"
+                                placeholderTextColor={screenColors.placeholder}
                                 keyboardType="decimal-pad"
                                 value={newBlockHeight}
                                 onChangeText={setNewBlockHeight}
@@ -465,7 +641,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
           </ScrollView>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { borderTopColor: screenColors.modalBorder }]}>
             <GlassButton variant="default" size="md" onPress={onCancel} style={styles.footerButton}>
               Cancel
             </GlassButton>
@@ -539,6 +715,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
     color: THEME.colors.text,
     fontSize: 16,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: 6,
   },
   vehicleTypeRow: {
     flexDirection: 'row',

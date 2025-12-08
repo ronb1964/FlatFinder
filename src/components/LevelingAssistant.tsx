@@ -40,11 +40,11 @@ import {
 } from '../lib/coordinateSystem';
 import { useAppStore } from '../state/appStore';
 import { formatMeasurement } from '../lib/units';
-import { THEME } from '../theme';
 import { GlassCard } from './ui/GlassCard';
 import { GlassButton } from './ui/GlassButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../hooks/useTheme';
 
 interface LevelingAssistantProps {
   onBack?: () => void;
@@ -206,19 +206,20 @@ function WheelIndicator({ x, y, status, isAnimating = false }: WheelIndicatorPro
     return () => global.clearInterval(interval);
   }, [isAnimating]);
 
+  // Status colors - consistent across themes
   const colors = {
     ground: {
-      fill: THEME.colors.success,
+      fill: '#22c55e',
       glow: 'rgba(34, 197, 94, 0.5)',
       outerGlow: 'rgba(34, 197, 94, 0.25)',
     },
     solution: {
-      fill: THEME.colors.primary,
+      fill: '#3b82f6',
       glow: 'rgba(59, 130, 246, 0.5)',
       outerGlow: 'rgba(59, 130, 246, 0.25)',
     },
     warning: {
-      fill: THEME.colors.warning,
+      fill: '#eab308',
       glow: 'rgba(234, 179, 8, 0.5)',
       outerGlow: 'rgba(234, 179, 8, 0.2)',
     },
@@ -724,30 +725,41 @@ interface WheelCardProps {
 }
 
 function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
   const hasBlocks = blockStack.blocks.length > 0;
   // Check if blocks fully cover the needed lift (within 0.1" tolerance)
   const isFullyCovered = hasBlocks && blockStack.totalHeight >= lift.liftInches - 0.1;
   const status = isGround ? 'ground' : isFullyCovered ? 'solution' : 'warning';
 
+  // Theme-aware status colors
   const statusColors = {
     ground: {
       bg: 'rgba(34, 197, 94, 0.1)',
       border: 'rgba(34, 197, 94, 0.3)',
-      text: THEME.colors.success,
+      text: '#22c55e',
     },
     solution: {
       bg: 'rgba(59, 130, 246, 0.1)',
       border: 'rgba(59, 130, 246, 0.3)',
-      text: THEME.colors.primary,
+      text: '#3b82f6',
     },
     warning: {
       bg: 'rgba(234, 179, 8, 0.1)',
       border: 'rgba(234, 179, 8, 0.3)',
-      text: THEME.colors.warning,
+      text: '#eab308',
     },
   };
 
   const colors = statusColors[status];
+
+  // Theme-aware text colors
+  const textColors = {
+    secondary: theme.colors.textSecondary,
+    muted: theme.colors.textMuted,
+    blockItem: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+  };
 
   return (
     <View style={[styles.wheelCard, { backgroundColor: colors.bg, borderColor: colors.border }]}>
@@ -755,12 +767,12 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
         <Text style={[styles.wheelCardTitle, { color: colors.text }]}>{lift.description}</Text>
         {isGround ? (
           <View style={styles.groundBadge}>
-            <Check size={12} color={THEME.colors.success} />
-            <Text style={styles.groundBadgeText}>Ground</Text>
+            <Check size={12} color="#22c55e" />
+            <Text style={[styles.groundBadgeText, { color: '#22c55e' }]}>Ground</Text>
           </View>
         ) : (
           <View style={styles.liftNeeded}>
-            <Text style={styles.liftNeededLabel}>Lift needed</Text>
+            <Text style={[styles.liftNeededLabel, { color: textColors.muted }]}>Lift needed</Text>
             <Text style={[styles.liftAmount, { color: colors.text }]}>
               {formatMeasurement(lift.liftInches, units)}
             </Text>
@@ -776,15 +788,20 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
                 {blockStack.blocks
                   .filter((b) => b.count > 0)
                   .map((block, idx) => (
-                    <View key={idx} style={styles.blockItem}>
-                      <Text style={styles.blockItemText}>
+                    <View
+                      key={idx}
+                      style={[styles.blockItem, { backgroundColor: textColors.blockItem }]}
+                    >
+                      <Text style={[styles.blockItemText, { color: textColors.secondary }]}>
                         {block.count} × {formatMeasurement(block.thickness, units)}
                       </Text>
                     </View>
                   ))}
               </View>
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Blocks provide:</Text>
+                <Text style={[styles.totalLabel, { color: textColors.muted }]}>
+                  Blocks provide:
+                </Text>
                 <Text style={[styles.totalValue, { color: colors.text }]}>
                   {formatMeasurement(blockStack.totalHeight, units)}
                 </Text>
@@ -792,8 +809,8 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
             </>
           ) : (
             <View style={styles.noBlocksWarning}>
-              <AlertTriangle size={14} color={THEME.colors.warning} />
-              <Text style={styles.noBlocksText}>No blocks available</Text>
+              <AlertTriangle size={14} color="#eab308" />
+              <Text style={[styles.noBlocksText, { color: '#eab308' }]}>No blocks available</Text>
             </View>
           )}
         </View>
@@ -803,9 +820,47 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
 }
 
 export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
   const { activeProfile, settings, setShowLevelingAssistant } = useAppStore();
   const { pitchDeg, rollDeg } = useDeviceAttitude();
   const { width: screenWidth } = useWindowDimensions();
+
+  // Theme-aware colors
+  const screenColors = {
+    // Backgrounds - blue-gray for light mode
+    gradientColors: isDark
+      ? (['#0a0a0f', '#111118', '#0d0d12'] as const)
+      : (['#dce4ed', '#d6dfe9', '#dae3ec'] as const),
+    containerBg: theme.colors.background,
+    headerBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.15)',
+    footerBg: isDark ? 'rgba(10, 10, 15, 0.95)' : 'rgba(200, 212, 228, 0.98)',
+    // Text colors
+    text: theme.colors.text,
+    textSecondary: theme.colors.textSecondary,
+    textMuted: theme.colors.textMuted,
+    // Status colors (same in both modes for consistency)
+    success: '#22c55e',
+    warning: '#eab308',
+    danger: '#ef4444',
+    primary: '#3b82f6',
+    // Modal styles
+    modalBg: isDark ? '#1a1a1f' : '#ffffff',
+    modalBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+    modalOverlay: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+    // Card backgrounds
+    blockItemBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    newInstructionsBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    // Icon container
+    iconContainerBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+    iconContainerBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+    // Step number
+    stepBg: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+    stepBorder: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+    // Close enough hint
+    closeEnoughBg: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+    closeEnoughBorder: isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.25)',
+  };
 
   // Responsive vehicle diagram sizing
   const VEHICLE_WIDTH = Math.min(screenWidth - 48, 320);
@@ -985,20 +1040,30 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
     };
 
     return (
-      <LinearGradient colors={['#0a0a0f', '#111118', '#0d0d12']} style={styles.gradient}>
+      <LinearGradient colors={screenColors.gradientColors} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.noProfileContainer}>
             {/* Icon */}
-            <View style={styles.noProfileIconContainer}>
-              <Caravan size={48} color={THEME.colors.primary} />
+            <View
+              style={[
+                styles.noProfileIconContainer,
+                {
+                  backgroundColor: screenColors.iconContainerBg,
+                  borderColor: screenColors.iconContainerBorder,
+                },
+              ]}
+            >
+              <Caravan size={48} color={screenColors.primary} />
             </View>
 
             {/* Title and description */}
-            <Text style={styles.noProfileTitle}>No Vehicle Profile</Text>
-            <Text style={styles.noProfileDescription}>
+            <Text style={[styles.noProfileTitle, { color: screenColors.text }]}>
+              No Vehicle Profile
+            </Text>
+            <Text style={[styles.noProfileDescription, { color: screenColors.textSecondary }]}>
               To calculate leveling requirements, you need to set up a vehicle profile first.
             </Text>
-            <Text style={styles.noProfileSubtext}>
+            <Text style={[styles.noProfileSubtext, { color: screenColors.textMuted }]}>
               {"Don't worry — the setup wizard will guide you through the process."}
             </Text>
 
@@ -1021,15 +1086,15 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const units = settings.measurementUnits || 'imperial';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: screenColors.containerBg }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: screenColors.headerBorder }]}>
         {onBack && (
           <Pressable style={styles.backButton} onPress={onBack}>
-            <ArrowLeft size={24} color="#fff" />
+            <ArrowLeft size={24} color={screenColors.text} />
           </Pressable>
         )}
-        <Text style={styles.headerTitle}>Leveling Plan</Text>
+        <Text style={[styles.headerTitle, { color: screenColors.text }]}>Leveling Plan</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -1038,10 +1103,12 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         {isNearLevel ? (
           <GlassCard variant="success">
             <View style={styles.statusBanner}>
-              <Check size={32} color={THEME.colors.success} />
+              <Check size={32} color={screenColors.success} />
               <View style={styles.statusTextContainer}>
-                <Text style={styles.statusTitle}>Level!</Text>
-                <Text style={styles.statusSubtitle}>Your RV is properly leveled</Text>
+                <Text style={[styles.statusTitle, { color: screenColors.success }]}>Level!</Text>
+                <Text style={[styles.statusSubtitle, { color: screenColors.textSecondary }]}>
+                  Your RV is properly leveled
+                </Text>
               </View>
             </View>
             <View style={styles.levelDoneButtonContainer}>
@@ -1061,8 +1128,12 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             <GlassCard>
               <View style={styles.diagramContainer}>
                 <View style={styles.diagramHeader}>
-                  <Text style={styles.diagramTitle}>Vehicle Overview</Text>
-                  <Text style={styles.profileLabel}>{activeProfile.name}</Text>
+                  <Text style={[styles.diagramTitle, { color: screenColors.text }]}>
+                    Vehicle Overview
+                  </Text>
+                  <Text style={[styles.profileLabel, { color: screenColors.textSecondary }]}>
+                    {activeProfile.name}
+                  </Text>
                 </View>
                 <View style={styles.diagramWrapper}>
                   {levelingPlan && (
@@ -1077,21 +1148,34 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 </View>
                 <View style={styles.legendContainer}>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: THEME.colors.success }]} />
-                    <Text style={styles.legendText}>Ground</Text>
+                    <View style={[styles.legendDot, { backgroundColor: screenColors.success }]} />
+                    <Text style={[styles.legendText, { color: screenColors.textMuted }]}>
+                      Ground
+                    </Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: THEME.colors.primary }]} />
-                    <Text style={styles.legendText}>Blocks</Text>
+                    <View style={[styles.legendDot, { backgroundColor: screenColors.primary }]} />
+                    <Text style={[styles.legendText, { color: screenColors.textMuted }]}>
+                      Blocks
+                    </Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: THEME.colors.warning }]} />
-                    <Text style={styles.legendText}>Attention</Text>
+                    <View style={[styles.legendDot, { backgroundColor: screenColors.warning }]} />
+                    <Text style={[styles.legendText, { color: screenColors.textMuted }]}>
+                      Attention
+                    </Text>
                   </View>
                 </View>
                 {/* Compact Pitch/Roll readings - FROZEN values */}
-                <View style={styles.compactReadings}>
-                  <Text style={styles.compactReadingText}>
+                <View
+                  style={[
+                    styles.compactReadings,
+                    {
+                      borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.compactReadingText, { color: screenColors.textSecondary }]}>
                     Pitch: {Math.abs(displayReadings.pitch).toFixed(1)}°
                     {displayReadings.pitch > 0.1
                       ? ' nose up'
@@ -1099,8 +1183,10 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                         ? ' nose down'
                         : ''}
                   </Text>
-                  <Text style={styles.compactReadingDivider}>•</Text>
-                  <Text style={styles.compactReadingText}>
+                  <Text style={[styles.compactReadingDivider, { color: screenColors.textMuted }]}>
+                    •
+                  </Text>
+                  <Text style={[styles.compactReadingText, { color: screenColors.textSecondary }]}>
                     Roll: {Math.abs(displayReadings.roll).toFixed(1)}°
                     {displayReadings.roll > 0.1
                       ? ' right up'
@@ -1115,15 +1201,19 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             {/* Warnings */}
             {levelingPlan && levelingPlan.warnings.length > 0 && (
               <View style={styles.warningBanner}>
-                <AlertCircle size={20} color={THEME.colors.danger} />
-                <Text style={styles.warningText}>{levelingPlan.warnings.join(' ')}</Text>
+                <AlertCircle size={20} color={screenColors.danger} />
+                <Text style={[styles.warningText, { color: screenColors.danger }]}>
+                  {levelingPlan.warnings.join(' ')}
+                </Text>
               </View>
             )}
 
             {/* Block Instructions */}
             {levelingPlan && !isCalculating && (
               <View style={styles.instructionsSection}>
-                <Text style={styles.sectionTitle}>Block Instructions</Text>
+                <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
+                  Block Instructions
+                </Text>
 
                 {/* Wheels needing blocks */}
                 {activeLifts.map((lift) => (
@@ -1155,7 +1245,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         {!levelingPlan && isCalculating && (
           <GlassCard>
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Calculating leveling plan...</Text>
+              <Text style={[styles.loadingText, { color: screenColors.textSecondary }]}>
+                Calculating leveling plan...
+              </Text>
             </View>
           </GlassCard>
         )}
@@ -1165,7 +1257,15 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
       {/* Footer - Check Level Button (part of normal layout flow, not absolute) */}
       {!isNearLevel && !showOrientationPrompt && !isCheckingLevel && levelingPlan && (
-        <View style={styles.checkLevelFooter}>
+        <View
+          style={[
+            styles.checkLevelFooter,
+            {
+              backgroundColor: screenColors.footerBg,
+              borderTopColor: screenColors.headerBorder,
+            },
+          ]}
+        >
           <GlassButton
             variant="primary"
             size="lg"
@@ -1184,25 +1284,67 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         animationType="fade"
         onRequestClose={handleBackToPlan}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.orientationTitle}>Position Your Phone</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: screenColors.modalOverlay }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: screenColors.modalBg, borderColor: screenColors.modalBorder },
+            ]}
+          >
+            <Text style={[styles.orientationTitle, { color: screenColors.text }]}>
+              Position Your Phone
+            </Text>
             <View style={styles.orientationInstructions}>
               <View style={styles.orientationStep}>
-                <Text style={styles.orientationNumber}>1</Text>
-                <Text style={styles.orientationText}>
+                <Text
+                  style={[
+                    styles.orientationNumber,
+                    {
+                      backgroundColor: screenColors.stepBg,
+                      borderColor: screenColors.stepBorder,
+                      color: screenColors.text,
+                    },
+                  ]}
+                >
+                  1
+                </Text>
+                <Text style={[styles.orientationText, { color: screenColors.textSecondary }]}>
                   Place phone flat on a surface inside your vehicle
                 </Text>
               </View>
               <View style={styles.orientationStep}>
-                <Text style={styles.orientationNumber}>2</Text>
-                <Text style={styles.orientationText}>
+                <Text
+                  style={[
+                    styles.orientationNumber,
+                    {
+                      backgroundColor: screenColors.stepBg,
+                      borderColor: screenColors.stepBorder,
+                      color: screenColors.text,
+                    },
+                  ]}
+                >
+                  2
+                </Text>
+                <Text style={[styles.orientationText, { color: screenColors.textSecondary }]}>
                   Point the TOP of your phone toward the FRONT of the vehicle
                 </Text>
               </View>
               <View style={styles.orientationStep}>
-                <Text style={styles.orientationNumber}>3</Text>
-                <Text style={styles.orientationText}>Keep phone still while checking</Text>
+                <Text
+                  style={[
+                    styles.orientationNumber,
+                    {
+                      backgroundColor: screenColors.stepBg,
+                      borderColor: screenColors.stepBorder,
+                      color: screenColors.text,
+                    },
+                  ]}
+                >
+                  3
+                </Text>
+                <Text style={[styles.orientationText, { color: screenColors.textSecondary }]}>
+                  Keep phone still while checking
+                </Text>
               </View>
             </View>
             <View style={styles.modalButtonsStacked}>
@@ -1229,21 +1371,22 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         animationType="fade"
         onRequestClose={handleBackToPlan}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: screenColors.modalOverlay }]}>
           <View
             style={[
               styles.modalContent,
-              isLevel && styles.modalContentSuccess,
-              isCloseEnough && styles.modalContentCloseEnough,
+              { backgroundColor: screenColors.modalBg, borderColor: screenColors.modalBorder },
+              isLevel && { borderColor: 'rgba(34, 197, 94, 0.4)' },
+              isCloseEnough && { borderColor: 'rgba(59, 130, 246, 0.4)' },
             ]}
           >
             {/* Perfect Level */}
             {isLevel && (
               <>
-                <Text style={[styles.checkResultsTitle, styles.checkResultsTitleSuccess]}>
+                <Text style={[styles.checkResultsTitle, { color: screenColors.success }]}>
                   ✓ Level Achieved!
                 </Text>
-                <Text style={styles.levelAchievedText}>
+                <Text style={[styles.levelAchievedText, { color: screenColors.textSecondary }]}>
                   Your RV is perfectly level. You&apos;re all set!
                 </Text>
               </>
@@ -1252,20 +1395,34 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             {/* Close Enough */}
             {isCloseEnough && (
               <>
-                <Text style={[styles.checkResultsTitle, styles.checkResultsTitleCloseEnough]}>
+                <Text style={[styles.checkResultsTitle, { color: screenColors.primary }]}>
                   Close Enough!
                 </Text>
                 <View style={styles.percentageContainer}>
-                  <Text style={styles.percentageValue}>{Math.round(levelPercentage)}%</Text>
-                  <Text style={styles.percentageLabel}>Level</Text>
+                  <Text style={[styles.percentageValue, { color: screenColors.success }]}>
+                    {Math.round(levelPercentage)}%
+                  </Text>
+                  <Text style={[styles.percentageLabel, { color: screenColors.textMuted }]}>
+                    Level
+                  </Text>
                 </View>
-                <Text style={styles.closeEnoughText}>
+                <Text style={[styles.closeEnoughText, { color: screenColors.textSecondary }]}>
                   You&apos;re within {totalDeviation.toFixed(1)}° of perfectly level. This is
                   acceptable for comfort and safe for your fridge and appliances.
                 </Text>
-                <View style={styles.closeEnoughHint}>
-                  <Check size={16} color={THEME.colors.success} />
-                  <Text style={styles.closeEnoughHintText}>Good to go!</Text>
+                <View
+                  style={[
+                    styles.closeEnoughHint,
+                    {
+                      backgroundColor: screenColors.closeEnoughBg,
+                      borderColor: screenColors.closeEnoughBorder,
+                    },
+                  ]}
+                >
+                  <Check size={16} color={screenColors.success} />
+                  <Text style={[styles.closeEnoughHintText, { color: screenColors.success }]}>
+                    Good to go!
+                  </Text>
                 </View>
               </>
             )}
@@ -1273,22 +1430,33 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             {/* Needs More Adjustment */}
             {!isLevel && !isCloseEnough && (
               <>
-                <Text style={styles.checkResultsTitle}>Adjustment Needed</Text>
+                <Text style={[styles.checkResultsTitle, { color: screenColors.text }]}>
+                  Adjustment Needed
+                </Text>
                 <View style={styles.percentageContainer}>
-                  <Text style={[styles.percentageValue, styles.percentageValueWarning]}>
+                  <Text style={[styles.percentageValue, { color: screenColors.warning }]}>
                     {Math.round(levelPercentage)}%
                   </Text>
-                  <Text style={styles.percentageLabel}>Level</Text>
+                  <Text style={[styles.percentageLabel, { color: screenColors.textMuted }]}>
+                    Level
+                  </Text>
                 </View>
-                <Text style={styles.adjustmentNeededText}>
+                <Text style={[styles.adjustmentNeededText, { color: screenColors.textSecondary }]}>
                   {totalDeviation.toFixed(1)}° from level. Add more blocks to reach safe operating
                   range.
                 </Text>
 
                 {/* Show new block instructions */}
                 {checkLevelPlan && (
-                  <View style={styles.newInstructionsContainer}>
-                    <Text style={styles.newInstructionsLabel}>Additional blocks needed:</Text>
+                  <View
+                    style={[
+                      styles.newInstructionsContainer,
+                      { backgroundColor: screenColors.newInstructionsBg },
+                    ]}
+                  >
+                    <Text style={[styles.newInstructionsLabel, { color: screenColors.textMuted }]}>
+                      Additional blocks needed:
+                    </Text>
                     {checkLevelPlan.wheelLifts
                       .filter((lift) => lift.liftInches > 0.125)
                       .map((lift) => {
@@ -1296,8 +1464,14 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                         const hasBlocks = stack && stack.blocks.length > 0;
                         return (
                           <View key={lift.location} style={styles.newInstructionRow}>
-                            <Text style={styles.newInstructionWheel}>{lift.description}</Text>
-                            <Text style={styles.newInstructionAmount}>
+                            <Text
+                              style={[styles.newInstructionWheel, { color: screenColors.text }]}
+                            >
+                              {lift.description}
+                            </Text>
+                            <Text
+                              style={[styles.newInstructionAmount, { color: screenColors.primary }]}
+                            >
                               {hasBlocks
                                 ? stack.blocks
                                     .filter((b) => b.count > 0)
@@ -1310,7 +1484,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                       })}
                     {checkLevelPlan.wheelLifts.filter((lift) => lift.liftInches > 0.125).length ===
                       0 && (
-                      <Text style={styles.newInstructionHint}>
+                      <Text
+                        style={[styles.newInstructionHint, { color: screenColors.textSecondary }]}
+                      >
                         Minor adjustment - reposition existing blocks
                       </Text>
                     )}
@@ -1344,7 +1520,6 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -1353,7 +1528,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   backButton: {
     padding: 8,
@@ -1361,7 +1535,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
   },
   headerSpacer: {
     width: 40,
@@ -1385,11 +1558,9 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: THEME.colors.success,
   },
   statusSubtitle: {
     fontSize: 14,
-    color: THEME.colors.textSecondary,
     marginTop: 2,
   },
   levelDoneButtonContainer: {
@@ -1410,12 +1581,10 @@ const styles = StyleSheet.create({
   diagramTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
   profileLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: THEME.colors.textSecondary,
   },
   diagramWrapper: {
     alignItems: 'center',
@@ -1439,7 +1608,6 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: THEME.colors.textMuted,
   },
   // Compact readings inline with diagram
   compactReadings: {
@@ -1450,15 +1618,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   compactReadingText: {
     fontSize: 12,
-    color: THEME.colors.textSecondary,
   },
   compactReadingDivider: {
     fontSize: 12,
-    color: THEME.colors.textMuted,
   },
   // Warning Banner
   warningBanner: {
@@ -1474,7 +1639,6 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 14,
-    color: THEME.colors.danger,
     lineHeight: 20,
   },
   // Instructions Section
@@ -1484,7 +1648,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
     marginBottom: 4,
   },
   // Wheel Card
@@ -1508,7 +1671,6 @@ const styles = StyleSheet.create({
   },
   liftNeededLabel: {
     fontSize: 10,
-    color: THEME.colors.textMuted,
     marginBottom: 1,
   },
   liftAmount: {
@@ -1527,7 +1689,6 @@ const styles = StyleSheet.create({
   groundBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.success,
   },
   wheelCardContent: {
     gap: 8,
@@ -1538,14 +1699,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   blockItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
   blockItemText: {
     fontSize: 13,
-    color: THEME.colors.textSecondary,
     fontWeight: '500',
   },
   totalRow: {
@@ -1556,7 +1715,6 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 13,
-    color: THEME.colors.textMuted,
   },
   totalValue: {
     fontSize: 15,
@@ -1569,7 +1727,6 @@ const styles = StyleSheet.create({
   },
   noBlocksText: {
     fontSize: 13,
-    color: THEME.colors.warning,
   },
   // Loading
   loadingContainer: {
@@ -1578,7 +1735,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: THEME.colors.textSecondary,
   },
   // No Profile State
   gradient: {
@@ -1608,13 +1764,11 @@ const styles = StyleSheet.create({
   noProfileTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
     marginBottom: 12,
     textAlign: 'center',
   },
   noProfileDescription: {
     fontSize: 15,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 8,
@@ -1622,7 +1776,6 @@ const styles = StyleSheet.create({
   },
   noProfileSubtext: {
     fontSize: 14,
-    color: THEME.colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
@@ -1641,7 +1794,6 @@ const styles = StyleSheet.create({
   checkResultsTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     textAlign: 'center',
   },
   checkResultsReadings: {
@@ -1656,20 +1808,15 @@ const styles = StyleSheet.create({
   },
   checkResultLabel: {
     fontSize: 13,
-    color: THEME.colors.textMuted,
     marginBottom: 4,
   },
   checkResultValue: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
   },
-  checkResultValueGood: {
-    color: THEME.colors.success,
-  },
+  checkResultValueGood: {},
   checkResultHint: {
     fontSize: 12,
-    color: THEME.colors.textSecondary,
     marginTop: 2,
   },
   checkResultDivider: {
@@ -1679,7 +1826,6 @@ const styles = StyleSheet.create({
   },
   checkResultsAdvice: {
     fontSize: 14,
-    color: THEME.colors.warning,
     textAlign: 'center',
   },
   checkResultsButtons: {
@@ -1694,7 +1840,6 @@ const styles = StyleSheet.create({
   orientationTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     textAlign: 'center',
   },
   orientationInstructions: {
@@ -1709,20 +1854,16 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(59, 130, 246, 0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.5)',
     textAlign: 'center',
     lineHeight: 26,
     fontSize: 14,
     fontWeight: '700',
-    color: '#fff',
     overflow: 'hidden',
   },
   orientationText: {
     flex: 1,
     fontSize: 15,
-    color: THEME.colors.textSecondary,
     lineHeight: 22,
   },
   orientationButtons: {
@@ -1769,15 +1910,9 @@ const styles = StyleSheet.create({
     gap: 10,
     width: '100%',
   },
-  checkResultsTitleSuccess: {
-    color: THEME.colors.success,
-  },
-  checkResultsTitleCloseEnough: {
-    color: THEME.colors.primary,
-  },
-  modalContentCloseEnough: {
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-  },
+  checkResultsTitleSuccess: {},
+  checkResultsTitleCloseEnough: {},
+  modalContentCloseEnough: {},
   // Percentage display
   percentageContainer: {
     alignItems: 'center',
@@ -1786,20 +1921,15 @@ const styles = StyleSheet.create({
   percentageValue: {
     fontSize: 48,
     fontWeight: '700',
-    color: THEME.colors.success,
   },
-  percentageValueWarning: {
-    color: THEME.colors.warning,
-  },
+  percentageValueWarning: {},
   percentageLabel: {
     fontSize: 14,
-    color: THEME.colors.textMuted,
     marginTop: -4,
   },
   // Close enough messaging
   closeEnoughText: {
     fontSize: 14,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -1808,35 +1938,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
   closeEnoughHintText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.success,
   },
   // Adjustment needed messaging
   adjustmentNeededText: {
     fontSize: 14,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   // Level achieved text
   levelAchievedText: {
     fontSize: 15,
-    color: THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   // New instructions in check level modal
   newInstructionsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -1845,7 +1969,6 @@ const styles = StyleSheet.create({
   newInstructionsLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.colors.textMuted,
     marginBottom: 4,
   },
   newInstructionRow: {
@@ -1856,16 +1979,13 @@ const styles = StyleSheet.create({
   newInstructionWheel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#fff',
   },
   newInstructionAmount: {
     fontSize: 13,
-    color: THEME.colors.primary,
     fontWeight: '600',
   },
   newInstructionHint: {
     fontSize: 13,
-    color: THEME.colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
   },

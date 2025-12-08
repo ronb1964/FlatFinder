@@ -3,6 +3,8 @@ import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, Platform, View } fro
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -18,6 +20,83 @@ interface GlassButtonProps {
   rightIcon?: React.ReactNode;
 }
 
+// Generate variant styles based on current theme
+// Note: Colored buttons use high saturation for visibility, especially in light mode
+function getVariantStyles(theme: Theme) {
+  const isDark = theme.mode === 'dark';
+
+  return {
+    default: {
+      gradient: isDark
+        ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.04)']
+        : ['rgba(180, 195, 215, 0.5)', 'rgba(180, 195, 215, 0.3)'],
+      border: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.35)',
+      text: theme.colors.text,
+      glow: 'transparent',
+      bg: isDark ? 'rgba(38, 38, 38, 0.8)' : 'rgba(200, 212, 228, 0.95)',
+    },
+    primary: {
+      // Blue - high saturation for visibility
+      gradient: isDark
+        ? ['rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.3)']
+        : ['rgba(59, 130, 246, 0.85)', 'rgba(59, 130, 246, 0.7)'],
+      border: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.9)',
+      text: '#ffffff',
+      glow: 'rgba(59, 130, 246, 0.3)',
+      bg: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.8)',
+    },
+    secondary: {
+      // Teal/Cyan - high saturation for visibility
+      gradient: isDark
+        ? ['rgba(6, 182, 212, 0.5)', 'rgba(6, 182, 212, 0.3)']
+        : ['rgba(6, 182, 212, 0.85)', 'rgba(6, 182, 212, 0.7)'],
+      border: isDark ? 'rgba(34, 211, 238, 0.5)' : 'rgba(6, 182, 212, 0.9)',
+      text: '#ffffff',
+      glow: 'rgba(6, 182, 212, 0.3)',
+      bg: isDark ? 'rgba(6, 182, 212, 0.4)' : 'rgba(6, 182, 212, 0.8)',
+    },
+    warning: {
+      // Orange/Amber - high saturation for visibility
+      gradient: isDark
+        ? ['rgba(245, 158, 11, 0.55)', 'rgba(245, 158, 11, 0.35)']
+        : ['rgba(245, 158, 11, 0.9)', 'rgba(245, 158, 11, 0.75)'],
+      border: isDark ? 'rgba(251, 191, 36, 0.5)' : 'rgba(245, 158, 11, 0.95)',
+      text: '#ffffff',
+      glow: 'rgba(245, 158, 11, 0.3)',
+      bg: isDark ? 'rgba(245, 158, 11, 0.45)' : 'rgba(245, 158, 11, 0.85)',
+    },
+    success: {
+      // Green - high saturation for visibility
+      gradient: isDark
+        ? ['rgba(34, 197, 94, 0.5)', 'rgba(34, 197, 94, 0.3)']
+        : ['rgba(34, 197, 94, 0.85)', 'rgba(34, 197, 94, 0.7)'],
+      border: isDark ? 'rgba(74, 222, 128, 0.5)' : 'rgba(34, 197, 94, 0.9)',
+      text: '#ffffff',
+      glow: 'rgba(34, 197, 94, 0.3)',
+      bg: isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.8)',
+    },
+    ghost: {
+      gradient: isDark
+        ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']
+        : ['rgba(180, 195, 215, 0.4)', 'rgba(180, 195, 215, 0.25)'],
+      border: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+      text: theme.colors.textSecondary,
+      glow: 'transparent',
+      bg: isDark ? 'rgba(38, 38, 38, 0.8)' : 'rgba(200, 212, 228, 0.9)',
+    },
+    danger: {
+      // Red - high saturation for visibility
+      gradient: isDark
+        ? ['rgba(239, 68, 68, 0.4)', 'rgba(239, 68, 68, 0.2)']
+        : ['rgba(239, 68, 68, 0.7)', 'rgba(239, 68, 68, 0.55)'],
+      border: isDark ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.8)',
+      text: isDark ? '#f87171' : '#dc2626',
+      glow: 'rgba(239, 68, 68, 0.2)',
+      bg: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.65)',
+    },
+  };
+}
+
 export function GlassButton({
   children,
   onPress,
@@ -29,61 +108,10 @@ export function GlassButton({
   icon,
   rightIcon,
 }: GlassButtonProps) {
+  const theme = useTheme();
   const scale = useSharedValue(1);
 
-  const variantStyles = {
-    default: {
-      gradient: ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.04)'],
-      border: 'rgba(255, 255, 255, 0.15)',
-      text: '#fafafa',
-      glow: 'transparent',
-      bg: 'rgba(38, 38, 38, 0.8)',
-    },
-    primary: {
-      gradient: ['rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.2)'],
-      border: 'rgba(96, 165, 250, 0.5)',
-      text: '#ffffff',
-      glow: 'rgba(59, 130, 246, 0.3)',
-      bg: 'rgba(59, 130, 246, 0.3)',
-    },
-    secondary: {
-      // Teal/Cyan for Full Calibration
-      gradient: ['rgba(6, 182, 212, 0.4)', 'rgba(6, 182, 212, 0.2)'],
-      border: 'rgba(34, 211, 238, 0.5)',
-      text: '#ffffff',
-      glow: 'rgba(6, 182, 212, 0.3)',
-      bg: 'rgba(6, 182, 212, 0.3)',
-    },
-    warning: {
-      // Orange/Amber for Quick Calibrate
-      gradient: ['rgba(245, 158, 11, 0.4)', 'rgba(245, 158, 11, 0.2)'],
-      border: 'rgba(251, 191, 36, 0.5)',
-      text: '#ffffff',
-      glow: 'rgba(245, 158, 11, 0.3)',
-      bg: 'rgba(245, 158, 11, 0.3)',
-    },
-    success: {
-      gradient: ['rgba(34, 197, 94, 0.4)', 'rgba(34, 197, 94, 0.2)'],
-      border: 'rgba(74, 222, 128, 0.5)',
-      text: '#ffffff',
-      glow: 'rgba(34, 197, 94, 0.3)',
-      bg: 'rgba(34, 197, 94, 0.3)',
-    },
-    ghost: {
-      gradient: ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)'],
-      border: 'rgba(255, 255, 255, 0.1)',
-      text: '#a3a3a3',
-      glow: 'transparent',
-      bg: 'rgba(38, 38, 38, 0.8)',
-    },
-    danger: {
-      gradient: ['rgba(239, 68, 68, 0.25)', 'rgba(239, 68, 68, 0.1)'],
-      border: 'rgba(239, 68, 68, 0.4)',
-      text: '#f87171',
-      glow: 'rgba(239, 68, 68, 0.2)',
-      bg: 'rgba(239, 68, 68, 0.15)',
-    },
-  };
+  const variantStyles = getVariantStyles(theme);
 
   const sizeStyles = {
     sm: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
@@ -93,6 +121,10 @@ export function GlassButton({
 
   const colors = variantStyles[variant];
   const sizing = sizeStyles[size];
+
+  // Highlight color based on theme
+  const highlightColor =
+    theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.6)';
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -122,8 +154,8 @@ export function GlassButton({
         },
       ]}
     >
-      {/* Top highlight */}
-      <View style={[styles.highlight, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
+      {/* Top highlight for glass effect */}
+      <View style={[styles.highlight, { backgroundColor: highlightColor }]} />
       <View style={styles.content}>
         {icon && <View style={styles.icon}>{icon}</View>}
         <View style={styles.textWrapper}>
@@ -142,7 +174,7 @@ export function GlassButton({
     </LinearGradient>
   );
 
-  // Web fallback
+  // Web fallback (no BlurView)
   if (Platform.OS === 'web') {
     return (
       <AnimatedPressable
@@ -197,7 +229,8 @@ export function GlassButton({
       disabled={disabled}
       style={[styles.container, animatedStyle, style]}
     >
-      <BlurView intensity={20} tint="dark" style={styles.blur}>
+      {/* BlurView tint based on theme */}
+      <BlurView intensity={20} tint={theme.mode === 'dark' ? 'dark' : 'light'} style={styles.blur}>
         {buttonContent}
       </BlurView>
     </AnimatedPressable>

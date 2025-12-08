@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { Car, Settings } from 'lucide-react-native';
-import { THEME } from '../theme';
+import { useTheme } from '../hooks/useTheme';
 import { useAppStore } from '../state/appStore';
 
 // Simple bubble level icon component
@@ -24,6 +24,9 @@ function BubbleLevelIcon({ size, color }: { size: number; color: string }) {
 const TAB_COUNT = 3;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
   const [tabBarWidth, setTabBarWidth] = React.useState(0);
   const tabWidth = tabBarWidth / TAB_COUNT;
   const setShowLevelingAssistant = useAppStore((s) => s.setShowLevelingAssistant);
@@ -74,20 +77,53 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     }
   };
 
+  // Theme-aware colors
+  const colors = {
+    background: isDark
+      ? Platform.OS === 'web'
+        ? 'rgba(17, 17, 23, 0.95)'
+        : 'rgba(10, 10, 15, 0.85)'
+      : Platform.OS === 'web'
+        ? 'rgba(200, 212, 228, 0.95)' // Blue-gray for web
+        : 'rgba(200, 212, 228, 0.9)', // Blue-gray for native
+    borderTop: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)',
+    pillBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.5)',
+    pillBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.6)',
+    active: isDark ? '#ffffff' : '#1a1a1a',
+    inactive: theme.colors.textMuted,
+  };
+
   return (
     <View style={styles.container} onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}>
       {/* Background blur for native */}
       {Platform.OS !== 'web' && (
-        <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
       )}
 
       {/* Background overlay */}
-      <View style={styles.background} />
+      <View
+        style={[
+          styles.background,
+          {
+            backgroundColor: colors.background,
+            borderTopColor: colors.borderTop,
+          },
+        ]}
+      />
 
       {/* Sliding pill indicator */}
       {tabWidth > 0 && (
         <Animated.View style={[styles.pillContainer, pillAnimatedStyle]}>
-          <View style={[styles.pill, { width: tabWidth - 16 }]} />
+          <View
+            style={[
+              styles.pill,
+              {
+                width: tabWidth - 16,
+                backgroundColor: colors.pillBg,
+                borderColor: colors.pillBorder,
+              },
+            ]}
+          />
         </Animated.View>
       )}
 
@@ -121,9 +157,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             });
           };
 
-          // White for active state - clean and distinct
-          const activeColor = '#ffffff';
-          const color = isFocused ? activeColor : THEME.colors.textMuted;
+          const color = isFocused ? colors.active : colors.inactive;
 
           return (
             <Pressable
@@ -170,9 +204,7 @@ const styles = StyleSheet.create({
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(17, 17, 23, 0.95)' : 'rgba(10, 10, 15, 0.85)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(59, 130, 246, 0.2)',
   },
   pillContainer: {
     position: 'absolute',
@@ -184,9 +216,7 @@ const styles = StyleSheet.create({
   pill: {
     height: PILL_HEIGHT,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   tabsContainer: {
     position: 'absolute',

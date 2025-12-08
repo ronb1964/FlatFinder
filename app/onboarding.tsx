@@ -26,9 +26,9 @@ import {
   Plus,
   Compass,
   Check,
-  Caravan,
 } from 'lucide-react-native';
-import { MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
+import { TrailerIcon, MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
+import { useTheme } from '../src/hooks/useTheme';
 import { useAppStore } from '../src/state/appStore';
 import { BlockInventory } from '../src/lib/rvLevelingMath';
 import { createCalibration } from '../src/lib/levelingMath';
@@ -65,29 +65,20 @@ const IconBox = ({
   );
 };
 
-// Wrapper for Caravan to match custom icon interface
-const TrailerIconWrapper = ({
-  size = 24,
-  color = '#a3a3a3',
-}: {
-  size?: number;
-  color?: string;
-}) => <Caravan size={size} color={color} />;
-
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    Icon: TrailerIconWrapper,
+    Icon: TrailerIcon,
     iconSize: 32,
   },
   {
     id: 'motorhome',
-    name: 'Motorhome/RV',
+    name: 'Motor Home',
     description: 'Self-contained with engine, drives itself',
     Icon: MotorhomeIcon,
-    iconSize: 32,
+    iconSize: 42, // Larger to match visual size of other icons
   },
   {
     id: 'van',
@@ -102,7 +93,55 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [addInputKey, setAddInputKey] = useState(0); // Forces clean remount of input
-  const { updateSettings, addProfile, setActiveProfile } = useAppStore();
+  const { updateSettings, addProfile, setActiveProfile, isProfileNameTaken } = useAppStore();
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  // Theme-aware colors for onboarding screens
+  const screenColors = {
+    // Main backgrounds
+    background: isDark ? THEME.colors.background : '#dce4ed',
+    glassCard: isDark ? 'rgba(26, 26, 26, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+    glassCardBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    glassCardTopBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.4)',
+    glassHighlight: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+    // Text colors
+    text: isDark ? THEME.colors.text : '#1a1a1a',
+    textSecondary: isDark ? THEME.colors.textSecondary : '#525252',
+    // Option cards
+    optionCard: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    optionCardBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+    optionCardSelected: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+    optionCardSelectedBorder: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+    optionHighlight: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.6)',
+    // Radio/checkbox
+    radio: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    radioBorder: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+    // Inputs
+    input: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    // Progress
+    progressDot: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    progressDotBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+    progressLine: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    // Vehicle icon container
+    vehicleIcon: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    vehicleIconBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    vehicleIconSelected: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+    // Quantity buttons
+    quantityButton: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    quantityButtonBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    // Info card
+    infoCard: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+    // Surface
+    surface: isDark ? THEME.colors.surface : 'rgba(0, 0, 0, 0.03)',
+    surfaceBorder: isDark ? THEME.colors.border : 'rgba(0, 0, 0, 0.08)',
+    // Add block button
+    addBlockBg: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.06)',
+    addBlockInputBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+    // Icon colors for non-selected state
+    iconColor: isDark ? '#a3a3a3' : '#525252',
+  };
   const scrollViewRef = useRef<ScrollView>(null);
   const blockInputRef = useRef<TextInput>(null);
   const newBlockHeightRef = useRef('');
@@ -239,6 +278,10 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
+  // Check if the current vehicle name is already taken
+  const vehicleNameTaken =
+    setupData.vehicleName.trim() && isProfileNameTaken(setupData.vehicleName);
+
   const canProceed = () => {
     switch (currentStep) {
       case 3:
@@ -246,7 +289,8 @@ export default function OnboardingScreen() {
       case 4:
         return !!setupData.vehicleType;
       case 5:
-        return !!setupData.vehicleName.trim();
+        // Must have a name AND it can't already be taken
+        return !!setupData.vehicleName.trim() && !vehicleNameTaken;
       case 6: {
         if (!setupData.hasLevelingBlocks) return true;
         // Check if at least one block type has quantity > 0
@@ -265,40 +309,48 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>Welcome to FlatFinder!</Text>
-          <Text style={styles.stepSubtitle}>Your Professional RV Leveling Assistant</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>
+            Welcome to FlatFinder!
+          </Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Your Professional RV Leveling Assistant
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               FlatFinder transforms your phone into a precision leveling tool for RVs, trailers, and
               motorhomes.
             </Text>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               Whether you&apos;re a weekend warrior or full-time RVer, proper leveling is essential
               for:
             </Text>
             <View style={styles.bulletList}>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>Comfort - Sleep better on a level bed</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  Comfort - Sleep better on a level bed
+                </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
                   Safety - Prevent items from sliding or falling
                 </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
                   Appliance protection - Refrigerators need to be level
                 </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>Stability - Reduce rocking and swaying</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  Stability - Reduce rocking and swaying
+                </Text>
               </View>
             </View>
           </View>
@@ -315,27 +367,35 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>How Leveling Works</Text>
-          <Text style={styles.stepSubtitle}>Understanding Pitch and Roll</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>How Leveling Works</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Understanding Pitch and Roll
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>Your RV can be unlevel in two directions:</Text>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
+              Your RV can be unlevel in two directions:
+            </Text>
             <View style={styles.bulletList}>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>PITCH: Front-to-back (nose up/down)</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  PITCH: Front-to-back (nose up/down)
+                </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>ROLL: Side-to-side (left/right high)</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  ROLL: Side-to-side (left/right high)
+                </Text>
               </View>
             </View>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               FlatFinder measures both angles using your phone&apos;s built-in motion sensors.
             </Text>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               The goal is to get both pitch and roll as close to 0° as possible. Most RV appliances
               work fine within ±1° of level.
             </Text>
@@ -353,34 +413,44 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>Safety First</Text>
-          <Text style={styles.stepSubtitle}>Important Guidelines</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Safety First</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Important Guidelines
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>Before you start leveling:</Text>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
+              Before you start leveling:
+            </Text>
             <View style={styles.bulletList}>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>Choose the most level spot available</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  Choose the most level spot available
+                </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>Avoid slopes greater than 8° in any direction</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  Avoid slopes greater than 8° in any direction
+                </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
                   Ensure your RV is stable and chocks are in place
                 </Text>
               </View>
               <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>{'\u2022'}</Text>
-                <Text style={styles.bulletText}>Never level on soft or unstable ground</Text>
+                <Text style={[styles.bullet, { color: screenColors.text }]}>{'\u2022'}</Text>
+                <Text style={[styles.bulletText, { color: screenColors.text }]}>
+                  Never level on soft or unstable ground
+                </Text>
               </View>
             </View>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               FlatFinder will warn you if angles become unsafe during leveling.
             </Text>
           </View>
@@ -390,6 +460,9 @@ export default function OnboardingScreen() {
   }
 
   function renderUnitsStep() {
+    const isImperial = setupData.measurementUnits === 'imperial';
+    const isMetric = setupData.measurementUnits === 'metric';
+
     return (
       <View style={styles.stepContent}>
         <IconBox variant="purple">
@@ -397,13 +470,15 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>Choose Your Units</Text>
-          <Text style={styles.stepSubtitle}>Imperial or Metric Measurements</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Choose Your Units</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Imperial or Metric Measurements
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               Choose your preferred measurement system. You can change this later in Settings.
             </Text>
 
@@ -411,26 +486,42 @@ export default function OnboardingScreen() {
               <TouchableOpacity
                 style={[
                   styles.optionCard,
-                  setupData.measurementUnits === 'imperial' && styles.optionCardSelected,
+                  {
+                    backgroundColor: screenColors.optionCard,
+                    borderColor: screenColors.optionCardBorder,
+                  },
+                  isImperial && {
+                    backgroundColor: screenColors.optionCardSelected,
+                    borderColor: screenColors.optionCardSelectedBorder,
+                  },
                 ]}
                 onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'imperial' }))}
               >
                 {/* Glass highlight */}
-                <View style={styles.optionCardHighlight} />
+                <View
+                  style={[
+                    styles.optionCardHighlight,
+                    { backgroundColor: screenColors.optionHighlight },
+                  ]}
+                />
                 <View style={styles.optionRow}>
                   <View
                     style={[
                       styles.radio,
-                      setupData.measurementUnits === 'imperial' && styles.radioSelected,
+                      {
+                        backgroundColor: screenColors.radio,
+                        borderColor: screenColors.radioBorder,
+                      },
+                      isImperial && styles.radioSelected,
                     ]}
                   >
-                    {setupData.measurementUnits === 'imperial' && (
-                      <View style={styles.radioInner} />
-                    )}
+                    {isImperial && <View style={styles.radioInner} />}
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Imperial</Text>
-                    <Text style={styles.optionDescription}>Inches, feet (US standard)</Text>
+                    <Text style={[styles.optionTitle, { color: screenColors.text }]}>Imperial</Text>
+                    <Text style={[styles.optionDescription, { color: screenColors.textSecondary }]}>
+                      Inches, feet (US standard)
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -438,24 +529,40 @@ export default function OnboardingScreen() {
               <TouchableOpacity
                 style={[
                   styles.optionCard,
-                  setupData.measurementUnits === 'metric' && styles.optionCardSelected,
+                  {
+                    backgroundColor: screenColors.optionCard,
+                    borderColor: screenColors.optionCardBorder,
+                  },
+                  isMetric && {
+                    backgroundColor: screenColors.optionCardSelected,
+                    borderColor: screenColors.optionCardSelectedBorder,
+                  },
                 ]}
                 onPress={() => setSetupData((prev) => ({ ...prev, measurementUnits: 'metric' }))}
               >
                 {/* Glass highlight */}
-                <View style={styles.optionCardHighlight} />
+                <View
+                  style={[
+                    styles.optionCardHighlight,
+                    { backgroundColor: screenColors.optionHighlight },
+                  ]}
+                />
                 <View style={styles.optionRow}>
                   <View
                     style={[
                       styles.radio,
-                      setupData.measurementUnits === 'metric' && styles.radioSelected,
+                      {
+                        backgroundColor: screenColors.radio,
+                        borderColor: screenColors.radioBorder,
+                      },
+                      isMetric && styles.radioSelected,
                     ]}
                   >
-                    {setupData.measurementUnits === 'metric' && <View style={styles.radioInner} />}
+                    {isMetric && <View style={styles.radioInner} />}
                   </View>
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Metric</Text>
-                    <Text style={styles.optionDescription}>
+                    <Text style={[styles.optionTitle, { color: screenColors.text }]}>Metric</Text>
+                    <Text style={[styles.optionDescription, { color: screenColors.textSecondary }]}>
                       Centimeters, meters (International)
                     </Text>
                   </View>
@@ -476,13 +583,15 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>Your Vehicle</Text>
-          <Text style={styles.stepSubtitle}>What type of RV do you have?</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Your Vehicle</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            What type of RV do you have?
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               This helps us provide accurate measurements and setup defaults for your vehicle type.
             </Text>
 
@@ -494,7 +603,17 @@ export default function OnboardingScreen() {
                 return (
                   <TouchableOpacity
                     key={vehicleType.id}
-                    style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                    style={[
+                      styles.optionCard,
+                      {
+                        backgroundColor: screenColors.optionCard,
+                        borderColor: screenColors.optionCardBorder,
+                      },
+                      isSelected && {
+                        backgroundColor: screenColors.optionCardSelected,
+                        borderColor: screenColors.optionCardSelectedBorder,
+                      },
+                    ]}
                     onPress={() =>
                       setSetupData((prev) => ({
                         ...prev,
@@ -503,22 +622,40 @@ export default function OnboardingScreen() {
                     }
                   >
                     {/* Glass highlight */}
-                    <View style={styles.optionCardHighlight} />
+                    <View
+                      style={[
+                        styles.optionCardHighlight,
+                        { backgroundColor: screenColors.optionHighlight },
+                      ]}
+                    />
                     <View style={styles.vehicleOptionRow}>
                       <View
                         style={[
                           styles.vehicleIconContainer,
-                          isSelected && styles.vehicleIconContainerSelected,
+                          {
+                            backgroundColor: screenColors.vehicleIcon,
+                            borderColor: screenColors.vehicleIconBorder,
+                          },
+                          isSelected && {
+                            backgroundColor: screenColors.vehicleIconSelected,
+                            borderColor: screenColors.optionCardSelectedBorder,
+                          },
                         ]}
                       >
                         <VehicleIcon
                           size={vehicleType.iconSize}
-                          color={isSelected ? '#fff' : '#a3a3a3'}
+                          color={isSelected ? '#fff' : screenColors.iconColor}
                         />
                       </View>
                       <View style={styles.optionText}>
-                        <Text style={styles.optionTitle}>{vehicleType.name}</Text>
-                        <Text style={styles.optionDescription}>{vehicleType.description}</Text>
+                        <Text style={[styles.optionTitle, { color: screenColors.text }]}>
+                          {vehicleType.name}
+                        </Text>
+                        <Text
+                          style={[styles.optionDescription, { color: screenColors.textSecondary }]}
+                        >
+                          {vehicleType.description}
+                        </Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -543,8 +680,10 @@ export default function OnboardingScreen() {
           </IconBox>
 
           <View style={styles.titleContainer}>
-            <Text style={styles.stepTitle}>Vehicle Details</Text>
-            <Text style={styles.stepSubtitle}>Tell us about your {selectedVehicleType?.name}</Text>
+            <Text style={[styles.stepTitle, { color: screenColors.text }]}>Vehicle Details</Text>
+            <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+              Tell us about your {selectedVehicleType?.name}
+            </Text>
           </View>
 
           <GlassCard variant="default">
@@ -552,26 +691,40 @@ export default function OnboardingScreen() {
               {/* Vehicle Name Input */}
               <View style={styles.vehicleNameContainer}>
                 <View style={styles.vehicleNameHeader}>
-                  <Text style={styles.vehicleNameLabel}>Vehicle Name</Text>
+                  <Text style={[styles.vehicleNameLabel, { color: screenColors.textSecondary }]}>
+                    Vehicle Name
+                  </Text>
                   <Text style={styles.requiredBadge}>*</Text>
                 </View>
                 <TextInput
-                  style={styles.vehicleNameInput}
+                  style={[
+                    styles.vehicleNameInput,
+                    {
+                      backgroundColor: screenColors.input,
+                      borderColor: vehicleNameTaken ? '#ef4444' : screenColors.inputBorder,
+                      color: screenColors.text,
+                    },
+                  ]}
                   placeholder={`e.g., "Big Blue"`}
-                  placeholderTextColor="#737373"
+                  placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                   value={setupData.vehicleName}
                   onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
                   selectTextOnFocus={true}
                   autoFocus={true}
                 />
+                {vehicleNameTaken && (
+                  <Text style={styles.errorText}>A vehicle with this name already exists</Text>
+                )}
               </View>
 
               {/* Measurements Section */}
-              <View style={styles.infoCard}>
+              <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
                 <View style={styles.infoCardContent}>
                   <View style={styles.blockHeaderRow}>
                     <Ruler size={20} color="#a855f7" />
-                    <Text style={styles.infoCardTitle}>Vehicle Measurements</Text>
+                    <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
+                      Vehicle Measurements
+                    </Text>
                   </View>
                   <View style={styles.switchRow}>
                     <Switch
@@ -579,12 +732,14 @@ export default function OnboardingScreen() {
                       onValueChange={(checked) =>
                         setSetupData((prev) => ({ ...prev, useCustomMeasurements: checked }))
                       }
-                      trackColor={{ false: '#555', true: '#a855f7' }}
+                      trackColor={{ false: isDark ? '#555' : '#d1d5db', true: '#a855f7' }}
                       thumbColor="#fff"
                     />
-                    <Text style={styles.switchLabel}>I know my exact measurements</Text>
+                    <Text style={[styles.switchLabel, { color: screenColors.text }]}>
+                      I know my exact measurements
+                    </Text>
                   </View>
-                  <Text style={styles.infoCardText}>
+                  <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
                     {setupData.useCustomMeasurements
                       ? 'Enter your vehicle measurements below for more accurate leveling calculations.'
                       : `We'll use typical measurements for a ${selectedVehicleType?.name}. You can adjust these later in Profiles.`}
@@ -594,44 +749,60 @@ export default function OnboardingScreen() {
 
               {/* Default Measurements Display */}
               {!setupData.useCustomMeasurements && typical && (
-                <View style={styles.measurementsSummary}>
-                  <Text style={styles.measurementsSummaryTitle}>Default measurements:</Text>
+                <View
+                  style={[
+                    styles.measurementsSummary,
+                    {
+                      backgroundColor: screenColors.surface,
+                      borderColor: screenColors.surfaceBorder,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.measurementsSummaryTitle, { color: screenColors.textSecondary }]}
+                  >
+                    Default measurements:
+                  </Text>
                   <View style={styles.measurementsList}>
                     {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
                     {setupData.vehicleType !== 'trailer' && (
                       <View style={styles.measurementItem}>
-                        <Text style={styles.measurementLabel}>
+                        <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
                           {'\u2022'} Wheelbase:{' '}
                           {setupData.measurementUnits === 'imperial'
                             ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
                             : `${typical.wheelbase} cm`}
                         </Text>
-                        <Text style={styles.measurementHint}>
+                        <Text
+                          style={[styles.measurementHint, { color: screenColors.textSecondary }]}
+                        >
                           Distance between front and rear axles
                         </Text>
                       </View>
                     )}
                     <View style={styles.measurementItem}>
-                      <Text style={styles.measurementLabel}>
+                      <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
                         {'\u2022'} Track Width:{' '}
                         {setupData.measurementUnits === 'imperial'
                           ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
                           : `${typical.track} cm`}
                       </Text>
-                      <Text style={styles.measurementHint}>
+                      <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
                         Distance between left and right wheels
                       </Text>
                     </View>
                     {/* Hitch Offset - only for trailers (single axle + tongue jack) */}
                     {setupData.vehicleType === 'trailer' && typical.hitch && (
                       <View style={styles.measurementItem}>
-                        <Text style={styles.measurementLabel}>
+                        <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
                           {'\u2022'} Hitch Offset:{' '}
                           {setupData.measurementUnits === 'imperial'
                             ? `${convertToInches(typical.hitch, setupData.measurementUnits)}"`
                             : `${typical.hitch} cm`}
                         </Text>
-                        <Text style={styles.measurementHint}>
+                        <Text
+                          style={[styles.measurementHint, { color: screenColors.textSecondary }]}
+                        >
                           Distance from rear axle center to hitch ball
                         </Text>
                       </View>
@@ -647,11 +818,20 @@ export default function OnboardingScreen() {
                   {setupData.vehicleType !== 'trailer' && (
                     <View style={styles.measurementInputRow}>
                       <View style={styles.measurementInputContainer}>
-                        <Text style={styles.inputLabel}>Wheelbase ({unitLabel})</Text>
+                        <Text style={[styles.inputLabel, { color: screenColors.text }]}>
+                          Wheelbase ({unitLabel})
+                        </Text>
                         <TextInput
-                          style={styles.textInput}
+                          style={[
+                            styles.textInput,
+                            {
+                              backgroundColor: screenColors.input,
+                              borderColor: screenColors.inputBorder,
+                              color: screenColors.text,
+                            },
+                          ]}
                           placeholder={typical ? String(typical.wheelbase) : '240'}
-                          placeholderTextColor="#737373"
+                          placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                           keyboardType="decimal-pad"
                           value={String(
                             setupData.measurementUnits === 'imperial'
@@ -671,7 +851,9 @@ export default function OnboardingScreen() {
                           }}
                           selectTextOnFocus={true}
                         />
-                        <Text style={styles.inputHint}>Distance between front and rear axles</Text>
+                        <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
+                          Distance between front and rear axles
+                        </Text>
                       </View>
                     </View>
                   )}
@@ -679,11 +861,20 @@ export default function OnboardingScreen() {
                   {/* Track Width */}
                   <View style={styles.measurementInputRow}>
                     <View style={styles.measurementInputContainer}>
-                      <Text style={styles.inputLabel}>Track Width ({unitLabel})</Text>
+                      <Text style={[styles.inputLabel, { color: screenColors.text }]}>
+                        Track Width ({unitLabel})
+                      </Text>
                       <TextInput
-                        style={styles.textInput}
+                        style={[
+                          styles.textInput,
+                          {
+                            backgroundColor: screenColors.input,
+                            borderColor: screenColors.inputBorder,
+                            color: screenColors.text,
+                          },
+                        ]}
                         placeholder={typical ? String(typical.track) : '96'}
-                        placeholderTextColor="#737373"
+                        placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                         keyboardType="decimal-pad"
                         value={String(
                           setupData.measurementUnits === 'imperial'
@@ -703,7 +894,9 @@ export default function OnboardingScreen() {
                         }}
                         selectTextOnFocus={true}
                       />
-                      <Text style={styles.inputHint}>Distance between left and right wheels</Text>
+                      <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
+                        Distance between left and right wheels
+                      </Text>
                     </View>
                   </View>
 
@@ -711,11 +904,20 @@ export default function OnboardingScreen() {
                   {setupData.vehicleType === 'trailer' && (
                     <View style={styles.measurementInputRow}>
                       <View style={styles.measurementInputContainer}>
-                        <Text style={styles.inputLabel}>Hitch Offset ({unitLabel})</Text>
+                        <Text style={[styles.inputLabel, { color: screenColors.text }]}>
+                          Hitch Offset ({unitLabel})
+                        </Text>
                         <TextInput
-                          style={styles.textInput}
+                          style={[
+                            styles.textInput,
+                            {
+                              backgroundColor: screenColors.input,
+                              borderColor: screenColors.inputBorder,
+                              color: screenColors.text,
+                            },
+                          ]}
                           placeholder={typical?.hitch ? String(typical.hitch) : '120'}
-                          placeholderTextColor="#737373"
+                          placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                           keyboardType="decimal-pad"
                           value={String(
                             setupData.measurementUnits === 'imperial'
@@ -735,7 +937,7 @@ export default function OnboardingScreen() {
                           }}
                           selectTextOnFocus={true}
                         />
-                        <Text style={styles.inputHint}>
+                        <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
                           Distance from rear axle center to hitch ball
                         </Text>
                       </View>
@@ -849,17 +1051,21 @@ export default function OnboardingScreen() {
           </IconBox>
 
           <View style={styles.titleContainer}>
-            <Text style={styles.stepTitle}>Leveling Blocks</Text>
-            <Text style={styles.stepSubtitle}>Build your block inventory</Text>
+            <Text style={[styles.stepTitle, { color: screenColors.text }]}>Leveling Blocks</Text>
+            <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+              Build your block inventory
+            </Text>
           </View>
 
           <GlassCard variant="default">
             <View style={styles.cardContent}>
-              <View style={styles.infoCard}>
+              <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
                 <View style={styles.infoCardContent}>
                   <View style={styles.blockHeaderRow}>
                     <Package size={20} color="#3b82f6" />
-                    <Text style={styles.infoCardTitle}>Block Inventory</Text>
+                    <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
+                      Block Inventory
+                    </Text>
                   </View>
                   <View style={styles.switchRow}>
                     <Switch
@@ -867,16 +1073,16 @@ export default function OnboardingScreen() {
                       onValueChange={(checked) =>
                         setSetupData((prev) => ({ ...prev, hasLevelingBlocks: checked }))
                       }
-                      trackColor={{ false: '#555', true: '#3b82f6' }}
+                      trackColor={{ false: isDark ? '#555' : '#d1d5db', true: '#3b82f6' }}
                       thumbColor="#fff"
                     />
-                    <Text style={styles.switchLabel}>
+                    <Text style={[styles.switchLabel, { color: screenColors.text }]}>
                       {setupData.hasLevelingBlocks
                         ? 'I have leveling blocks'
                         : "I don't have leveling blocks"}
                     </Text>
                   </View>
-                  <Text style={styles.infoCardText}>
+                  <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
                     {setupData.hasLevelingBlocks
                       ? "Tap the trash icon to remove sizes you don't have. Add custom sizes with the button below."
                       : 'No problem! The app will show you exact measurements instead.'}
@@ -886,7 +1092,9 @@ export default function OnboardingScreen() {
 
               {setupData.hasLevelingBlocks && (
                 <View style={styles.blocksSection}>
-                  <Text style={styles.blocksSectionTitle}>Your block sizes:</Text>
+                  <Text style={[styles.blocksSectionTitle, { color: screenColors.text }]}>
+                    Your block sizes:
+                  </Text>
 
                   <View style={styles.optionsContainer}>
                     {sortedHeights.map((height) => {
@@ -896,7 +1104,14 @@ export default function OnboardingScreen() {
                       return (
                         <View
                           key={height}
-                          style={[styles.blockOption, hasBlocks && styles.blockOptionSelected]}
+                          style={[
+                            styles.blockOption,
+                            {
+                              backgroundColor: screenColors.optionCard,
+                              borderColor: screenColors.optionCardBorder,
+                            },
+                            hasBlocks && styles.blockOptionSelected,
+                          ]}
                         >
                           <View style={styles.blockQuantityRow}>
                             <TouchableOpacity
@@ -907,12 +1122,18 @@ export default function OnboardingScreen() {
                               <Trash2 size={18} color="#ef4444" />
                             </TouchableOpacity>
                             <View style={styles.blockInfoSection}>
-                              <Text style={styles.optionTitle}>{formatHeight(height)}</Text>
+                              <Text style={[styles.optionTitle, { color: screenColors.text }]}>
+                                {formatHeight(height)}
+                              </Text>
                             </View>
                             <View style={styles.quantityControls}>
                               <TouchableOpacity
                                 style={[
                                   styles.quantityButton,
+                                  {
+                                    backgroundColor: screenColors.quantityButton,
+                                    borderColor: screenColors.quantityButtonBorder,
+                                  },
                                   quantity === 0 && styles.quantityButtonDisabled,
                                 ]}
                                 onPress={() => updateBlockQuantity(height, -1)}
@@ -920,23 +1141,38 @@ export default function OnboardingScreen() {
                                 activeOpacity={0.6}
                                 delayPressIn={0}
                               >
-                                <Text style={styles.quantityButtonText}>−</Text>
+                                <Text
+                                  style={[styles.quantityButtonText, { color: screenColors.text }]}
+                                >
+                                  −
+                                </Text>
                               </TouchableOpacity>
                               <Text
                                 style={[
                                   styles.quantityValue,
+                                  { color: screenColors.textSecondary },
                                   hasBlocks && styles.quantityValueActive,
                                 ]}
                               >
                                 {quantity}
                               </Text>
                               <TouchableOpacity
-                                style={styles.quantityButton}
+                                style={[
+                                  styles.quantityButton,
+                                  {
+                                    backgroundColor: screenColors.quantityButton,
+                                    borderColor: screenColors.quantityButtonBorder,
+                                  },
+                                ]}
                                 onPress={() => updateBlockQuantity(height, 1)}
                                 activeOpacity={0.6}
                                 delayPressIn={0}
                               >
-                                <Text style={styles.quantityButtonText}>+</Text>
+                                <Text
+                                  style={[styles.quantityButtonText, { color: screenColors.text }]}
+                                >
+                                  +
+                                </Text>
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -957,7 +1193,7 @@ export default function OnboardingScreen() {
                   {/* Add Block Size Button/Input */}
                   {!setupData.showAddBlockInput ? (
                     <TouchableOpacity
-                      style={styles.addBlockButton}
+                      style={[styles.addBlockButton, { backgroundColor: screenColors.addBlockBg }]}
                       onPress={() => {
                         // Reset ref and increment key for clean state
                         newBlockHeightRef.current = '';
@@ -969,18 +1205,33 @@ export default function OnboardingScreen() {
                       <Text style={styles.addBlockButtonText}>Add Block Size</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View key={addInputKey} style={styles.addBlockInputContainer}>
-                      <Text style={styles.addBlockInputLabel}>
+                    <View
+                      key={addInputKey}
+                      style={[
+                        styles.addBlockInputContainer,
+                        { backgroundColor: screenColors.addBlockInputBg },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.addBlockInputLabel, { color: screenColors.textSecondary }]}
+                      >
                         Enter height ({setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}
                         ):
                       </Text>
                       <TextInput
                         ref={blockInputRef}
-                        style={styles.addBlockTextInput}
+                        style={[
+                          styles.addBlockTextInput,
+                          {
+                            backgroundColor: screenColors.input,
+                            borderColor: screenColors.inputBorder,
+                            color: screenColors.text,
+                          },
+                        ]}
                         placeholder={
                           setupData.measurementUnits === 'imperial' ? 'e.g., 5' : 'e.g., 12'
                         }
-                        placeholderTextColor="#737373"
+                        placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                         keyboardType="decimal-pad"
                         defaultValue=""
                         onChangeText={(text) => {
@@ -1042,28 +1293,30 @@ export default function OnboardingScreen() {
         </IconBox>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.stepTitle}>Ready to Level!</Text>
-          <Text style={styles.stepSubtitle}>Your setup is complete</Text>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Ready to Level!</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Your setup is complete
+          </Text>
         </View>
 
         <GlassCard variant="default">
           <View style={styles.cardContent}>
-            <Text style={styles.cardText}>
+            <Text style={[styles.cardText, { color: screenColors.text }]}>
               Perfect! We&apos;ve set up FlatFinder with your preferences:
             </Text>
 
             <View style={styles.summaryList}>
-              <Text style={styles.summaryItem}>
+              <Text style={[styles.summaryItem, { color: screenColors.text }]}>
                 📱 <Text style={styles.summaryBold}>Units:</Text>{' '}
                 {setupData.measurementUnits === 'imperial'
                   ? 'Imperial (inches/feet)'
                   : 'Metric (cm/meters)'}
               </Text>
-              <Text style={styles.summaryItem}>
+              <Text style={[styles.summaryItem, { color: screenColors.text }]}>
                 🚐 <Text style={styles.summaryBold}>Vehicle:</Text>{' '}
                 {setupData.vehicleName || `My ${selectedVehicleType?.name}`}
               </Text>
-              <Text style={styles.summaryItem}>
+              <Text style={[styles.summaryItem, { color: screenColors.text }]}>
                 📦 <Text style={styles.summaryBold}>Blocks:</Text>{' '}
                 {(() => {
                   if (!setupData.hasLevelingBlocks) return 'Measurement mode';
@@ -1085,7 +1338,7 @@ export default function OnboardingScreen() {
               </Text>
             </View>
 
-            <Text style={styles.settingsHint}>
+            <Text style={[styles.settingsHint, { color: screenColors.textSecondary }]}>
               You can update these preferences anytime in Settings.
             </Text>
           </View>
@@ -1095,7 +1348,10 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: screenColors.background }]}
+      edges={['top']}
+    >
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1103,13 +1359,29 @@ export default function OnboardingScreen() {
       >
         <View style={styles.centeredContainer}>
           {/* Glass Card Container */}
-          <View style={styles.glassCard}>
+          <View
+            style={[
+              styles.glassCard,
+              {
+                backgroundColor: screenColors.glassCard,
+                borderColor: screenColors.glassCardBorder,
+                borderTopColor: screenColors.glassCardTopBorder,
+              },
+            ]}
+          >
             {/* Top highlight for glass effect */}
-            <View style={styles.glassCardHighlight} />
+            <View
+              style={[styles.glassCardHighlight, { backgroundColor: screenColors.glassHighlight }]}
+            />
 
             {/* Progress Indicator */}
             {!keyboardVisible && (
-              <View style={styles.progressSection}>
+              <View
+                style={[
+                  styles.progressSection,
+                  { borderBottomColor: screenColors.glassCardBorder },
+                ]}
+              >
                 <View style={styles.progressRow}>
                   {STEPS.map((_, index) => {
                     const isActive = index === currentStep;
@@ -1121,6 +1393,10 @@ export default function OnboardingScreen() {
                         <View
                           style={[
                             styles.progressDot,
+                            {
+                              backgroundColor: screenColors.progressDot,
+                              borderColor: screenColors.progressDotBorder,
+                            },
                             isComplete && styles.progressDotComplete,
                             isActive && styles.progressDotActive,
                           ]}
@@ -1130,7 +1406,11 @@ export default function OnboardingScreen() {
                         {isActive && <View style={styles.progressDotGlow} />}
                         {showLine && (
                           <View
-                            style={[styles.progressLine, isComplete && styles.progressLineComplete]}
+                            style={[
+                              styles.progressLine,
+                              { backgroundColor: screenColors.progressLine },
+                              isComplete && styles.progressLineComplete,
+                            ]}
                           />
                         )}
                       </View>
@@ -1138,7 +1418,7 @@ export default function OnboardingScreen() {
                   })}
                 </View>
                 {/* Step indicator text */}
-                <Text style={styles.stepIndicator}>
+                <Text style={[styles.stepIndicator, { color: screenColors.textSecondary }]}>
                   Step {currentStep + 1} of {STEPS.length}: {currentStepData.title}
                 </Text>
               </View>
@@ -1157,7 +1437,7 @@ export default function OnboardingScreen() {
 
             {/* Navigation buttons - inside the card */}
             {!keyboardVisible && (
-              <View style={styles.navigation}>
+              <View style={[styles.navigation, { borderTopColor: screenColors.glassCardBorder }]}>
                 <View style={styles.navButtonsColumn}>
                   <GlassButton
                     onPress={handleNext}
@@ -1165,9 +1445,15 @@ export default function OnboardingScreen() {
                     variant={canProceed() ? 'primary' : 'ghost'}
                     rightIcon={
                       currentStep < STEPS.length - 1 ? (
-                        <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                        <ArrowRight
+                          size={20}
+                          color={canProceed() ? '#fff' : screenColors.textSecondary}
+                        />
                       ) : (
-                        <CheckCircle size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
+                        <CheckCircle
+                          size={20}
+                          color={canProceed() ? '#fff' : screenColors.textSecondary}
+                        />
                       )
                     }
                   >
@@ -1504,6 +1790,11 @@ const styles = StyleSheet.create({
         outlineStyle: 'none',
       },
     }),
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: 6,
   },
   infoCard: {
     padding: 16,

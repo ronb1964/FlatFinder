@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   Easing,
 } from 'react-native-reanimated';
+import { useTheme } from '../hooks/useTheme';
 
 // Note: Screen dimensions are now obtained via useWindowDimensions hook inside the component
 // for proper reactivity when viewport changes
@@ -44,35 +45,68 @@ function getCardinalDirection(heading: number): string {
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// Charcoal + Electric Blue - Enhanced with pronounced rings
-const COLORS = {
-  bg: {
-    outer: '#0a0a0f', // Deep dark with slight blue
-    middle: '#12141c', // Dark surface with blue tint
-    inner: '#1a1d28', // Lighter with blue undertone
-  },
-  glass: {
-    tint: 'rgba(59, 130, 246, 0.12)',
-    border: 'rgba(96, 165, 250, 0.6)',
-  },
-  // More pronounced concentric rings with gradient colors
-  rings: [
-    { color: '#1e40af', opacity: 0.5, width: 1.5 }, // Dark blue - innermost
-    { color: '#2563eb', opacity: 0.6, width: 2 }, // Blue
-    { color: '#3b82f6', opacity: 0.7, width: 2.5 }, // Electric blue
-    { color: '#60a5fa', opacity: 0.6, width: 2 }, // Light blue
-    { color: '#93c5fd', opacity: 0.5, width: 1.5 }, // Pale blue - outermost
-  ],
-  bubble: {
-    base: '#3b82f6',
-    highlight: '#ffffff',
-    edge: '#1d4ed8', // Darker edge for definition
-  },
-  crosshairs: 'rgba(96, 165, 250, 0.5)',
-  center: '#60a5fa',
-  success: '#22c55e',
-  nearLevel: '#eab308', // Yellow/amber for nearly level
-};
+// Theme-aware colors for the bubble level
+function getBubbleColors(isDark: boolean) {
+  return {
+    bg: isDark
+      ? {
+          outer: '#0a0a0f', // Deep dark with slight blue
+          middle: '#12141c', // Dark surface with blue tint
+          inner: '#1a1d28', // Lighter with blue undertone
+        }
+      : {
+          outer: '#e8ecf0', // Light gray with blue tint
+          middle: '#f0f4f8', // Light surface with blue tint
+          inner: '#f8fafc', // Almost white
+        },
+    glass: isDark
+      ? {
+          tint: 'rgba(59, 130, 246, 0.12)',
+          border: 'rgba(96, 165, 250, 0.6)',
+        }
+      : {
+          tint: 'rgba(59, 130, 246, 0.08)',
+          border: 'rgba(59, 130, 246, 0.5)',
+        },
+    // Concentric rings - slightly more subtle in light mode
+    rings: isDark
+      ? [
+          { color: '#1e40af', opacity: 0.5, width: 1.5 }, // Dark blue - innermost
+          { color: '#2563eb', opacity: 0.6, width: 2 }, // Blue
+          { color: '#3b82f6', opacity: 0.7, width: 2.5 }, // Electric blue
+          { color: '#60a5fa', opacity: 0.6, width: 2 }, // Light blue
+          { color: '#93c5fd', opacity: 0.5, width: 1.5 }, // Pale blue - outermost
+        ]
+      : [
+          { color: '#93c5fd', opacity: 0.4, width: 1.5 }, // Pale blue - innermost
+          { color: '#60a5fa', opacity: 0.5, width: 2 }, // Light blue
+          { color: '#3b82f6', opacity: 0.6, width: 2.5 }, // Electric blue
+          { color: '#2563eb', opacity: 0.5, width: 2 }, // Blue
+          { color: '#1e40af', opacity: 0.4, width: 1.5 }, // Dark blue - outermost
+        ],
+    bubble: {
+      base: '#3b82f6',
+      highlight: '#ffffff',
+      edge: '#1d4ed8', // Darker edge for definition
+    },
+    crosshairs: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+    center: '#60a5fa',
+    success: '#22c55e',
+    nearLevel: '#eab308', // Yellow/amber for nearly level
+    // Text colors
+    cardinalText: isDark ? '#fafafa' : '#1a1a1a',
+    intercardinalText: isDark ? '#a3a3a3' : '#64748b',
+    // Card background
+    compassCardBg: isDark ? 'rgba(17, 17, 17, 0.85)' : 'rgba(220, 230, 242, 0.95)',
+    compassCardBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.35)',
+    compassHeadingText: isDark ? '#fafafa' : '#1a1a1a',
+    // Tick marks
+    tickColor: isDark ? '#60a5fa' : '#3b82f6',
+    // Glass dome gradients
+    glassDomeHighlight: isDark ? 0.15 : 0.25,
+    glassDomeMid: isDark ? 0.08 : 0.12,
+  };
+}
 
 export const BubbleLevel = memo(function BubbleLevel({
   pitch,
@@ -85,6 +119,11 @@ export const BubbleLevel = memo(function BubbleLevel({
   size = 'full',
   maxSize,
 }: BubbleLevelProps) {
+  // Get theme for dynamic colors
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+  const COLORS = getBubbleColors(isDark);
+
   // Get reactive screen dimensions - updates when viewport changes
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
@@ -191,25 +230,27 @@ export const BubbleLevel = memo(function BubbleLevel({
 
   return (
     <View style={[styles.container, { width: VIEWBOX_SIZE, height: VIEWBOX_SIZE }]}>
+      {/* Key forces re-render when theme changes to update SVG gradients */}
       <Svg
+        key={theme.mode}
         width={VIEWBOX_SIZE}
         height={VIEWBOX_SIZE}
         viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
       >
         <Defs>
-          {/* Rich dark background with subtle blue gradient */}
+          {/* Rich background with subtle blue gradient - theme aware */}
           <RadialGradient id="glassBg" cx="50%" cy="50%" rx="50%" ry="50%">
-            <Stop offset="0%" stopColor="#1a1d28" stopOpacity="1" />
-            <Stop offset="40%" stopColor="#12141c" stopOpacity="1" />
-            <Stop offset="70%" stopColor="#0d0f14" stopOpacity="1" />
-            <Stop offset="100%" stopColor="#0a0a0f" stopOpacity="1" />
+            <Stop offset="0%" stopColor={COLORS.bg.inner} stopOpacity="1" />
+            <Stop offset="40%" stopColor={COLORS.bg.middle} stopOpacity="1" />
+            <Stop offset="70%" stopColor={isDark ? '#0d0f14' : '#f0f4f8'} stopOpacity="1" />
+            <Stop offset="100%" stopColor={COLORS.bg.outer} stopOpacity="1" />
           </RadialGradient>
 
           {/* Glass dome highlight - creates glass reflection effect */}
           <RadialGradient id="glassDome" cx="35%" cy="25%" rx="60%" ry="50%">
-            <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.15" />
-            <Stop offset="40%" stopColor="#60a5fa" stopOpacity="0.08" />
-            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+            <Stop offset="0%" stopColor="#ffffff" stopOpacity={COLORS.glassDomeHighlight} />
+            <Stop offset="40%" stopColor="#60a5fa" stopOpacity={COLORS.glassDomeMid} />
+            <Stop offset="100%" stopColor={isDark ? '#000000' : '#ffffff'} stopOpacity="0" />
           </RadialGradient>
 
           {/* Inner glass reflection arc */}
@@ -313,7 +354,7 @@ export const BubbleLevel = memo(function BubbleLevel({
               y1={center + Math.sin(rad) * innerR}
               x2={center + Math.cos(rad) * outerR}
               y2={center + Math.sin(rad) * outerR}
-              stroke="#60a5fa"
+              stroke={COLORS.tickColor}
               strokeWidth={angle % 90 === 0 ? 2.5 : 1.5}
               strokeOpacity={angle % 90 === 0 ? 0.7 : 0.4}
             />
@@ -432,7 +473,7 @@ export const BubbleLevel = memo(function BubbleLevel({
                   key={dir}
                   x={x}
                   y={y}
-                  fill={isNorth ? '#ef4444' : '#fafafa'}
+                  fill={isNorth ? '#ef4444' : COLORS.cardinalText}
                   fontSize={size === 'compact' ? 14 : 20}
                   fontWeight={isNorth ? '800' : '700'}
                   textAnchor="middle"
@@ -459,7 +500,7 @@ export const BubbleLevel = memo(function BubbleLevel({
                   key={dir}
                   x={x}
                   y={y}
-                  fill="#a3a3a3"
+                  fill={COLORS.intercardinalText}
                   fontSize={size === 'compact' ? 10 : 14}
                   fontWeight="600"
                   textAnchor="middle"
@@ -502,9 +543,19 @@ export const BubbleLevel = memo(function BubbleLevel({
       {/* Compass Heading Readout */}
       {showHeading && (
         <View style={styles.compassReadout}>
-          <View style={styles.compassCard}>
-            <Text style={styles.compassHeading}>{Math.round(normalizedHeading)}°</Text>
-            <Text style={styles.compassDirection}>{cardinalDirection}</Text>
+          <View
+            style={[
+              styles.compassCard,
+              {
+                backgroundColor: COLORS.compassCardBg,
+                borderColor: COLORS.compassCardBorder,
+              },
+            ]}
+          >
+            <Text style={[styles.compassHeading, { color: COLORS.compassHeadingText }]}>
+              {Math.round(normalizedHeading)}°
+            </Text>
+            <Text style={[styles.compassDirection, { color: '#60a5fa' }]}>{cardinalDirection}</Text>
           </View>
         </View>
       )}
@@ -526,22 +577,18 @@ const styles = StyleSheet.create({
   compassCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(17, 17, 17, 0.85)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
     borderWidth: 1,
     gap: 6,
   },
   compassHeading: {
-    color: '#fafafa',
     fontSize: 16,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   compassDirection: {
-    color: '#60a5fa',
     fontSize: 14,
     fontWeight: '600',
   },

@@ -12,6 +12,7 @@ import {
 } from '../lib/calibration';
 import { Calibration, createCalibration } from '../lib/levelingMath';
 import { THEME } from '../theme';
+import { useTheme } from '../hooks/useTheme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -184,6 +185,18 @@ function LoopingPhoneRotation({ startAngle, endAngle }: { startAngle: number; en
 
 // Glowing progress dots
 function ProgressIndicator({ currentStep }: { currentStep: CalibrationStep }) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  const dotColors = {
+    bg: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    active: theme.colors.primary,
+    complete: '#22c55e',
+    glow: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+    line: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    lineComplete: '#22c55e',
+  };
+
   const steps: CalibrationStep[] = ['position_0', 'position_90', 'position_180'];
   const currentIndex = steps.indexOf(currentStep);
 
@@ -198,15 +211,24 @@ function ProgressIndicator({ currentStep }: { currentStep: CalibrationStep }) {
             <View
               style={[
                 styles.progressDot,
-                isComplete && styles.progressDotComplete,
-                isActive && styles.progressDotActive,
+                { backgroundColor: dotColors.bg },
+                isComplete && [styles.progressDotComplete, { backgroundColor: dotColors.complete }],
+                isActive && [styles.progressDotActive, { backgroundColor: dotColors.active }],
               ]}
             >
-              {isComplete && <Check size={12} color="#000" />}
+              {isComplete && <Check size={12} color={isDark ? '#000' : '#fff'} />}
             </View>
-            {isActive && <View style={styles.progressDotGlow} />}
+            {isActive && (
+              <View style={[styles.progressDotGlow, { backgroundColor: dotColors.glow }]} />
+            )}
             {index < steps.length - 1 && (
-              <View style={[styles.progressLine, isComplete && styles.progressLineComplete]} />
+              <View
+                style={[
+                  styles.progressLine,
+                  { backgroundColor: dotColors.line },
+                  isComplete && { backgroundColor: dotColors.lineComplete },
+                ]}
+              />
             )}
           </View>
         );
@@ -221,6 +243,50 @@ export function CalibrationWizard({
   onGoHome,
   isVisible,
 }: CalibrationWizardProps) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  // Theme-aware colors for calibration wizard
+  const screenColors = {
+    // Overlay and container backgrounds
+    overlayBg: isDark ? 'rgba(10, 10, 15, 0.95)' : 'rgba(200, 212, 228, 0.98)',
+    contentBg: isDark ? 'rgba(26, 26, 26, 0.85)' : 'rgba(235, 240, 248, 0.95)',
+    contentBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.25)',
+    contentTopBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.4)',
+    // Card backgrounds
+    cardBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
+    cardBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+    // Capture button (blue)
+    captureBg: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.8)',
+    captureBorder: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.9)',
+    // Cancel button
+    cancelBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(180, 195, 215, 0.5)',
+    cancelBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.35)',
+    // Text colors
+    titleText: isDark ? '#ffffff' : '#1a1a1a',
+    subtitleText: theme.colors.primary,
+    instructionText: theme.colors.textSecondary,
+    buttonText: '#ffffff',
+    cancelText: isDark ? '#ffffff' : '#1a1a1a',
+    // Progress dots
+    dotBg: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    dotActiveBg: theme.colors.primary,
+    dotCompleteBg: '#22c55e',
+    dotGlow: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+    lineBg: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    lineCompleteBg: '#22c55e',
+    // Phone indicator
+    phoneBg: isDark ? 'rgba(30, 30, 30, 1)' : 'rgba(60, 70, 85, 1)',
+    phoneScreenBg: isDark ? 'rgba(15, 15, 15, 1)' : 'rgba(40, 50, 65, 1)',
+    phoneBorder: isDark ? 'rgba(80, 80, 80, 1)' : 'rgba(100, 115, 135, 1)',
+    phoneNotch: isDark ? 'rgba(60, 60, 60, 1)' : 'rgba(80, 90, 105, 1)',
+    phoneArrow: theme.colors.primary,
+    phoneLabel: isDark ? 'rgba(150, 150, 150, 1)' : 'rgba(180, 190, 205, 1)',
+    // Rotation icon
+    rotationBg: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
+    rotationBorder: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+  };
+
   const [currentStep, setCurrentStep] = useState<CalibrationStep>('welcome');
   const [readings, setReadings] = useState<OrientedCalibrationReading[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -403,10 +469,18 @@ export function CalibrationWizard({
   if (!isVisible) return null;
 
   return (
-    <SafeAreaView style={styles.overlay}>
+    <SafeAreaView style={[styles.overlay, { backgroundColor: screenColors.overlayBg }]}>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
         <Animated.View
-          style={[isRotatedStep ? styles.contentLandscape : styles.content, contentAnimatedStyle]}
+          style={[
+            isRotatedStep ? styles.contentLandscape : styles.content,
+            {
+              backgroundColor: screenColors.contentBg,
+              borderColor: screenColors.contentBorder,
+              borderTopColor: screenColors.contentTopBorder,
+            },
+            contentAnimatedStyle,
+          ]}
         >
           {/* Landscape layout for rotated steps */}
           {/* Container rotates -90°. With flexDirection: 'column': */}
@@ -428,8 +502,12 @@ export function CalibrationWizard({
                   isTransitionStep ? styles.landscapeTitleAreaNoDots : styles.landscapeTitleArea
                 }
               >
-                <Text style={styles.titleLandscape}>{config.title}</Text>
-                <Text style={styles.subtitleLandscape}>{config.subtitle}</Text>
+                <Text style={[styles.titleLandscape, { color: screenColors.titleText }]}>
+                  {config.title}
+                </Text>
+                <Text style={[styles.subtitleLandscape, { color: screenColors.subtitleText }]}>
+                  {config.subtitle}
+                </Text>
               </View>
 
               {/* Content area: Two columns for capture, single centered column for transition */}
@@ -438,8 +516,18 @@ export function CalibrationWizard({
                 /* Order: phone (my BOTTOM), rotation icon (middle), text (my TOP) */
                 <View style={styles.landscapeCenteredStack}>
                   <LoopingPhoneRotation startAngle={90} endAngle={180} />
-                  <View style={styles.instructionCardLandscape}>
-                    <Text style={styles.instruction}>{config.instruction}</Text>
+                  <View
+                    style={[
+                      styles.instructionCardLandscape,
+                      {
+                        backgroundColor: screenColors.cardBg,
+                        borderColor: screenColors.cardBorder,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.instruction, { color: screenColors.instructionText }]}>
+                      {config.instruction}
+                    </Text>
                   </View>
                 </View>
               ) : (
@@ -455,8 +543,18 @@ export function CalibrationWizard({
                     )}
                   </View>
                   <View style={styles.landscapeRightCol}>
-                    <View style={styles.instructionCardLandscape}>
-                      <Text style={styles.instruction}>{config.instruction}</Text>
+                    <View
+                      style={[
+                        styles.instructionCardLandscape,
+                        {
+                          backgroundColor: screenColors.cardBg,
+                          borderColor: screenColors.cardBorder,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.instruction, { color: screenColors.instructionText }]}>
+                        {config.instruction}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -467,11 +565,22 @@ export function CalibrationWizard({
                 {isTransitionStep ? (
                   /* Transition screen: Next button */
                   <Pressable
-                    style={[styles.captureButtonLandscapeWide, { marginBottom: 8 }]}
+                    style={[
+                      styles.captureButtonLandscapeWide,
+                      {
+                        marginBottom: 8,
+                        backgroundColor: screenColors.captureBg,
+                        borderColor: screenColors.captureBorder,
+                      },
+                    ]}
                     onPress={handleProceed}
                   >
-                    <RotateCw size={18} color="#fff" />
-                    <Text style={styles.captureButtonTextCompact}>Next</Text>
+                    <RotateCw size={18} color={screenColors.buttonText} />
+                    <Text
+                      style={[styles.captureButtonTextCompact, { color: screenColors.buttonText }]}
+                    >
+                      Next
+                    </Text>
                   </Pressable>
                 ) : (
                   /* Capture screen: Capture button with glow animation */
@@ -483,17 +592,26 @@ export function CalibrationWizard({
                       <Pressable
                         style={[
                           styles.captureButtonLandscapeWide,
+                          {
+                            backgroundColor: screenColors.captureBg,
+                            borderColor: screenColors.captureBorder,
+                          },
                           (!isReliable || isCapturing) && styles.captureButtonDisabled,
                         ]}
                         onPress={handleCaptureReading}
                         disabled={!isReliable || isCapturing}
                       >
                         {isCapturing ? (
-                          <RotateCw size={18} color="#fff" />
+                          <RotateCw size={18} color={screenColors.buttonText} />
                         ) : (
-                          <Target size={18} color="#fff" />
+                          <Target size={18} color={screenColors.buttonText} />
                         )}
-                        <Text style={styles.captureButtonTextCompact}>
+                        <Text
+                          style={[
+                            styles.captureButtonTextCompact,
+                            { color: screenColors.buttonText },
+                          ]}
+                        >
                           {isCapturing ? 'Capturing...' : 'Capture Reading'}
                         </Text>
                       </Pressable>
@@ -501,10 +619,20 @@ export function CalibrationWizard({
                   </View>
                 )}
                 <Pressable
-                  style={styles.cancelButtonLandscapeWide}
+                  style={[
+                    styles.cancelButtonLandscapeWide,
+                    {
+                      backgroundColor: screenColors.cancelBg,
+                      borderColor: screenColors.cancelBorder,
+                    },
+                  ]}
                   onPress={() => setShowCancelConfirm(true)}
                 >
-                  <Text style={styles.cancelButtonTextCompact}>Cancel</Text>
+                  <Text
+                    style={[styles.cancelButtonTextCompact, { color: screenColors.cancelText }]}
+                  >
+                    Cancel
+                  </Text>
                 </Pressable>
               </View>
             </>
@@ -513,16 +641,27 @@ export function CalibrationWizard({
               {/* Transition screen - portrait, showing rotation animation */}
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.title}>{config.title}</Text>
-                <Text style={styles.subtitle}>{config.subtitle}</Text>
+                <Text style={[styles.title, { color: screenColors.titleText }]}>
+                  {config.title}
+                </Text>
+                <Text style={[styles.subtitle, { color: screenColors.subtitleText }]}>
+                  {config.subtitle}
+                </Text>
               </View>
 
               {/* Looping phone rotation animation: 0° to 90° */}
               <LoopingPhoneRotation startAngle={0} endAngle={90} />
 
               {/* Instructions */}
-              <View style={styles.instructionCard}>
-                <Text style={styles.instruction}>{config.instruction}</Text>
+              <View
+                style={[
+                  styles.instructionCard,
+                  { backgroundColor: screenColors.cardBg, borderColor: screenColors.cardBorder },
+                ]}
+              >
+                <Text style={[styles.instruction, { color: screenColors.instructionText }]}>
+                  {config.instruction}
+                </Text>
               </View>
             </>
           ) : (
@@ -535,8 +674,12 @@ export function CalibrationWizard({
 
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.title}>{config.title}</Text>
-                <Text style={styles.subtitle}>{config.subtitle}</Text>
+                <Text style={[styles.title, { color: screenColors.titleText }]}>
+                  {config.title}
+                </Text>
+                <Text style={[styles.subtitle, { color: screenColors.subtitleText }]}>
+                  {config.subtitle}
+                </Text>
               </View>
 
               {/* Phone rotation indicator */}
@@ -549,25 +692,41 @@ export function CalibrationWizard({
               )}
 
               {/* Instructions */}
-              <View style={styles.instructionCard}>
-                <Text style={styles.instruction}>{config.instruction}</Text>
+              <View
+                style={[
+                  styles.instructionCard,
+                  { backgroundColor: screenColors.cardBg, borderColor: screenColors.cardBorder },
+                ]}
+              >
+                <Text style={[styles.instruction, { color: screenColors.instructionText }]}>
+                  {config.instruction}
+                </Text>
               </View>
             </>
           )}
 
           {/* Result display on completion */}
           {currentStep === 'complete' && result && (
-            <View style={styles.resultContainer}>
+            <View
+              style={[
+                styles.resultContainer,
+                { backgroundColor: screenColors.cardBg, borderColor: screenColors.cardBorder },
+              ]}
+            >
               <View style={styles.resultRow}>
                 <View style={styles.resultItem}>
-                  <Text style={styles.resultLabel}>Device Bias</Text>
-                  <Text style={styles.resultValue}>
+                  <Text style={[styles.resultLabel, { color: screenColors.instructionText }]}>
+                    Device Bias
+                  </Text>
+                  <Text style={[styles.resultValue, { color: screenColors.titleText }]}>
                     {result.deviceBias.pitch.toFixed(1)}° / {result.deviceBias.roll.toFixed(1)}°
                   </Text>
                 </View>
                 <View style={styles.resultItem}>
-                  <Text style={styles.resultLabel}>Vehicle Tilt</Text>
-                  <Text style={styles.resultValue}>
+                  <Text style={[styles.resultLabel, { color: screenColors.instructionText }]}>
+                    Vehicle Tilt
+                  </Text>
+                  <Text style={[styles.resultValue, { color: screenColors.titleText }]}>
                     {result.vehicleTilt.pitch.toFixed(1)}° / {result.vehicleTilt.roll.toFixed(1)}°
                   </Text>
                 </View>
@@ -617,17 +776,23 @@ export function CalibrationWizard({
                       <Pressable
                         style={[
                           styles.captureButton,
+                          {
+                            backgroundColor: screenColors.captureBg,
+                            borderColor: screenColors.captureBorder,
+                          },
                           (!isReliable || isCapturing) && styles.captureButtonDisabled,
                         ]}
                         onPress={handleCaptureReading}
                         disabled={!isReliable || isCapturing}
                       >
                         {isCapturing ? (
-                          <RotateCw size={18} color="#fff" />
+                          <RotateCw size={18} color={screenColors.buttonText} />
                         ) : (
-                          <Target size={18} color="#fff" />
+                          <Target size={18} color={screenColors.buttonText} />
                         )}
-                        <Text style={styles.captureButtonText}>
+                        <Text
+                          style={[styles.captureButtonText, { color: screenColors.buttonText }]}
+                        >
                           {isCapturing ? 'Capturing...' : 'Capture Reading'}
                         </Text>
                       </Pressable>
@@ -680,15 +845,26 @@ export function CalibrationWizard({
         animationType="fade"
         onRequestClose={() => setShowCancelConfirm(false)}
       >
-        <View style={styles.confirmModalOverlay}>
+        <View
+          style={[
+            styles.confirmModalOverlay,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)' },
+          ]}
+        >
           <View
             style={[
               styles.confirmModalContent,
-              { transform: [{ rotate: `${config.uiRotation}deg` }] },
+              {
+                transform: [{ rotate: `${config.uiRotation}deg` }],
+                backgroundColor: screenColors.contentBg,
+                borderColor: screenColors.contentBorder,
+              },
             ]}
           >
-            <Text style={styles.confirmModalTitle}>Cancel Calibration?</Text>
-            <Text style={styles.confirmModalText}>
+            <Text style={[styles.confirmModalTitle, { color: screenColors.titleText }]}>
+              Cancel Calibration?
+            </Text>
+            <Text style={[styles.confirmModalText, { color: screenColors.instructionText }]}>
               Your calibration progress will be lost. Are you sure you want to cancel?
             </Text>
             <View style={styles.confirmModalButtons}>

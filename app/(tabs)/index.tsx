@@ -43,6 +43,7 @@ import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
 
 import { useAppStore } from '../../src/state/appStore';
+import { useTheme } from '../../src/hooks/useTheme';
 import {
   applyCalibration,
   calculateCalibrationOffsets,
@@ -74,6 +75,54 @@ export default function LevelScreen() {
   const { showLeveling } = useLocalSearchParams<{ showLeveling?: string }>();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const insets = useSafeInsets();
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  // Theme-aware colors for this screen
+  const screenColors = {
+    // Background gradient - blue-gray for light mode
+    gradientColors: isDark
+      ? (['#0a0a0f', '#111118', '#0d0d12'] as const)
+      : (['#dce4ed', '#d6dfe9', '#dae3ec'] as const),
+    // Text colors
+    text: theme.colors.text,
+    textSecondary: theme.colors.textSecondary,
+    textMuted: theme.colors.textMuted,
+    // Modal/card backgrounds
+    modalBg: isDark ? '#1a1a1f' : '#ffffff',
+    modalBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    // SVG triangle fills - blue-gray tint for light mode to blend with background
+    triangleFill: isDark ? '#1a1a1a' : '#e2eaf3',
+    triangleStroke: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(100, 130, 170, 0.25)',
+    triangleGradientStart: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+    triangleGradientEnd: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)',
+    // Profile card
+    profileCardBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+    profileCardBorder: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+    profileHighlight: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.8)',
+    profileIconBg: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)',
+    profileIconBorder: isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+    // Heading card - lighter than pitch/roll with stronger blue accent
+    headingCardBg: isDark ? 'rgba(17, 17, 17, 0.85)' : 'rgba(240, 245, 252, 0.95)',
+    headingCardBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+    // Dismiss text
+    dismissText: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
+    // Divider
+    divider: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    // Warning backgrounds
+    warningBg: isDark ? 'rgba(234, 179, 8, 0.15)' : 'rgba(234, 179, 8, 0.12)',
+    warningBorder: isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.25)',
+    // Calibration buttons - high saturation for light mode
+    // Green for "Use Last Calibration" (success)
+    calibrationPrimaryBg: isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.8)',
+    calibrationPrimaryBorder: isDark ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 197, 94, 0.9)',
+    // Orange for "Quick Calibrate" (warning) - matches home screen
+    calibrationWarningBg: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.85)',
+    calibrationWarningBorder: isDark ? 'rgba(251, 191, 36, 0.5)' : 'rgba(245, 158, 11, 0.95)',
+    // Teal for "Full Calibration" (secondary) - matches home screen
+    calibrationSecondaryBg: isDark ? 'rgba(6, 182, 212, 0.3)' : 'rgba(6, 182, 212, 0.8)',
+    calibrationSecondaryBorder: isDark ? 'rgba(34, 211, 238, 0.5)' : 'rgba(6, 182, 212, 0.9)',
+  };
 
   // Calculate actual usable height (screen height minus safe areas and tab bar)
   // Tab bar is approximately 49px on iOS
@@ -371,10 +420,12 @@ export default function LevelScreen() {
 
   if (isAvailable === false) {
     return (
-      <SafeAreaSimulator style={styles.container}>
+      <SafeAreaSimulator style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.centerContent}>
-          <Text style={styles.errorTitle}>Device sensors not available</Text>
-          <Text style={styles.errorText}>
+          <Text style={[styles.errorTitle, { color: screenColors.text }]}>
+            Device sensors not available
+          </Text>
+          <Text style={[styles.errorText, { color: screenColors.textSecondary }]}>
             This device does not support motion sensors required for leveling.
           </Text>
         </View>
@@ -384,9 +435,11 @@ export default function LevelScreen() {
 
   if (isAvailable === null) {
     return (
-      <SafeAreaSimulator style={styles.container}>
+      <SafeAreaSimulator style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.centerContent}>
-          <Text style={styles.loadingText}>Checking sensor availability...</Text>
+          <Text style={[styles.loadingText, { color: screenColors.textSecondary }]}>
+            Checking sensor availability...
+          </Text>
         </View>
       </SafeAreaSimulator>
     );
@@ -403,7 +456,7 @@ export default function LevelScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0a0a0f', '#111118', '#0d0d12']} style={styles.gradient}>
+    <LinearGradient colors={screenColors.gradientColors} style={styles.gradient}>
       {Platform.OS !== 'web' && settings.keepAwake && <KeepAwakeWrapper />}
       <SafeAreaSimulator style={styles.safeArea} showIndicators={false}>
         <ScrollView
@@ -423,10 +476,12 @@ export default function LevelScreen() {
                   <AlertTriangle size={20} color="#eab308" />
                   <View style={styles.warningTextContainer}>
                     <Text style={styles.cautionTitle}>Caution</Text>
-                    <Text style={styles.warningText}>
+                    <Text style={[styles.warningText, { color: screenColors.text }]}>
                       Steep slope detected. Use wheel chocks and stabilizing jacks.
                     </Text>
-                    <Text style={styles.warningDismiss}>Tap to dismiss</Text>
+                    <Text style={[styles.warningDismiss, { color: screenColors.dismissText }]}>
+                      Tap to dismiss
+                    </Text>
                   </View>
                 </View>
               </GlassCard>
@@ -448,10 +503,12 @@ export default function LevelScreen() {
                   <AlertTriangle size={20} color="#ef4444" />
                   <View style={styles.warningTextContainer}>
                     <Text style={styles.warningTitle}>Safety Warning</Text>
-                    <Text style={styles.warningText}>
+                    <Text style={[styles.warningText, { color: screenColors.text }]}>
                       Slope may be unsafe for leveling. Consider finding a flatter spot.
                     </Text>
-                    <Text style={styles.warningDismiss}>Tap to acknowledge</Text>
+                    <Text style={[styles.warningDismiss, { color: screenColors.dismissText }]}>
+                      Tap to acknowledge
+                    </Text>
                   </View>
                 </View>
               </GlassCard>
@@ -711,26 +768,26 @@ export default function LevelScreen() {
                   <Svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
                     <Defs>
                       <SvgLinearGradient id="glassGradientTri" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.08)" />
-                        <Stop offset="100%" stopColor="rgba(255, 255, 255, 0.02)" />
+                        <Stop offset="0%" stopColor={screenColors.triangleGradientStart} />
+                        <Stop offset="100%" stopColor={screenColors.triangleGradientEnd} />
                       </SvgLinearGradient>
                     </Defs>
 
                     {/* Left Triangle - Pitch */}
                     <Path
                       d={leftPath}
-                      fill="#1a1a1a"
+                      fill={screenColors.triangleFill}
                       fillOpacity={0.9}
-                      stroke="rgba(255, 255, 255, 0.3)"
+                      stroke={screenColors.triangleStroke}
                       strokeWidth={1}
                     />
 
                     {/* Right Triangle - Roll */}
                     <Path
                       d={rightPath}
-                      fill="#1a1a1a"
+                      fill={screenColors.triangleFill}
                       fillOpacity={0.9}
-                      stroke="rgba(255, 255, 255, 0.3)"
+                      stroke={screenColors.triangleStroke}
                       strokeWidth={1}
                     />
                   </Svg>
@@ -746,12 +803,14 @@ export default function LevelScreen() {
                       },
                     ]}
                   >
-                    <Text style={styles.arcValueLabel}>Pitch</Text>
+                    <Text style={[styles.arcValueLabel, { color: screenColors.textSecondary }]}>
+                      Pitch
+                    </Text>
                     <Text style={[styles.arcValueNumber, { color: levelStatus.color }]}>
                       {calibratedValues.pitch >= 0 ? '+' : ''}
                       {calibratedValues.pitch.toFixed(1)}°
                     </Text>
-                    <Text style={styles.arcValueHint}>
+                    <Text style={[styles.arcValueHint, { color: screenColors.textMuted }]}>
                       {calibratedValues.pitch > 0
                         ? 'Nose Up'
                         : calibratedValues.pitch < 0
@@ -771,12 +830,14 @@ export default function LevelScreen() {
                       },
                     ]}
                   >
-                    <Text style={styles.arcValueLabel}>Roll</Text>
+                    <Text style={[styles.arcValueLabel, { color: screenColors.textSecondary }]}>
+                      Roll
+                    </Text>
                     <Text style={[styles.arcValueNumber, { color: levelStatus.color }]}>
                       {calibratedValues.roll >= 0 ? '+' : ''}
                       {calibratedValues.roll.toFixed(1)}°
                     </Text>
-                    <Text style={styles.arcValueHint}>
+                    <Text style={[styles.arcValueHint, { color: screenColors.textMuted }]}>
                       {calibratedValues.roll > 0
                         ? 'Right Up'
                         : calibratedValues.roll < 0
@@ -796,8 +857,16 @@ export default function LevelScreen() {
                       zIndex: 10,
                     }}
                   >
-                    <View style={styles.externalHeadingCard}>
-                      <Text style={styles.externalHeadingValue}>
+                    <View
+                      style={[
+                        styles.externalHeadingCard,
+                        {
+                          backgroundColor: screenColors.headingCardBg,
+                          borderColor: screenColors.headingCardBorder,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.externalHeadingValue, { color: screenColors.text }]}>
                         {Math.round(((yawDeg % 360) + 360) % 360)}°
                       </Text>
                       <Text style={styles.externalHeadingDirection}>
@@ -882,16 +951,29 @@ export default function LevelScreen() {
               <View
                 style={[
                   styles.profileCard,
+                  {
+                    backgroundColor: screenColors.profileCardBg,
+                    borderColor: screenColors.profileCardBorder,
+                  },
                   isSmallScreen && styles.profileCardSmall,
                   !activeProfile && styles.profileCardEmpty,
                 ]}
               >
                 {/* Glass highlight bar */}
-                <View style={styles.profileHighlight} />
+                <View
+                  style={[
+                    styles.profileHighlight,
+                    { backgroundColor: screenColors.profileHighlight },
+                  ]}
+                />
                 <View style={styles.profileContent}>
                   <View
                     style={[
                       styles.profileIconContainer,
+                      {
+                        backgroundColor: screenColors.profileIconBg,
+                        borderColor: screenColors.profileIconBorder,
+                      },
                       isSmallScreen && styles.profileIconContainerSmall,
                       !activeProfile && styles.profileIconContainerEmpty,
                     ]}
@@ -912,6 +994,7 @@ export default function LevelScreen() {
                     <Text
                       style={[
                         styles.profileLabel,
+                        { color: screenColors.textMuted },
                         isSmallScreen && styles.profileLabelSmall,
                         !activeProfile && styles.profileLabelEmpty,
                       ]}
@@ -921,6 +1004,7 @@ export default function LevelScreen() {
                     <Text
                       style={[
                         styles.profileName,
+                        { color: screenColors.text },
                         isSmallScreen && styles.profileNameSmall,
                         !activeProfile && styles.profileNameEmpty,
                       ]}
@@ -946,6 +1030,8 @@ export default function LevelScreen() {
               style={[
                 styles.quickCalModal,
                 {
+                  backgroundColor: screenColors.modalBg,
+                  borderColor: screenColors.modalBorder,
                   opacity: modalAnimation,
                   transform: [
                     {
@@ -962,18 +1048,28 @@ export default function LevelScreen() {
                 {/* Modal Header */}
                 <View style={styles.modalHeader}>
                   <Target size={28} color="#3b82f6" />
-                  <Text style={styles.modalTitle}>Quick Calibrate</Text>
+                  <Text style={[styles.modalTitle, { color: screenColors.text }]}>
+                    Quick Calibrate
+                  </Text>
                 </View>
 
                 {/* Warning Message */}
-                <View style={styles.modalWarning}>
+                <View
+                  style={[
+                    styles.modalWarning,
+                    {
+                      backgroundColor: screenColors.warningBg,
+                      borderColor: screenColors.warningBorder,
+                    },
+                  ]}
+                >
                   <AlertTriangle size={20} color="#eab308" />
                   <Text style={styles.modalWarningText}>
                     Phone must be on a known level surface
                   </Text>
                 </View>
 
-                <Text style={styles.modalDescription}>
+                <Text style={[styles.modalDescription, { color: screenColors.textSecondary }]}>
                   This sets your current position as &quot;level.&quot; Use a hardware bubble level
                   to verify the surface first.
                 </Text>
@@ -1009,6 +1105,8 @@ export default function LevelScreen() {
               style={[
                 styles.calibrationPromptModal,
                 {
+                  backgroundColor: screenColors.modalBg,
+                  borderColor: screenColors.modalBorder,
                   opacity: calibrationPromptAnimation,
                   transform: [
                     {
@@ -1025,7 +1123,9 @@ export default function LevelScreen() {
                 {/* Modal Header */}
                 <View style={styles.calibrationPromptHeader}>
                   <Zap size={28} color="#3b82f6" />
-                  <Text style={styles.calibrationPromptTitle}>Leveling Assistant</Text>
+                  <Text style={[styles.calibrationPromptTitle, { color: screenColors.text }]}>
+                    Leveling Assistant
+                  </Text>
                 </View>
 
                 {/* Message based on calibration status */}
@@ -1050,7 +1150,13 @@ export default function LevelScreen() {
                 <View style={styles.calibrationPromptButtons}>
                   {hasCalibration && (
                     <Pressable
-                      style={styles.calibrationPromptPrimaryBtn}
+                      style={[
+                        styles.calibrationPromptPrimaryBtn,
+                        {
+                          backgroundColor: screenColors.calibrationPrimaryBg,
+                          borderColor: screenColors.calibrationPrimaryBorder,
+                        },
+                      ]}
                       onPress={handleUseLastCalibration}
                     >
                       <Check size={18} color="#fff" />
@@ -1062,7 +1168,17 @@ export default function LevelScreen() {
                     <Pressable
                       style={[
                         styles.calibrationPromptSecondaryBtn,
-                        !hasCalibration && styles.calibrationPromptPrimaryBtn,
+                        {
+                          backgroundColor: screenColors.calibrationWarningBg,
+                          borderColor: screenColors.calibrationWarningBorder,
+                        },
+                        !hasCalibration && [
+                          styles.calibrationPromptPrimaryBtn,
+                          {
+                            backgroundColor: screenColors.calibrationWarningBg,
+                            borderColor: screenColors.calibrationWarningBorder,
+                          },
+                        ],
                       ]}
                       onPress={handleQuickCalibrateFromPrompt}
                       disabled={!isReliable}
@@ -1070,20 +1186,26 @@ export default function LevelScreen() {
                       <Target size={18} color="#fff" />
                       <Text style={styles.calibrationPromptBtnText}>Quick Calibrate</Text>
                     </Pressable>
-                    <Text style={styles.calibrationOptionDesc}>
+                    <Text style={[styles.calibrationOptionDesc, { color: screenColors.textMuted }]}>
                       Sets current position as level. Place phone on a surface you know is level.
                     </Text>
                   </View>
 
                   <View style={styles.calibrationOptionGroup}>
                     <Pressable
-                      style={styles.calibrationPromptSecondaryBtn}
+                      style={[
+                        styles.calibrationPromptSecondaryBtn,
+                        {
+                          backgroundColor: screenColors.calibrationSecondaryBg,
+                          borderColor: screenColors.calibrationSecondaryBorder,
+                        },
+                      ]}
                       onPress={handleFullCalibrationFromPrompt}
                     >
                       <Settings size={18} color="#fff" />
                       <Text style={styles.calibrationPromptBtnText}>Full Calibration</Text>
                     </Pressable>
-                    <Text style={styles.calibrationOptionDesc}>
+                    <Text style={[styles.calibrationOptionDesc, { color: screenColors.textMuted }]}>
                       3-step process that works on any surface. Most accurate option.
                     </Text>
                   </View>
@@ -1238,7 +1360,6 @@ const styles = StyleSheet.create({
     bottom: -8,
     borderRadius: 30,
     backgroundColor: 'rgba(34, 197, 94, 0.25)',
-    // @ts-expect-error - filter works on web
     filter: 'blur(20px)',
   },
   statusGlowYellowWeb: {
@@ -1249,7 +1370,6 @@ const styles = StyleSheet.create({
     bottom: -6,
     borderRadius: 25,
     backgroundColor: 'rgba(234, 179, 8, 0.22)',
-    // @ts-expect-error - filter works on web
     filter: 'blur(18px)',
   },
   statusText: {

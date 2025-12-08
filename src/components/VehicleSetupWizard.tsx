@@ -8,14 +8,15 @@ import {
   Modal,
   StyleSheet,
 } from 'react-native';
-import { Check, Trash2, Plus, Caravan } from 'lucide-react-native';
-import { MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
+import { Check, Trash2, Plus } from 'lucide-react-native';
+import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
 import { GlassButton } from './ui/GlassButton';
 import { GlassToggle } from './ui/GlassToggle';
 import { StandardBlockSets, BlockInventory } from '../lib/rvLevelingMath';
 import { useAppStore } from '../state/appStore';
 import { getTypicalMeasurements, convertToInches, convertForDisplay } from '../lib/units';
 import { THEME } from '../theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface VehicleSetupWizardProps {
   onComplete: (profile: {
@@ -40,29 +41,20 @@ interface VehicleSetupWizardProps {
   isOnboarding?: boolean;
 }
 
-// Wrapper for Caravan to match custom icon interface
-const TrailerIconWrapper = ({
-  size = 24,
-  color = '#a3a3a3',
-}: {
-  size?: number;
-  color?: string;
-}) => <Caravan size={size} color={color} />;
-
 const VEHICLE_TYPES = [
   {
     id: 'trailer',
     name: 'Travel Trailer',
     description: 'Towed behind a vehicle, has a hitch',
-    Icon: TrailerIconWrapper,
+    Icon: TrailerIcon,
     iconSize: 32,
   },
   {
     id: 'motorhome',
-    name: 'Motorhome/RV',
+    name: 'Motor Home',
     description: 'Self-contained with engine, drives itself',
     Icon: MotorhomeIcon,
-    iconSize: 32,
+    iconSize: 42, // Larger to match visual size of other icons
   },
   {
     id: 'van',
@@ -80,7 +72,53 @@ export function VehicleSetupWizard({
   editingProfile,
   isOnboarding = false,
 }: VehicleSetupWizardProps) {
-  const { settings } = useAppStore();
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  // Theme-aware colors
+  const screenColors = {
+    // Overlay and modal
+    overlayBg: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+    modalBg: theme.colors.background,
+    modalBorder: theme.colors.border,
+    // Text colors
+    text: theme.colors.text,
+    textSecondary: theme.colors.textSecondary,
+    textMuted: theme.colors.textMuted,
+    primary: theme.colors.primary,
+    success: theme.colors.success,
+    danger: '#ef4444',
+    warning: '#f97316',
+    // Surface/card backgrounds
+    surface: theme.colors.surface,
+    cardBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(200, 215, 235, 0.5)',
+    cardBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+    cardSelectedBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
+    cardSelectedBorder: theme.colors.primary,
+    // Icon box
+    iconBoxBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(200, 215, 235, 0.5)',
+    iconBoxBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+    iconBoxSelectedBg: isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.3)',
+    iconBoxSelectedBorder: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.6)',
+    // Progress dots
+    dotBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.2)',
+    dotBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    dotActiveBg: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)',
+    lineBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+    // Tip box
+    tipBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.4)',
+    tipBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    // Input
+    inputBg: isDark ? theme.colors.surface : 'rgba(220, 230, 242, 0.95)',
+    placeholder: isDark ? '#737373' : '#9ca3af',
+    // Block item
+    blockItemBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(200, 215, 235, 0.5)',
+    blockItemBorder: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(100, 130, 170, 0.3)',
+    // Icon colors
+    iconDefault: isDark ? '#a3a3a3' : '#64748b',
+  };
+
+  const { settings, isProfileNameTaken } = useAppStore();
   const [step, setStep] = useState(0);
 
   const typicalMeasurements = getTypicalMeasurements(settings.measurementUnits);
@@ -250,10 +288,10 @@ export function VehicleSetupWizard({
   const renderVehicleTypeStep = () => (
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
-        <Text style={styles.stepTitle}>
+        <Text style={[styles.stepTitle, { color: screenColors.text }]}>
           {isOnboarding ? 'What type of RV do you have?' : 'What type of vehicle do you have?'}
         </Text>
-        <Text style={styles.stepSubtitle}>
+        <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
           {isOnboarding
             ? "We'll customize everything to fit your setup perfectly."
             : 'This helps us set up realistic measurements for your vehicle.'}
@@ -268,7 +306,14 @@ export function VehicleSetupWizard({
           return (
             <TouchableOpacity
               key={vehicleType.id}
-              style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+              style={[
+                styles.optionCard,
+                { backgroundColor: screenColors.surface, borderColor: screenColors.cardBorder },
+                isSelected && {
+                  backgroundColor: screenColors.cardSelectedBg,
+                  borderColor: screenColors.cardSelectedBorder,
+                },
+              ]}
               onPress={() => {
                 setProfile((prev) => {
                   const newType = vehicleType.id as 'trailer' | 'motorhome' | 'van';
@@ -296,15 +341,31 @@ export function VehicleSetupWizard({
                 });
               }}
             >
-              <View style={[styles.iconBox, isSelected && styles.iconBoxSelected]}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: screenColors.iconBoxBg,
+                    borderColor: screenColors.iconBoxBorder,
+                  },
+                  isSelected && {
+                    backgroundColor: screenColors.iconBoxSelectedBg,
+                    borderColor: screenColors.iconBoxSelectedBorder,
+                  },
+                ]}
+              >
                 <VehicleIcon
                   size={vehicleType.iconSize}
-                  color={isSelected ? THEME.colors.primary : '#a3a3a3'}
+                  color={isSelected ? screenColors.primary : screenColors.iconDefault}
                 />
               </View>
               <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>{vehicleType.name}</Text>
-                <Text style={styles.optionDescription}>{vehicleType.description}</Text>
+                <Text style={[styles.optionTitle, { color: screenColors.text }]}>
+                  {vehicleType.name}
+                </Text>
+                <Text style={[styles.optionDescription, { color: screenColors.textSecondary }]}>
+                  {vehicleType.description}
+                </Text>
               </View>
             </TouchableOpacity>
           );
@@ -316,10 +377,10 @@ export function VehicleSetupWizard({
   const renderNameStep = () => (
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
-        <Text style={styles.stepTitle}>
+        <Text style={[styles.stepTitle, { color: screenColors.text }]}>
           {isOnboarding ? 'What do you call it?' : `Give your ${selectedVehicleType?.name} a name`}
         </Text>
-        <Text style={styles.stepSubtitle}>
+        <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
           {isOnboarding
             ? 'Give your RV a nickname - something fun and memorable!'
             : 'This helps you identify it if you have multiple vehicles.'}
@@ -327,19 +388,33 @@ export function VehicleSetupWizard({
       </View>
 
       <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>Vehicle Name</Text>
+        <Text style={[styles.inputLabel, { color: screenColors.text }]}>Vehicle Name</Text>
         <TextInput
-          style={styles.textInput}
+          style={[
+            styles.textInput,
+            { backgroundColor: screenColors.inputBg, color: screenColors.text },
+            vehicleNameTaken && { borderColor: '#ef4444', borderWidth: 1 },
+          ]}
           placeholder={`My ${selectedVehicleType?.name}`}
-          placeholderTextColor="#737373"
+          placeholderTextColor={screenColors.placeholder}
           value={profile.name}
           onChangeText={(text) => setProfile((prev) => ({ ...prev, name: text }))}
           selectTextOnFocus={true}
           autoFocus={true}
         />
-        <View style={styles.tipBox}>
-          <Text style={styles.tipTitle}>{isOnboarding ? 'Ideas:' : 'Naming Tips:'}</Text>
-          <Text style={styles.tipText}>
+        {vehicleNameTaken && (
+          <Text style={styles.errorText}>A vehicle with this name already exists</Text>
+        )}
+        <View
+          style={[
+            styles.tipBox,
+            { backgroundColor: screenColors.tipBg, borderColor: screenColors.tipBorder },
+          ]}
+        >
+          <Text style={[styles.tipTitle, { color: screenColors.text }]}>
+            {isOnboarding ? 'Ideas:' : 'Naming Tips:'}
+          </Text>
+          <Text style={[styles.tipText, { color: screenColors.textSecondary }]}>
             {'\u2022'} Use something memorable and descriptive{'\n'}
             {'\u2022'} Consider color, size, or brand (e.g., &quot;Big Blue&quot;, &quot;Little
             Winnebago&quot;){'\n'}
@@ -356,10 +431,10 @@ export function VehicleSetupWizard({
     return (
       <View style={styles.stepContainer}>
         <View style={styles.stepHeader}>
-          <Text style={styles.stepTitle}>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>
             {isOnboarding ? 'Quick Measurements' : 'Vehicle Measurements'}
           </Text>
-          <Text style={styles.stepSubtitle}>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
             {isOnboarding
               ? "Don't worry - typical values work great! You can fine-tune later."
               : 'We need a few measurements to calculate leveling accurately.'}
@@ -369,7 +444,14 @@ export function VehicleSetupWizard({
         {/* Measurement Type Selection */}
         <View style={styles.optionsList}>
           <TouchableOpacity
-            style={[styles.radioOption, useTypicalMeasurements && styles.radioOptionSelected]}
+            style={[
+              styles.radioOption,
+              { backgroundColor: screenColors.surface, borderColor: screenColors.cardBorder },
+              useTypicalMeasurements && {
+                backgroundColor: screenColors.cardSelectedBg,
+                borderColor: screenColors.cardSelectedBorder,
+              },
+            ]}
             onPress={() => {
               setUseTypicalMeasurements(true);
               if (typical) {
@@ -383,28 +465,57 @@ export function VehicleSetupWizard({
             }}
           >
             <View
-              style={[styles.radioCircle, useTypicalMeasurements && styles.radioCircleSelected]}
+              style={[
+                styles.radioCircle,
+                { borderColor: screenColors.textMuted },
+                useTypicalMeasurements && {
+                  borderColor: screenColors.primary,
+                  backgroundColor: screenColors.primary,
+                },
+              ]}
             >
               {useTypicalMeasurements && <View style={styles.radioInner} />}
             </View>
             <View style={styles.radioTextContainer}>
-              <Text style={styles.radioTitle}>Use Typical Values</Text>
-              <Text style={styles.radioSubtitle}>Quick setup with standard measurements</Text>
+              <Text style={[styles.radioTitle, { color: screenColors.text }]}>
+                Use Typical Values
+              </Text>
+              <Text style={[styles.radioSubtitle, { color: screenColors.textSecondary }]}>
+                Quick setup with standard measurements
+              </Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.radioOption, !useTypicalMeasurements && styles.radioOptionSelected]}
+            style={[
+              styles.radioOption,
+              { backgroundColor: screenColors.surface, borderColor: screenColors.cardBorder },
+              !useTypicalMeasurements && {
+                backgroundColor: screenColors.cardSelectedBg,
+                borderColor: screenColors.cardSelectedBorder,
+              },
+            ]}
             onPress={() => setUseTypicalMeasurements(false)}
           >
             <View
-              style={[styles.radioCircle, !useTypicalMeasurements && styles.radioCircleSelected]}
+              style={[
+                styles.radioCircle,
+                { borderColor: screenColors.textMuted },
+                !useTypicalMeasurements && {
+                  borderColor: screenColors.primary,
+                  backgroundColor: screenColors.primary,
+                },
+              ]}
             >
               {!useTypicalMeasurements && <View style={styles.radioInner} />}
             </View>
             <View style={styles.radioTextContainer}>
-              <Text style={styles.radioTitle}>Enter Custom Values</Text>
-              <Text style={styles.radioSubtitle}>Most accurate for your specific vehicle</Text>
+              <Text style={[styles.radioTitle, { color: screenColors.text }]}>
+                Enter Custom Values
+              </Text>
+              <Text style={[styles.radioSubtitle, { color: screenColors.textSecondary }]}>
+                Most accurate for your specific vehicle
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -412,24 +523,29 @@ export function VehicleSetupWizard({
         {/* Wheelbase - only for motorhomes and vans (not trailers) */}
         {profile.type !== 'trailer' && (
           <View style={styles.measurementSection}>
-            <Text style={[styles.measurementLabel, { color: THEME.colors.primary }]}>
+            <Text style={[styles.measurementLabel, { color: screenColors.primary }]}>
               Wheelbase Length ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
             </Text>
             {useTypicalMeasurements ? (
-              <View style={styles.measurementDisplay}>
-                <Text style={styles.measurementValue}>
+              <View style={[styles.measurementDisplay, { backgroundColor: screenColors.surface }]}>
+                <Text style={[styles.measurementValue, { color: screenColors.text }]}>
                   {settings.measurementUnits === 'metric'
                     ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
                     : `${profile.wheelbaseInches}"`}
                 </Text>
-                <Text style={styles.measurementHint}>Standard for {selectedVehicleType?.name}</Text>
+                <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                  Standard for {selectedVehicleType?.name}
+                </Text>
               </View>
             ) : (
               <View>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                  ]}
                   placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)}`}
-                  placeholderTextColor="#737373"
+                  placeholderTextColor={screenColors.placeholder}
                   value={convertForDisplay(
                     profile.wheelbaseInches,
                     settings.measurementUnits
@@ -444,7 +560,7 @@ export function VehicleSetupWizard({
                   keyboardType="decimal-pad"
                   selectTextOnFocus={true}
                 />
-                <Text style={styles.inputHint}>
+                <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
                   Measure center-to-center between front and rear axles
                 </Text>
               </View>
@@ -454,24 +570,29 @@ export function VehicleSetupWizard({
 
         {/* Track Width */}
         <View style={styles.measurementSection}>
-          <Text style={[styles.measurementLabel, { color: '#22c55e' }]}>
+          <Text style={[styles.measurementLabel, { color: screenColors.success }]}>
             Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
           </Text>
           {useTypicalMeasurements ? (
-            <View style={styles.measurementDisplay}>
-              <Text style={styles.measurementValue}>
+            <View style={[styles.measurementDisplay, { backgroundColor: screenColors.surface }]}>
+              <Text style={[styles.measurementValue, { color: screenColors.text }]}>
                 {settings.measurementUnits === 'metric'
                   ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
                   : `${profile.trackWidthInches}"`}
               </Text>
-              <Text style={styles.measurementHint}>Standard for {selectedVehicleType?.name}</Text>
+              <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                Standard for {selectedVehicleType?.name}
+              </Text>
             </View>
           ) : (
             <View>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                ]}
                 placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)}`}
-                placeholderTextColor="#737373"
+                placeholderTextColor={screenColors.placeholder}
                 value={convertForDisplay(
                   profile.trackWidthInches,
                   settings.measurementUnits
@@ -486,7 +607,7 @@ export function VehicleSetupWizard({
                 keyboardType="decimal-pad"
                 selectTextOnFocus={true}
               />
-              <Text style={styles.inputHint}>
+              <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
                 Measure center-to-center between left and right wheels
               </Text>
             </View>
@@ -496,24 +617,29 @@ export function VehicleSetupWizard({
         {/* Hitch Offset (only for trailers) */}
         {profile.type === 'trailer' && (
           <View style={styles.measurementSection}>
-            <Text style={[styles.measurementLabel, { color: '#f97316' }]}>
+            <Text style={[styles.measurementLabel, { color: screenColors.warning }]}>
               Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
             </Text>
             {useTypicalMeasurements ? (
-              <View style={styles.measurementDisplay}>
-                <Text style={styles.measurementValue}>
+              <View style={[styles.measurementDisplay, { backgroundColor: screenColors.surface }]}>
+                <Text style={[styles.measurementValue, { color: screenColors.text }]}>
                   {settings.measurementUnits === 'metric'
                     ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
                     : `${profile.hitchOffsetInches}"`}
                 </Text>
-                <Text style={styles.measurementHint}>Standard for travel trailers</Text>
+                <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                  Standard for travel trailers
+                </Text>
               </View>
             ) : (
               <View>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                  ]}
                   placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)}`}
-                  placeholderTextColor="#737373"
+                  placeholderTextColor={screenColors.placeholder}
                   value={convertForDisplay(
                     profile.hitchOffsetInches,
                     settings.measurementUnits
@@ -528,18 +654,25 @@ export function VehicleSetupWizard({
                   keyboardType="decimal-pad"
                   selectTextOnFocus={true}
                 />
-                <Text style={styles.inputHint}>Measure from rear axle center to hitch ball</Text>
+                <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
+                  Measure from rear axle center to hitch ball
+                </Text>
               </View>
             )}
           </View>
         )}
 
         {/* Help section */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>
+        <View
+          style={[
+            styles.infoBox,
+            { backgroundColor: screenColors.tipBg, borderColor: screenColors.tipBorder },
+          ]}
+        >
+          <Text style={[styles.infoTitle, { color: screenColors.text }]}>
             {useTypicalMeasurements ? 'Using Standard Values' : 'Measurement Tips'}
           </Text>
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoText, { color: screenColors.textSecondary }]}>
             {useTypicalMeasurements
               ? 'These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed.'
               : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
@@ -557,11 +690,33 @@ export function VehicleSetupWizard({
 
     const totalBlocks = Object.values(blockQuantities).reduce((sum, qty) => sum + qty, 0);
 
+    // Block-specific colors
+    const blockColors = {
+      switchBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
+      switchBorder: screenColors.primary,
+      blockItemBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
+      blockItemBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+      blockItemActiveBg: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.15)',
+      blockItemActiveBorder: isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.5)',
+      quantityBtnBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 215, 235, 0.6)',
+      quantityBtnBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.4)',
+      totalCardBg: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.15)',
+      totalCardBorder: isDark ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.5)',
+      addBtnBg: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.12)',
+      addBtnBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+      addInputBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
+      addInputBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
+      addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(220, 230, 242, 0.95)',
+      addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    };
+
     return (
       <View style={styles.stepContainer}>
         <View style={styles.stepHeader}>
-          <Text style={styles.stepTitle}>{isOnboarding ? 'Almost Done!' : 'Leveling Blocks'}</Text>
-          <Text style={styles.stepSubtitle}>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>
+            {isOnboarding ? 'Almost Done!' : 'Leveling Blocks'}
+          </Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
             {isOnboarding
               ? 'Do you have leveling blocks? They help get your RV perfectly level.'
               : `Do you have leveling blocks to help level your ${selectedVehicleType?.name}?`}
@@ -569,10 +724,15 @@ export function VehicleSetupWizard({
         </View>
 
         {/* Toggle for having blocks */}
-        <View style={styles.switchSection}>
+        <View
+          style={[
+            styles.switchSection,
+            { backgroundColor: blockColors.switchBg, borderColor: blockColors.switchBorder },
+          ]}
+        >
           <View style={styles.switchRow}>
             <GlassToggle value={hasLevelingBlocks} onValueChange={setHasLevelingBlocks} />
-            <Text style={styles.switchText}>
+            <Text style={[styles.switchText, { color: screenColors.text }]}>
               {hasLevelingBlocks ? 'I have leveling blocks' : "I don't have leveling blocks"}
             </Text>
           </View>
@@ -590,20 +750,36 @@ export function VehicleSetupWizard({
                   return (
                     <View
                       key={height}
-                      style={[styles.blockItem, hasBlocks && styles.blockItemActive]}
+                      style={[
+                        styles.blockItem,
+                        {
+                          backgroundColor: blockColors.blockItemBg,
+                          borderColor: blockColors.blockItemBorder,
+                        },
+                        hasBlocks && {
+                          backgroundColor: blockColors.blockItemActiveBg,
+                          borderColor: blockColors.blockItemActiveBorder,
+                        },
+                      ]}
                     >
                       <TouchableOpacity
                         style={styles.deleteBlockButton}
                         onPress={() => deleteBlockSize(height)}
                         activeOpacity={0.6}
                       >
-                        <Trash2 size={16} color="#ef4444" />
+                        <Trash2 size={16} color={screenColors.danger} />
                       </TouchableOpacity>
-                      <Text style={styles.blockHeight}>{formatHeight(height)}</Text>
+                      <Text style={[styles.blockHeight, { color: screenColors.text }]}>
+                        {formatHeight(height)}
+                      </Text>
                       <View style={styles.quantityControls}>
                         <TouchableOpacity
                           style={[
                             styles.quantityButton,
+                            {
+                              backgroundColor: blockColors.quantityBtnBg,
+                              borderColor: blockColors.quantityBtnBorder,
+                            },
                             quantity === 0 && styles.quantityButtonDisabled,
                           ]}
                           onPress={() => updateBlockQuantity(height, -1)}
@@ -611,20 +787,34 @@ export function VehicleSetupWizard({
                           activeOpacity={0.6}
                           delayPressIn={0}
                         >
-                          <Text style={styles.quantityButtonText}>−</Text>
+                          <Text style={[styles.quantityButtonText, { color: screenColors.text }]}>
+                            −
+                          </Text>
                         </TouchableOpacity>
                         <Text
-                          style={[styles.quantityValue, hasBlocks && styles.quantityValueActive]}
+                          style={[
+                            styles.quantityValue,
+                            { color: screenColors.textSecondary },
+                            hasBlocks && { color: screenColors.success },
+                          ]}
                         >
                           {quantity}
                         </Text>
                         <TouchableOpacity
-                          style={styles.quantityButton}
+                          style={[
+                            styles.quantityButton,
+                            {
+                              backgroundColor: blockColors.quantityBtnBg,
+                              borderColor: blockColors.quantityBtnBorder,
+                            },
+                          ]}
                           onPress={() => updateBlockQuantity(height, 1)}
                           activeOpacity={0.6}
                           delayPressIn={0}
                         >
-                          <Text style={styles.quantityButtonText}>+</Text>
+                          <Text style={[styles.quantityButtonText, { color: screenColors.text }]}>
+                            +
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -632,12 +822,22 @@ export function VehicleSetupWizard({
                 })}
               </View>
             ) : (
-              <Text style={styles.noBlocksText}>No block sizes added. Tap below to add some.</Text>
+              <Text style={[styles.noBlocksText, { color: screenColors.textMuted }]}>
+                No block sizes added. Tap below to add some.
+              </Text>
             )}
 
             {totalBlocks > 0 && (
-              <View style={styles.totalBlocksCard}>
-                <Text style={styles.totalBlocksText}>
+              <View
+                style={[
+                  styles.totalBlocksCard,
+                  {
+                    backgroundColor: blockColors.totalCardBg,
+                    borderColor: blockColors.totalCardBorder,
+                  },
+                ]}
+              >
+                <Text style={[styles.totalBlocksText, { color: screenColors.success }]}>
                   Total: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} ({sortedHeights.length}{' '}
                   size{sortedHeights.length !== 1 ? 's' : ''})
                 </Text>
@@ -647,23 +847,43 @@ export function VehicleSetupWizard({
             {/* Add Block Size */}
             {!showAddBlockInput ? (
               <TouchableOpacity
-                style={styles.addBlockButton}
+                style={[
+                  styles.addBlockButton,
+                  { backgroundColor: blockColors.addBtnBg, borderColor: blockColors.addBtnBorder },
+                ]}
                 onPress={() => setShowAddBlockInput(true)}
               >
-                <Plus size={18} color={THEME.colors.primary} />
-                <Text style={styles.addBlockButtonText}>Add Block Size</Text>
+                <Plus size={18} color={screenColors.primary} />
+                <Text style={[styles.addBlockButtonText, { color: screenColors.primary }]}>
+                  Add Block Size
+                </Text>
               </TouchableOpacity>
             ) : (
-              <View style={styles.addBlockInputContainer}>
+              <View
+                style={[
+                  styles.addBlockInputContainer,
+                  {
+                    backgroundColor: blockColors.addInputBg,
+                    borderColor: blockColors.addInputBorder,
+                  },
+                ]}
+              >
                 <View style={styles.addBlockInputGroup}>
-                  <Text style={styles.addBlockLabel}>
+                  <Text style={[styles.addBlockLabel, { color: screenColors.textSecondary }]}>
                     Height ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'}):
                   </Text>
                   <View style={styles.addBlockInputRow}>
                     <TextInput
-                      style={styles.addBlockInput}
+                      style={[
+                        styles.addBlockInput,
+                        {
+                          backgroundColor: blockColors.addInputFieldBg,
+                          borderColor: blockColors.addInputFieldBorder,
+                          color: screenColors.text,
+                        },
+                      ]}
                       placeholder="e.g., 2"
-                      placeholderTextColor="#737373"
+                      placeholderTextColor={screenColors.placeholder}
                       keyboardType="decimal-pad"
                       value={newBlockHeight}
                       onChangeText={setNewBlockHeight}
@@ -696,8 +916,13 @@ export function VehicleSetupWizard({
           </View>
         )}
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
+        <View
+          style={[
+            styles.infoBox,
+            { backgroundColor: screenColors.tipBg, borderColor: screenColors.tipBorder },
+          ]}
+        >
+          <Text style={[styles.infoText, { color: screenColors.textSecondary }]}>
             Don&apos;t worry if you&apos;re not sure about your block heights. You can always update
             this later in your vehicle profile settings.
           </Text>
@@ -716,11 +941,19 @@ export function VehicleSetupWizard({
   const currentStepData = STEPS[step];
   // Check if user has at least one block size with quantity > 0
   const hasAtLeastOneBlock = Object.values(blockQuantities).some((qty) => qty > 0);
+
+  // Check if the current name is taken (allow if it's the same as the original when editing)
+  const isEditingSameVehicle =
+    editingProfile &&
+    profile.name.trim().toLowerCase() === editingProfile.name.trim().toLowerCase();
+  const vehicleNameTaken =
+    profile.name.trim() && !isEditingSameVehicle && isProfileNameTaken(profile.name);
+
   const canProceed =
     step === 0
       ? !!profile.type
       : step === 1
-        ? !!profile.name.trim()
+        ? !!profile.name.trim() && !vehicleNameTaken
         : step === 2
           ? true
           : step === 3
@@ -729,14 +962,27 @@ export function VehicleSetupWizard({
 
   if (!isVisible) return null;
 
+  // Modal-specific colors
+  const modalColors = {
+    progressDotBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.2)',
+    progressDotBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(100, 130, 170, 0.3)',
+    progressDotActiveBg: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)',
+    progressLineBg: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.3)',
+  };
+
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+      <View style={[styles.overlay, { backgroundColor: screenColors.overlayBg }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: screenColors.modalBg, borderColor: screenColors.modalBorder },
+          ]}
+        >
           {/* Fixed header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: screenColors.modalBorder }]}>
             <View style={styles.headerRow}>
-              <Text style={styles.headerTitle}>
+              <Text style={[styles.headerTitle, { color: screenColors.text }]}>
                 {isOnboarding
                   ? "Welcome! Let's Get Started"
                   : editingProfile
@@ -757,16 +1003,34 @@ export function VehicleSetupWizard({
                     <View
                       style={[
                         styles.progressDot,
-                        isComplete && styles.progressDotComplete,
-                        isActive && styles.progressDotActive,
+                        {
+                          backgroundColor: modalColors.progressDotBg,
+                          borderColor: modalColors.progressDotBorder,
+                        },
+                        isComplete && {
+                          backgroundColor: screenColors.success,
+                          borderColor: screenColors.success,
+                        },
+                        isActive && {
+                          backgroundColor: modalColors.progressDotActiveBg,
+                          borderColor: screenColors.primary,
+                        },
                       ]}
                     >
-                      {isComplete && <Check size={10} color="#000" />}
+                      {isComplete && <Check size={10} color={isDark ? '#000' : '#fff'} />}
                     </View>
-                    {isActive && <View style={styles.progressDotGlow} />}
+                    {isActive && (
+                      <View
+                        style={[styles.progressDotGlow, { backgroundColor: screenColors.primary }]}
+                      />
+                    )}
                     {showLine && (
                       <View
-                        style={[styles.progressLine, isComplete && styles.progressLineComplete]}
+                        style={[
+                          styles.progressLine,
+                          { backgroundColor: modalColors.progressLineBg },
+                          isComplete && { backgroundColor: screenColors.success },
+                        ]}
                       />
                     )}
                   </View>
@@ -775,7 +1039,7 @@ export function VehicleSetupWizard({
             </View>
 
             {/* Step Title */}
-            <Text style={styles.stepIndicator}>
+            <Text style={[styles.stepIndicator, { color: screenColors.textSecondary }]}>
               Step {step + 1} of {STEPS.length}: {currentStepData.title}
             </Text>
           </View>
@@ -790,7 +1054,7 @@ export function VehicleSetupWizard({
           </ScrollView>
 
           {/* Fixed navigation buttons */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { borderTopColor: screenColors.modalBorder }]}>
             {/* Back and Next/Complete buttons row */}
             <View style={styles.navButtonRow}>
               {step > 0 && (
@@ -1023,6 +1287,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     color: THEME.colors.text,
     fontSize: 16,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: 6,
   },
   tipBox: {
     padding: 12,

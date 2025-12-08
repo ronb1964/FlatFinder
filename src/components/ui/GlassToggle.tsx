@@ -8,6 +8,7 @@ import Animated, {
   withSpring,
   interpolateColor,
 } from 'react-native-reanimated';
+import { useTheme } from '../../hooks/useTheme';
 
 interface GlassToggleProps {
   value: boolean;
@@ -21,6 +22,8 @@ const THUMB_SIZE = 24;
 const THUMB_MARGIN = 3;
 
 export function GlassToggle({ value, onValueChange, disabled = false }: GlassToggleProps) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
   const progress = useSharedValue(value ? 1 : 0);
 
   React.useEffect(() => {
@@ -58,13 +61,23 @@ export function GlassToggle({ value, onValueChange, disabled = false }: GlassTog
     }
   };
 
+  // Theme-aware track colors
+  const trackColors = {
+    bgOn: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+    bgOff: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    borderOn: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+    borderOff: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    highlightOn: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
+    highlightOff: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.5)',
+  };
+
   const trackContent = (
     <View
       style={[
         styles.trackInner,
         {
-          backgroundColor: value ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.05)',
-          borderColor: value ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.15)',
+          backgroundColor: value ? trackColors.bgOn : trackColors.bgOff,
+          borderColor: value ? trackColors.borderOn : trackColors.borderOff,
         },
       ]}
     >
@@ -73,7 +86,7 @@ export function GlassToggle({ value, onValueChange, disabled = false }: GlassTog
         style={[
           styles.trackHighlight,
           {
-            backgroundColor: value ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: value ? trackColors.highlightOn : trackColors.highlightOff,
           },
         ]}
       />
@@ -105,7 +118,14 @@ export function GlassToggle({ value, onValueChange, disabled = false }: GlassTog
         disabled={disabled}
         style={[styles.container, disabled && styles.disabled]}
       >
-        <View style={styles.webTrack}>{trackContent}</View>
+        <View
+          style={[
+            styles.webTrack,
+            { backgroundColor: isDark ? 'rgba(26, 26, 26, 0.8)' : 'rgba(200, 212, 228, 0.9)' },
+          ]}
+        >
+          {trackContent}
+        </View>
       </Pressable>
     );
   }
@@ -116,7 +136,7 @@ export function GlassToggle({ value, onValueChange, disabled = false }: GlassTog
       disabled={disabled}
       style={[styles.container, disabled && styles.disabled]}
     >
-      <BlurView intensity={20} tint="dark" style={styles.blur}>
+      <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.blur}>
         {trackContent}
       </BlurView>
     </Pressable>
@@ -140,7 +160,6 @@ const styles = StyleSheet.create({
   webTrack: {
     flex: 1,
     borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: 'rgba(26, 26, 26, 0.8)',
   },
   trackInner: {
     flex: 1,
