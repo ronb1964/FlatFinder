@@ -96,10 +96,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   blur: {
-    flex: 1,
+    // Removed flex: 1 - let content determine height
   },
   gradient: {
-    flex: 1,
+    // Removed flex: 1 - let content determine height
     borderRadius: 16,
     borderWidth: 1,
     position: 'relative',

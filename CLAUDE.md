@@ -90,6 +90,42 @@ FlatFinder is a React Native/Expo app for RV leveling with a "Liquid Glass" UI t
 
 This keeps the app simple, minimal dependencies, and consistent.
 
+## Design Patterns - USE THESE FOR CONSISTENCY
+
+### Button Variants (GlassButton component)
+
+| Action Type      | Variant     | Color        | Example                        |
+| ---------------- | ----------- | ------------ | ------------------------------ |
+| Cancel/Dismiss   | `default`   | Gray         | Cancel, Close                  |
+| Navigation Back  | `warning`   | Orange/Amber | Back (in wizards/flows)        |
+| Primary Action   | `primary`   | Blue         | Save, Confirm, Calibrate, Next |
+| Destructive      | `danger`    | Red          | Delete, Remove                 |
+| Success/Positive | `success`   | Green        | Quick Calibrate, Level Check   |
+| Secondary        | `secondary` | Teal/Cyan    | Full Calibration               |
+| Subtle/Muted     | `ghost`     | Faded gray   | Low-emphasis options           |
+
+### Modal Pattern
+
+**IMPORTANT: Never use X buttons to close modals. Always use a Cancel button.**
+
+All modals should follow this structure:
+
+1. **Header**: Icon + Title only (NO X close button ever)
+2. **Content**: Message/form fields
+3. **Buttons**: Action buttons at bottom
+   - Cancel button (gray, `variant="default"`) - always include this
+   - Primary action (blue/green/red based on action type)
+
+### Color Palette (from theme.ts)
+
+- **Background**: `#111111` (near black)
+- **Surface**: `#1a1a1a` (dark gray)
+- **Primary**: `#3b82f6` (electric blue)
+- **Success**: `#22c55e` (green)
+- **Warning**: `#eab308` (yellow)
+- **Danger**: `#ef4444` (red)
+- **Text**: `#fafafa` (white), `#a3a3a3` (secondary), `#737373` (muted)
+
 ## Key Files
 
 - `app/(tabs)/index.tsx` - Main level screen with bubble level, warnings, calibration buttons
@@ -99,7 +135,7 @@ This keeps the app simple, minimal dependencies, and consistent.
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 5, 2025)
+## Current State (as of Dec 6, 2025)
 
 **Core Functionality - WORKING:**
 
@@ -107,52 +143,41 @@ This keeps the app simple, minimal dependencies, and consistent.
 - Bubble correctly floats to HIGH side on actual phone
 - Check Level feature with percentage feedback implemented
 - Calibration → Leveling flow with prompt modal implemented
+- Home screen UI stable on phone (reverted after failed browser-matching attempt)
 
-**Home Screen Changes This Session:**
+**Known Issues:**
 
-- Stacked Quick Calibrate / Full Calibration buttons (was side-by-side, text was truncated)
-- Debug controls hidden on native devices (only show on web)
-- Pitch/roll card made more compact
-- Added ScrollView for scrolling
-
-**UI Sizing Issue Discovered:**
-
-- Browser testing at 430x932 does NOT match actual iPhone 14 Pro Max
-- Safe areas (~93px) + tab bar (~83px) = ~176px of lost space
-- Actual usable height is ~756px, not 932px
-- Elements that fit in browser are too large on device
-- CalibrationWizard and other screens need sizing adjustments for real device
+- Cancel buttons are still RED (should be gray per design patterns)
+- ProfileEditor modal doesn't show form fields on phone (just header + buttons)
+- Browser preview doesn't match phone (browser shows larger usable area than phone actually has)
+- **Compass heading is 180° off** - both the displayed degrees AND the ring are wrong (pointing north shows ~180° instead of ~0°)
 
 Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### 1. Fix UI Sizing for Actual Device (PRIORITY)
+### 1. Fix Cancel Button Colors (CAREFUL - test on phone!)
 
-The UI looks good in browser but elements are too large on actual iPhone. Need to resize for real device constraints.
+Cancel buttons should be gray (`variant="default"`), only Delete buttons should be red.
 
-**Approach:**
+**Files to update:**
 
-1. Ron sends screenshot of what's wrong on his phone
-2. Identify what's cut off / too big / overlapping
-3. Adjust sizes specifically for actual device behavior
+- `src/components/ProfileEditor.tsx` - 2 Cancel buttons (footer + add block input)
+- `src/components/CalibrationWizard.tsx` - Multiple cancel button styles (both GlassButton and custom Pressable styles)
+- `app/onboarding.tsx` - Add block cancel button
 
-**Key insight:** Browser viewport 430x932 doesn't account for:
+**IMPORTANT:** After each change, test on the PHONE to verify nothing breaks. The browser preview is NOT accurate for layout testing.
 
-- Dynamic Island: ~59px
-- Home indicator: ~34px
-- Tab bar: ~83px
-- Total lost: ~176px
-- Actual usable: ~756px
+### 2. Fix ProfileEditor Modal Height on Phone
 
-**Consider using `useSafeAreaInsets()` hook** to get actual inset values and calculate truly available space.
+The Edit Profile modal only shows header + buttons, no form fields. Need to investigate why ScrollView content doesn't appear on native iOS.
 
-### 2. Block Tolerance Threshold (After UI is fixed)
+### 3. Block Tolerance Threshold
 
 Constant already defined: `BLOCK_TOLERANCE_INCHES = 0.5`
 Just need to use it in `getWheelStatus()` and `WheelCard` component.
 
-### 3. Verify Trailer/Motorhome Diagrams (After UI is fixed)
+### 4. Verify Trailer/Motorhome Diagrams
 
 Create test profiles for each vehicle type and verify wheel positions/labels.
 

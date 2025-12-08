@@ -77,7 +77,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   measurementUnits: 'imperial',
   hapticsEnabled: true,
   audioEnabled: false,
-  levelThreshold: 0.5,
+  levelThreshold: 1.0,
   nightMode: false,
   keepAwake: true,
   hasCompletedOnboarding: false,

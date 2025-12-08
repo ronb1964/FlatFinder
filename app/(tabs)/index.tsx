@@ -26,7 +26,6 @@ import {
   Settings,
   Zap,
   AlertTriangle,
-  X,
   Check,
   CheckCircle,
   Caravan,
@@ -112,6 +111,7 @@ export default function LevelScreen() {
   // Halo animations for status text
   const perfectGlowOpacity = useRef(new Animated.Value(0)).current;
   const nearlyGlowOpacity = useRef(new Animated.Value(0)).current;
+  const lastGlowState = useRef<'none' | 'green' | 'green-perfect' | 'yellow'>('none');
 
   // Check if we should show leveling assistant (from calibration completion)
   useEffect(() => {
@@ -168,49 +168,65 @@ export default function LevelScreen() {
       setLastHapticLevel(status.isLevel);
     }
 
-    // Animate glows based on level status
-    if (status.isLevel) {
-      // Perfect level - show green glow, hide yellow
-      Animated.parallel([
-        Animated.timing(perfectGlowOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(nearlyGlowOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (status.nearLevel) {
-      // Nearly level - show yellow glow, hide green
-      Animated.parallel([
-        Animated.timing(perfectGlowOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(nearlyGlowOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Not level at all - hide both glows
-      Animated.parallel([
-        Animated.timing(perfectGlowOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(nearlyGlowOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Determine target glow state and intensity
+    // "Perfect Level!" gets full intensity (1.0), "Level" gets reduced (0.6)
+    const isPerfect = status.description === 'Perfect Level!';
+    const targetGlow: 'none' | 'green' | 'green-perfect' | 'yellow' = status.isLevel
+      ? isPerfect
+        ? 'green-perfect'
+        : 'green'
+      : status.nearLevel
+        ? 'yellow'
+        : 'none';
+    const greenIntensity = isPerfect ? 1.0 : 0.6;
+
+    // Only animate if the glow state actually changed
+    if (targetGlow !== lastGlowState.current) {
+      lastGlowState.current = targetGlow;
+
+      if (targetGlow === 'green' || targetGlow === 'green-perfect') {
+        // Level/Perfect level - hide yellow immediately, fade in green
+        Animated.parallel([
+          Animated.timing(nearlyGlowOpacity, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.timing(perfectGlowOpacity, {
+            toValue: greenIntensity,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else if (targetGlow === 'yellow') {
+        // Nearly level - hide green immediately, fade in yellow (reduced intensity)
+        Animated.parallel([
+          Animated.timing(perfectGlowOpacity, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.timing(nearlyGlowOpacity, {
+            toValue: 0.6,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        // Not level at all - hide both immediately
+        Animated.parallel([
+          Animated.timing(perfectGlowOpacity, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.timing(nearlyGlowOpacity, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
     }
   }, [
     pitchDeg,
@@ -226,6 +242,11 @@ export default function LevelScreen() {
   ]);
 
   const handleCalibrate = () => {
+    // If no vehicle profile exists, redirect to profiles page
+    if (!activeProfile) {
+      router.push('/(tabs)/profiles');
+      return;
+    }
     router.push('/calibration');
   };
 
@@ -258,6 +279,11 @@ export default function LevelScreen() {
   };
 
   const handleShowLevelingAssistant = () => {
+    // If no vehicle profile exists, redirect to profiles page
+    if (!activeProfile) {
+      router.push('/(tabs)/profiles');
+      return;
+    }
     // If we just calibrated from the home screen, skip the prompt and go directly to leveling assistant
     if (justCalibratedFromHome) {
       setJustCalibratedFromHome(false); // Clear the flag
@@ -302,6 +328,11 @@ export default function LevelScreen() {
 
   // Open the Quick Calibrate confirmation modal with animation
   const openQuickCalModal = () => {
+    // If no vehicle profile exists, redirect to profiles page
+    if (!activeProfile) {
+      router.push('/(tabs)/profiles');
+      return;
+    }
     setShowQuickCalModal(true);
     Animated.spring(modalAnimation, {
       toValue: 1,
@@ -932,9 +963,6 @@ export default function LevelScreen() {
                 <View style={styles.modalHeader}>
                   <Target size={28} color="#3b82f6" />
                   <Text style={styles.modalTitle}>Quick Calibrate</Text>
-                  <Pressable style={styles.modalCloseBtn} onPress={closeQuickCalModal}>
-                    <X size={22} color="#737373" />
-                  </Pressable>
                 </View>
 
                 {/* Warning Message */}
@@ -950,15 +978,19 @@ export default function LevelScreen() {
                   to verify the surface first.
                 </Text>
 
-                {/* Action Buttons */}
-                <View style={styles.modalButtons}>
-                  <Pressable style={styles.modalCancelBtn} onPress={closeQuickCalModal}>
-                    <Text style={styles.modalCancelText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable style={styles.modalConfirmBtn} onPress={handleQuickCalibrate}>
-                    <CheckCircle size={18} color="#fff" />
-                    <Text style={styles.modalConfirmText}>Calibrate</Text>
-                  </Pressable>
+                {/* Action Buttons - Stacked vertically */}
+                <View style={styles.modalButtonsStacked}>
+                  <GlassButton
+                    variant="success"
+                    size="md"
+                    onPress={handleQuickCalibrate}
+                    icon={<CheckCircle size={18} color="#fff" />}
+                  >
+                    Calibrate
+                  </GlassButton>
+                  <GlassButton variant="default" size="md" onPress={closeQuickCalModal}>
+                    Cancel
+                  </GlassButton>
                 </View>
               </Pressable>
             </Animated.View>
@@ -994,9 +1026,6 @@ export default function LevelScreen() {
                 <View style={styles.calibrationPromptHeader}>
                   <Zap size={28} color="#3b82f6" />
                   <Text style={styles.calibrationPromptTitle}>Leveling Assistant</Text>
-                  <Pressable style={styles.modalCloseBtn} onPress={closeCalibrationPrompt}>
-                    <X size={22} color="#737373" />
-                  </Pressable>
                 </View>
 
                 {/* Message based on calibration status */}
@@ -1058,6 +1087,16 @@ export default function LevelScreen() {
                       3-step process that works on any surface. Most accurate option.
                     </Text>
                   </View>
+
+                  {/* Cancel Button */}
+                  <GlassButton
+                    variant="default"
+                    size="md"
+                    onPress={closeCalibrationPrompt}
+                    style={{ marginTop: 8 }}
+                  >
+                    Cancel
+                  </GlassButton>
                 </View>
               </Pressable>
             </Animated.View>
@@ -1518,6 +1557,10 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+  },
+  modalButtonsStacked: {
+    flexDirection: 'column',
+    gap: 10,
   },
   modalCancelBtn: {
     flex: 1,

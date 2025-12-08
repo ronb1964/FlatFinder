@@ -159,7 +159,7 @@ export default function ProfilesScreen() {
           {profiles.length > 0 && (
             <TouchableOpacity style={styles.addButton} onPress={() => setShowSetupWizard(true)}>
               <Plus size={18} color={THEME.colors.primary} />
-              <Text style={styles.addButtonText}>Add Vehicle</Text>
+              <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -336,17 +336,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: THEME.colors.text,
+    flexShrink: 1,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.4)',
+    flexShrink: 0,
   },
   addButtonText: {
     color: THEME.colors.primary,

@@ -354,121 +354,73 @@ export function VehicleSetupWizard({
     const typical = typicalMeasurements[profile.type];
 
     return (
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.stepContainer}>
-          <View style={styles.stepHeader}>
-            <Text style={styles.stepTitle}>
-              {isOnboarding ? 'Quick Measurements' : 'Vehicle Measurements'}
-            </Text>
-            <Text style={styles.stepSubtitle}>
-              {isOnboarding
-                ? "Don't worry - typical values work great! You can fine-tune later."
-                : 'We need a few measurements to calculate leveling accurately.'}
-            </Text>
-          </View>
+      <View style={styles.stepContainer}>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepTitle}>
+            {isOnboarding ? 'Quick Measurements' : 'Vehicle Measurements'}
+          </Text>
+          <Text style={styles.stepSubtitle}>
+            {isOnboarding
+              ? "Don't worry - typical values work great! You can fine-tune later."
+              : 'We need a few measurements to calculate leveling accurately.'}
+          </Text>
+        </View>
 
-          {/* Measurement Type Selection */}
-          <View style={styles.optionsList}>
-            <TouchableOpacity
-              style={[styles.radioOption, useTypicalMeasurements && styles.radioOptionSelected]}
-              onPress={() => {
-                setUseTypicalMeasurements(true);
-                if (typical) {
-                  setProfile((prev) => ({
-                    ...prev,
-                    wheelbaseInches: convertToInches(typical.wheelbase, settings.measurementUnits),
-                    trackWidthInches: convertToInches(typical.track, settings.measurementUnits),
-                    hitchOffsetInches: convertToInches(
-                      typical.hitch || 0,
-                      settings.measurementUnits
-                    ),
-                  }));
-                }
-              }}
+        {/* Measurement Type Selection */}
+        <View style={styles.optionsList}>
+          <TouchableOpacity
+            style={[styles.radioOption, useTypicalMeasurements && styles.radioOptionSelected]}
+            onPress={() => {
+              setUseTypicalMeasurements(true);
+              if (typical) {
+                setProfile((prev) => ({
+                  ...prev,
+                  wheelbaseInches: convertToInches(typical.wheelbase, settings.measurementUnits),
+                  trackWidthInches: convertToInches(typical.track, settings.measurementUnits),
+                  hitchOffsetInches: convertToInches(typical.hitch || 0, settings.measurementUnits),
+                }));
+              }
+            }}
+          >
+            <View
+              style={[styles.radioCircle, useTypicalMeasurements && styles.radioCircleSelected]}
             >
-              <View
-                style={[styles.radioCircle, useTypicalMeasurements && styles.radioCircleSelected]}
-              >
-                {useTypicalMeasurements && <View style={styles.radioInner} />}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={styles.radioTitle}>Use Typical Values</Text>
-                <Text style={styles.radioSubtitle}>Quick setup with standard measurements</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.radioOption, !useTypicalMeasurements && styles.radioOptionSelected]}
-              onPress={() => setUseTypicalMeasurements(false)}
-            >
-              <View
-                style={[styles.radioCircle, !useTypicalMeasurements && styles.radioCircleSelected]}
-              >
-                {!useTypicalMeasurements && <View style={styles.radioInner} />}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={styles.radioTitle}>Enter Custom Values</Text>
-                <Text style={styles.radioSubtitle}>Most accurate for your specific vehicle</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Wheelbase - only for motorhomes and vans (not trailers) */}
-          {profile.type !== 'trailer' && (
-            <View style={styles.measurementSection}>
-              <Text style={[styles.measurementLabel, { color: THEME.colors.primary }]}>
-                Wheelbase Length ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
-              </Text>
-              {useTypicalMeasurements ? (
-                <View style={styles.measurementDisplay}>
-                  <Text style={styles.measurementValue}>
-                    {settings.measurementUnits === 'metric'
-                      ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
-                      : `${profile.wheelbaseInches}"`}
-                  </Text>
-                  <Text style={styles.measurementHint}>
-                    Standard for {selectedVehicleType?.name}
-                  </Text>
-                </View>
-              ) : (
-                <View>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)}`}
-                    placeholderTextColor="#737373"
-                    value={convertForDisplay(
-                      profile.wheelbaseInches,
-                      settings.measurementUnits
-                    ).toString()}
-                    onChangeText={(text) => {
-                      const num = parseFloat(text) || 0;
-                      setProfile((prev) => ({
-                        ...prev,
-                        wheelbaseInches: convertToInches(num, settings.measurementUnits),
-                      }));
-                    }}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus={true}
-                  />
-                  <Text style={styles.inputHint}>
-                    Measure center-to-center between front and rear axles
-                  </Text>
-                </View>
-              )}
+              {useTypicalMeasurements && <View style={styles.radioInner} />}
             </View>
-          )}
+            <View style={styles.radioTextContainer}>
+              <Text style={styles.radioTitle}>Use Typical Values</Text>
+              <Text style={styles.radioSubtitle}>Quick setup with standard measurements</Text>
+            </View>
+          </TouchableOpacity>
 
-          {/* Track Width */}
+          <TouchableOpacity
+            style={[styles.radioOption, !useTypicalMeasurements && styles.radioOptionSelected]}
+            onPress={() => setUseTypicalMeasurements(false)}
+          >
+            <View
+              style={[styles.radioCircle, !useTypicalMeasurements && styles.radioCircleSelected]}
+            >
+              {!useTypicalMeasurements && <View style={styles.radioInner} />}
+            </View>
+            <View style={styles.radioTextContainer}>
+              <Text style={styles.radioTitle}>Enter Custom Values</Text>
+              <Text style={styles.radioSubtitle}>Most accurate for your specific vehicle</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Wheelbase - only for motorhomes and vans (not trailers) */}
+        {profile.type !== 'trailer' && (
           <View style={styles.measurementSection}>
-            <Text style={[styles.measurementLabel, { color: '#22c55e' }]}>
-              Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+            <Text style={[styles.measurementLabel, { color: THEME.colors.primary }]}>
+              Wheelbase Length ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
             </Text>
             {useTypicalMeasurements ? (
               <View style={styles.measurementDisplay}>
                 <Text style={styles.measurementValue}>
                   {settings.measurementUnits === 'metric'
-                    ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
-                    : `${profile.trackWidthInches}"`}
+                    ? `${Math.round(profile.wheelbaseInches * 2.54)} cm`
+                    : `${profile.wheelbaseInches}"`}
                 </Text>
                 <Text style={styles.measurementHint}>Standard for {selectedVehicleType?.name}</Text>
               </View>
@@ -476,83 +428,124 @@ export function VehicleSetupWizard({
               <View>
                 <TextInput
                   style={styles.textInput}
-                  placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)}`}
+                  placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)}`}
                   placeholderTextColor="#737373"
                   value={convertForDisplay(
-                    profile.trackWidthInches,
+                    profile.wheelbaseInches,
                     settings.measurementUnits
                   ).toString()}
                   onChangeText={(text) => {
                     const num = parseFloat(text) || 0;
                     setProfile((prev) => ({
                       ...prev,
-                      trackWidthInches: convertToInches(num, settings.measurementUnits),
+                      wheelbaseInches: convertToInches(num, settings.measurementUnits),
                     }));
                   }}
                   keyboardType="decimal-pad"
                   selectTextOnFocus={true}
                 />
                 <Text style={styles.inputHint}>
-                  Measure center-to-center between left and right wheels
+                  Measure center-to-center between front and rear axles
                 </Text>
               </View>
             )}
           </View>
+        )}
 
-          {/* Hitch Offset (only for trailers) */}
-          {profile.type === 'trailer' && (
-            <View style={styles.measurementSection}>
-              <Text style={[styles.measurementLabel, { color: '#f97316' }]}>
-                Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+        {/* Track Width */}
+        <View style={styles.measurementSection}>
+          <Text style={[styles.measurementLabel, { color: '#22c55e' }]}>
+            Track Width ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+          </Text>
+          {useTypicalMeasurements ? (
+            <View style={styles.measurementDisplay}>
+              <Text style={styles.measurementValue}>
+                {settings.measurementUnits === 'metric'
+                  ? `${Math.round(profile.trackWidthInches * 2.54)} cm`
+                  : `${profile.trackWidthInches}"`}
               </Text>
-              {useTypicalMeasurements ? (
-                <View style={styles.measurementDisplay}>
-                  <Text style={styles.measurementValue}>
-                    {settings.measurementUnits === 'metric'
-                      ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
-                      : `${profile.hitchOffsetInches}"`}
-                  </Text>
-                  <Text style={styles.measurementHint}>Standard for travel trailers</Text>
-                </View>
-              ) : (
-                <View>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)}`}
-                    placeholderTextColor="#737373"
-                    value={convertForDisplay(
-                      profile.hitchOffsetInches,
-                      settings.measurementUnits
-                    ).toString()}
-                    onChangeText={(text) => {
-                      const num = parseFloat(text) || 0;
-                      setProfile((prev) => ({
-                        ...prev,
-                        hitchOffsetInches: convertToInches(num, settings.measurementUnits),
-                      }));
-                    }}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus={true}
-                  />
-                  <Text style={styles.inputHint}>Measure from rear axle center to hitch ball</Text>
-                </View>
-              )}
+              <Text style={styles.measurementHint}>Standard for {selectedVehicleType?.name}</Text>
+            </View>
+          ) : (
+            <View>
+              <TextInput
+                style={styles.textInput}
+                placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)}`}
+                placeholderTextColor="#737373"
+                value={convertForDisplay(
+                  profile.trackWidthInches,
+                  settings.measurementUnits
+                ).toString()}
+                onChangeText={(text) => {
+                  const num = parseFloat(text) || 0;
+                  setProfile((prev) => ({
+                    ...prev,
+                    trackWidthInches: convertToInches(num, settings.measurementUnits),
+                  }));
+                }}
+                keyboardType="decimal-pad"
+                selectTextOnFocus={true}
+              />
+              <Text style={styles.inputHint}>
+                Measure center-to-center between left and right wheels
+              </Text>
             </View>
           )}
-
-          {/* Help section */}
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>
-              {useTypicalMeasurements ? 'Using Standard Values' : 'Measurement Tips'}
-            </Text>
-            <Text style={styles.infoText}>
-              {useTypicalMeasurements
-                ? 'These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed.'
-                : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
-            </Text>
-          </View>
         </View>
-      </ScrollView>
+
+        {/* Hitch Offset (only for trailers) */}
+        {profile.type === 'trailer' && (
+          <View style={styles.measurementSection}>
+            <Text style={[styles.measurementLabel, { color: '#f97316' }]}>
+              Hitch Offset ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'})
+            </Text>
+            {useTypicalMeasurements ? (
+              <View style={styles.measurementDisplay}>
+                <Text style={styles.measurementValue}>
+                  {settings.measurementUnits === 'metric'
+                    ? `${Math.round(profile.hitchOffsetInches * 2.54)} cm`
+                    : `${profile.hitchOffsetInches}"`}
+                </Text>
+                <Text style={styles.measurementHint}>Standard for travel trailers</Text>
+              </View>
+            ) : (
+              <View>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)}`}
+                  placeholderTextColor="#737373"
+                  value={convertForDisplay(
+                    profile.hitchOffsetInches,
+                    settings.measurementUnits
+                  ).toString()}
+                  onChangeText={(text) => {
+                    const num = parseFloat(text) || 0;
+                    setProfile((prev) => ({
+                      ...prev,
+                      hitchOffsetInches: convertToInches(num, settings.measurementUnits),
+                    }));
+                  }}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus={true}
+                />
+                <Text style={styles.inputHint}>Measure from rear axle center to hitch ball</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Help section */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>
+            {useTypicalMeasurements ? 'Using Standard Values' : 'Measurement Tips'}
+          </Text>
+          <Text style={styles.infoText}>
+            {useTypicalMeasurements
+              ? 'These are typical values for your vehicle type. You can always adjust them later in your profile settings if needed.'
+              : "Don't have a tape measure? Check your owner's manual or RV specifications. You can also update these later."}
+          </Text>
+        </View>
+      </View>
     );
   };
 
@@ -565,157 +558,151 @@ export function VehicleSetupWizard({
     const totalBlocks = Object.values(blockQuantities).reduce((sum, qty) => sum + qty, 0);
 
     return (
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.stepContainer}>
-          <View style={styles.stepHeader}>
-            <Text style={styles.stepTitle}>
-              {isOnboarding ? 'Almost Done!' : 'Leveling Blocks'}
-            </Text>
-            <Text style={styles.stepSubtitle}>
-              {isOnboarding
-                ? 'Do you have leveling blocks? They help get your RV perfectly level.'
-                : `Do you have leveling blocks to help level your ${selectedVehicleType?.name}?`}
-            </Text>
-          </View>
+      <View style={styles.stepContainer}>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepTitle}>{isOnboarding ? 'Almost Done!' : 'Leveling Blocks'}</Text>
+          <Text style={styles.stepSubtitle}>
+            {isOnboarding
+              ? 'Do you have leveling blocks? They help get your RV perfectly level.'
+              : `Do you have leveling blocks to help level your ${selectedVehicleType?.name}?`}
+          </Text>
+        </View>
 
-          {/* Toggle for having blocks */}
-          <View style={styles.switchSection}>
-            <View style={styles.switchRow}>
-              <GlassToggle value={hasLevelingBlocks} onValueChange={setHasLevelingBlocks} />
-              <Text style={styles.switchText}>
-                {hasLevelingBlocks ? 'I have leveling blocks' : "I don't have leveling blocks"}
-              </Text>
-            </View>
-          </View>
-
-          {/* Block inventory section if they have blocks */}
-          {hasLevelingBlocks && (
-            <View style={styles.blocksSection}>
-              {sortedHeights.length > 0 ? (
-                <View style={styles.blocksList}>
-                  {sortedHeights.map((height) => {
-                    const quantity = blockQuantities[height] || 0;
-                    const hasBlocks = quantity > 0;
-
-                    return (
-                      <View
-                        key={height}
-                        style={[styles.blockItem, hasBlocks && styles.blockItemActive]}
-                      >
-                        <TouchableOpacity
-                          style={styles.deleteBlockButton}
-                          onPress={() => deleteBlockSize(height)}
-                          activeOpacity={0.6}
-                        >
-                          <Trash2 size={16} color="#ef4444" />
-                        </TouchableOpacity>
-                        <Text style={styles.blockHeight}>{formatHeight(height)}</Text>
-                        <View style={styles.quantityControls}>
-                          <TouchableOpacity
-                            style={[
-                              styles.quantityButton,
-                              quantity === 0 && styles.quantityButtonDisabled,
-                            ]}
-                            onPress={() => updateBlockQuantity(height, -1)}
-                            disabled={quantity === 0}
-                            activeOpacity={0.6}
-                            delayPressIn={0}
-                          >
-                            <Text style={styles.quantityButtonText}>−</Text>
-                          </TouchableOpacity>
-                          <Text
-                            style={[styles.quantityValue, hasBlocks && styles.quantityValueActive]}
-                          >
-                            {quantity}
-                          </Text>
-                          <TouchableOpacity
-                            style={styles.quantityButton}
-                            onPress={() => updateBlockQuantity(height, 1)}
-                            activeOpacity={0.6}
-                            delayPressIn={0}
-                          >
-                            <Text style={styles.quantityButtonText}>+</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <Text style={styles.noBlocksText}>
-                  No block sizes added. Tap below to add some.
-                </Text>
-              )}
-
-              {totalBlocks > 0 && (
-                <View style={styles.totalBlocksCard}>
-                  <Text style={styles.totalBlocksText}>
-                    Total: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} ({sortedHeights.length}{' '}
-                    size{sortedHeights.length !== 1 ? 's' : ''})
-                  </Text>
-                </View>
-              )}
-
-              {/* Add Block Size */}
-              {!showAddBlockInput ? (
-                <TouchableOpacity
-                  style={styles.addBlockButton}
-                  onPress={() => setShowAddBlockInput(true)}
-                >
-                  <Plus size={18} color={THEME.colors.primary} />
-                  <Text style={styles.addBlockButtonText}>Add Block Size</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.addBlockInputContainer}>
-                  <View style={styles.addBlockInputGroup}>
-                    <Text style={styles.addBlockLabel}>
-                      Height ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'}):
-                    </Text>
-                    <View style={styles.addBlockInputRow}>
-                      <TextInput
-                        style={styles.addBlockInput}
-                        placeholder="e.g., 2"
-                        placeholderTextColor="#737373"
-                        keyboardType="decimal-pad"
-                        value={newBlockHeight}
-                        onChangeText={setNewBlockHeight}
-                        autoFocus
-                        selectTextOnFocus={true}
-                      />
-                      <GlassButton
-                        variant="primary"
-                        size="sm"
-                        onPress={addBlockSize}
-                        style={styles.addBlockActionButton}
-                      >
-                        Add
-                      </GlassButton>
-                      <GlassButton
-                        variant="danger"
-                        size="sm"
-                        onPress={() => {
-                          setShowAddBlockInput(false);
-                          setNewBlockHeight('');
-                        }}
-                        style={styles.addBlockActionButton}
-                      >
-                        Cancel
-                      </GlassButton>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              Don&apos;t worry if you&apos;re not sure about your block heights. You can always
-              update this later in your vehicle profile settings.
+        {/* Toggle for having blocks */}
+        <View style={styles.switchSection}>
+          <View style={styles.switchRow}>
+            <GlassToggle value={hasLevelingBlocks} onValueChange={setHasLevelingBlocks} />
+            <Text style={styles.switchText}>
+              {hasLevelingBlocks ? 'I have leveling blocks' : "I don't have leveling blocks"}
             </Text>
           </View>
         </View>
-      </ScrollView>
+
+        {/* Block inventory section if they have blocks */}
+        {hasLevelingBlocks && (
+          <View style={styles.blocksSection}>
+            {sortedHeights.length > 0 ? (
+              <View style={styles.blocksList}>
+                {sortedHeights.map((height) => {
+                  const quantity = blockQuantities[height] || 0;
+                  const hasBlocks = quantity > 0;
+
+                  return (
+                    <View
+                      key={height}
+                      style={[styles.blockItem, hasBlocks && styles.blockItemActive]}
+                    >
+                      <TouchableOpacity
+                        style={styles.deleteBlockButton}
+                        onPress={() => deleteBlockSize(height)}
+                        activeOpacity={0.6}
+                      >
+                        <Trash2 size={16} color="#ef4444" />
+                      </TouchableOpacity>
+                      <Text style={styles.blockHeight}>{formatHeight(height)}</Text>
+                      <View style={styles.quantityControls}>
+                        <TouchableOpacity
+                          style={[
+                            styles.quantityButton,
+                            quantity === 0 && styles.quantityButtonDisabled,
+                          ]}
+                          onPress={() => updateBlockQuantity(height, -1)}
+                          disabled={quantity === 0}
+                          activeOpacity={0.6}
+                          delayPressIn={0}
+                        >
+                          <Text style={styles.quantityButtonText}>−</Text>
+                        </TouchableOpacity>
+                        <Text
+                          style={[styles.quantityValue, hasBlocks && styles.quantityValueActive]}
+                        >
+                          {quantity}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => updateBlockQuantity(height, 1)}
+                          activeOpacity={0.6}
+                          delayPressIn={0}
+                        >
+                          <Text style={styles.quantityButtonText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.noBlocksText}>No block sizes added. Tap below to add some.</Text>
+            )}
+
+            {totalBlocks > 0 && (
+              <View style={styles.totalBlocksCard}>
+                <Text style={styles.totalBlocksText}>
+                  Total: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} ({sortedHeights.length}{' '}
+                  size{sortedHeights.length !== 1 ? 's' : ''})
+                </Text>
+              </View>
+            )}
+
+            {/* Add Block Size */}
+            {!showAddBlockInput ? (
+              <TouchableOpacity
+                style={styles.addBlockButton}
+                onPress={() => setShowAddBlockInput(true)}
+              >
+                <Plus size={18} color={THEME.colors.primary} />
+                <Text style={styles.addBlockButtonText}>Add Block Size</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.addBlockInputContainer}>
+                <View style={styles.addBlockInputGroup}>
+                  <Text style={styles.addBlockLabel}>
+                    Height ({settings.measurementUnits === 'metric' ? 'cm' : 'inches'}):
+                  </Text>
+                  <View style={styles.addBlockInputRow}>
+                    <TextInput
+                      style={styles.addBlockInput}
+                      placeholder="e.g., 2"
+                      placeholderTextColor="#737373"
+                      keyboardType="decimal-pad"
+                      value={newBlockHeight}
+                      onChangeText={setNewBlockHeight}
+                      autoFocus
+                      selectTextOnFocus={true}
+                    />
+                    <GlassButton
+                      variant="primary"
+                      size="sm"
+                      onPress={addBlockSize}
+                      style={styles.addBlockActionButton}
+                    >
+                      Add
+                    </GlassButton>
+                    <GlassButton
+                      variant="default"
+                      size="sm"
+                      onPress={() => {
+                        setShowAddBlockInput(false);
+                        setNewBlockHeight('');
+                      }}
+                      style={styles.addBlockActionButton}
+                    >
+                      Cancel
+                    </GlassButton>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            Don&apos;t worry if you&apos;re not sure about your block heights. You can always update
+            this later in your vehicle profile settings.
+          </Text>
+        </View>
+      </View>
     );
   };
 
@@ -774,7 +761,7 @@ export function VehicleSetupWizard({
                         isActive && styles.progressDotActive,
                       ]}
                     >
-                      {isComplete && <Check size={12} color="#000" />}
+                      {isComplete && <Check size={10} color="#000" />}
                     </View>
                     {isActive && <View style={styles.progressDotGlow} />}
                     {showLine && (
@@ -794,7 +781,13 @@ export function VehicleSetupWizard({
           </View>
 
           {/* Scrollable content */}
-          <View style={styles.content}>{currentStepData.component()}</View>
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {currentStepData.component()}
+          </ScrollView>
 
           {/* Fixed navigation buttons */}
           <View style={styles.footer}>
@@ -803,7 +796,7 @@ export function VehicleSetupWizard({
               {step > 0 && (
                 <GlassButton
                   variant="warning"
-                  size="lg"
+                  size="md"
                   onPress={handleBack}
                   style={styles.navButton}
                 >
@@ -813,7 +806,7 @@ export function VehicleSetupWizard({
 
               <GlassButton
                 variant={canProceed ? 'primary' : 'ghost'}
-                size="lg"
+                size="md"
                 disabled={!canProceed}
                 onPress={step < STEPS.length - 1 ? handleNext : handleComplete}
                 style={styles.navButton}
@@ -823,16 +816,16 @@ export function VehicleSetupWizard({
                   : isOnboarding
                     ? "Let's Go!"
                     : editingProfile
-                      ? 'Update Profile'
-                      : 'Create Profile'}
+                      ? 'Update'
+                      : 'Create'}
               </GlassButton>
             </View>
 
             {/* Cancel button - hidden during onboarding */}
             {!isOnboarding && onCancel && (
               <GlassButton
-                variant="danger"
-                size="md"
+                variant="default"
+                size="sm"
                 onPress={onCancel}
                 style={styles.fullWidthButton}
               >
@@ -857,7 +850,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    height: '85%',
     backgroundColor: THEME.colors.background,
     borderRadius: 16,
     borderWidth: 1,
@@ -865,9 +858,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: {
-    padding: 16,
-    paddingBottom: 12,
-    gap: 12,
+    padding: 12,
+    paddingBottom: 8,
+    gap: 6,
     borderBottomWidth: 1,
     borderBottomColor: THEME.colors.border,
   },
@@ -877,7 +870,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
     color: THEME.colors.text,
   },
@@ -891,9 +884,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -910,24 +903,25 @@ const styles = StyleSheet.create({
   },
   progressDotGlow: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: THEME.colors.primary,
     opacity: 0.3,
-    left: -6,
-    top: -6,
+    left: -4,
+    top: -4,
   },
   progressLine: {
-    width: 40,
+    width: 24,
     height: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginHorizontal: 4,
+    marginHorizontal: 3,
   },
   progressLineComplete: {
     backgroundColor: THEME.colors.success,
   },
   stepIndicator: {
+    fontSize: 12,
     color: THEME.colors.textSecondary,
     textAlign: 'center',
   },
@@ -939,18 +933,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    padding: 16,
-    paddingTop: 12,
-    gap: 12,
+    padding: 12,
+    paddingTop: 10,
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: THEME.colors.border,
   },
   navButtonRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   navButton: {
     flex: 1,
+    minHeight: 44,
   },
   fullWidthButton: {
     width: '100%',

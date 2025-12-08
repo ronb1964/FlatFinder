@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Modal,
+  useWindowDimensions,
+} from 'react-native';
 // Note: Using global setInterval/clearInterval which are available in React Native runtime
 import {
   AlertCircle,
@@ -37,10 +45,6 @@ import { GlassCard } from './ui/GlassCard';
 import { GlassButton } from './ui/GlassButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const VEHICLE_WIDTH = Math.min(SCREEN_WIDTH - 48, 320);
-const VEHICLE_HEIGHT = VEHICLE_WIDTH * 0.6;
 
 interface LevelingAssistantProps {
   onBack?: () => void;
@@ -161,53 +165,87 @@ function TrailerWheel({ x, y, status }: TrailerWheelProps) {
 }
 
 function WheelIndicator({ x, y, status, isAnimating = false }: WheelIndicatorProps) {
-  const [pulseOpacity, setPulseOpacity] = useState(0.3);
+  const [pulseOpacity, setPulseOpacity] = useState(0.2);
+  const [pulseScale, setPulseScale] = useState(1);
 
   useEffect(() => {
     if (!isAnimating) {
-      setPulseOpacity(0.3);
+      setPulseOpacity(0.2);
+      setPulseScale(1);
       return;
     }
 
-    // Simple pulse animation using setInterval
+    // Smoother, more noticeable pulse animation
     let increasing = true;
     const interval = global.setInterval(() => {
       setPulseOpacity((prev) => {
         if (increasing) {
-          if (prev >= 0.7) {
+          if (prev >= 0.85) {
             increasing = false;
-            return prev - 0.02;
+            return prev - 0.03;
           }
-          return prev + 0.02;
+          return prev + 0.03;
         } else {
-          if (prev <= 0.3) {
+          if (prev <= 0.15) {
             increasing = true;
-            return prev + 0.02;
+            return prev + 0.03;
           }
-          return prev - 0.02;
+          return prev - 0.03;
         }
       });
-    }, 50);
+      // Also pulse the scale slightly
+      setPulseScale((prev) => {
+        if (increasing) {
+          return Math.min(1.15, prev + 0.01);
+        } else {
+          return Math.max(1, prev - 0.01);
+        }
+      });
+    }, 40);
 
     return () => global.clearInterval(interval);
   }, [isAnimating]);
 
   const colors = {
-    ground: { fill: THEME.colors.success, glow: 'rgba(34, 197, 94, 0.6)' },
-    solution: { fill: THEME.colors.primary, glow: 'rgba(59, 130, 246, 0.6)' },
-    warning: { fill: THEME.colors.warning, glow: 'rgba(234, 179, 8, 0.6)' },
+    ground: {
+      fill: THEME.colors.success,
+      glow: 'rgba(34, 197, 94, 0.5)',
+      outerGlow: 'rgba(34, 197, 94, 0.25)',
+    },
+    solution: {
+      fill: THEME.colors.primary,
+      glow: 'rgba(59, 130, 246, 0.5)',
+      outerGlow: 'rgba(59, 130, 246, 0.25)',
+    },
+    warning: {
+      fill: THEME.colors.warning,
+      glow: 'rgba(234, 179, 8, 0.5)',
+      outerGlow: 'rgba(234, 179, 8, 0.2)',
+    },
   };
 
   const color = colors[status];
+  const glowRadius = isAnimating ? 22 * pulseScale : 16;
+  const outerGlowRadius = isAnimating ? 32 * pulseScale : 20;
 
   return (
     <G>
-      {/* Outer glow - pulses when animating */}
-      <Circle cx={x} cy={y} r={isAnimating ? 20 : 18} fill={color.glow} opacity={pulseOpacity} />
+      {/* Outer soft glow - larger, softer */}
+      {isAnimating && (
+        <Circle
+          cx={x}
+          cy={y}
+          r={outerGlowRadius}
+          fill={color.outerGlow}
+          opacity={pulseOpacity * 0.6}
+        />
+      )}
+      {/* Inner glow - pulses when animating */}
+      <Circle cx={x} cy={y} r={glowRadius} fill={color.glow} opacity={pulseOpacity} />
       {/* Main circle */}
-      <Circle cx={x} cy={y} r={12} fill={color.fill} opacity={0.9} />
+      <Circle cx={x} cy={y} r={12} fill={color.fill} opacity={0.95} />
       {/* Inner highlight */}
-      <Circle cx={x} cy={y - 3} r={4} fill="rgba(255,255,255,0.4)" />
+      <Circle cx={x} cy={y - 3} r={4} fill="rgba(255,255,255,0.35)" />
     </G>
   );
 }
@@ -220,9 +258,20 @@ interface VehicleDiagramProps {
     string,
     { totalHeight: number; blocks: { thickness: number; count: number }[] }
   >;
+  vehicleWidth: number;
+  vehicleHeight: number;
 }
 
-function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) {
+function VehicleDiagram({
+  type,
+  wheelLifts,
+  blockStacks,
+  vehicleWidth,
+  vehicleHeight,
+}: VehicleDiagramProps) {
+  // Use passed dimensions for responsive sizing
+  const VEHICLE_WIDTH = vehicleWidth;
+  const VEHICLE_HEIGHT = vehicleHeight;
   // Determine wheel status based on lift requirements
   const getWheelStatus = (location: string): 'ground' | 'solution' | 'warning' => {
     const lift = wheelLifts.find((w) => w.location === location);
@@ -268,15 +317,15 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
         {/* Trailer body - shortened to make room for longer hitch */}
         <Path
           d="M 90 40 L 280 40 Q 300 40 300 60 L 300 140 Q 300 160 280 160 L 90 160 Q 70 160 70 140 L 70 60 Q 70 40 90 40 Z"
-          fill="url(#trailerBodyGradient)"
+          fill="rgba(59, 130, 246, 0.1)"
           stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={1.5}
         />
 
         {/* Tongue/A-frame - extended for longer hitch */}
         <Path
-          d="M 70 88 L 22 100 L 70 112"
-          fill="rgba(59, 130, 246, 0.05)"
+          d="M 70 88 L 22 100 L 70 112 Z"
+          fill="rgba(59, 130, 246, 0.08)"
           stroke="rgba(59, 130, 246, 0.4)"
           strokeWidth={2}
           strokeLinecap="round"
@@ -398,7 +447,7 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
              L 95 148
              L 95 44
              Z"
-          fill="url(#vanBodyGradient)"
+          fill="rgba(34, 197, 94, 0.1)"
           stroke="rgba(34, 197, 94, 0.4)"
           strokeWidth={1.5}
         />
@@ -413,8 +462,9 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
              Q 28 118 32 128
              L 40 138
              Q 50 148 70 148
-             L 95 148"
-          fill="url(#vanHoodGradient)"
+             L 95 148
+             Z"
+          fill="rgba(34, 197, 94, 0.12)"
           stroke="rgba(34, 197, 94, 0.4)"
           strokeWidth={1.5}
         />
@@ -555,7 +605,7 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
            Q 298 154 270 154
            L 75 154
            Z"
-        fill="url(#mhBodyGradient)"
+        fill="rgba(168, 85, 247, 0.1)"
         stroke="rgba(168, 85, 247, 0.4)"
         strokeWidth={1.5}
       />
@@ -570,8 +620,9 @@ function VehicleDiagram({ type, wheelLifts, blockStacks }: VehicleDiagramProps) 
            Q 22 114 28 129
            L 34 144
            Q 38 154 50 154
-           L 75 154"
-        fill="url(#mhCabGradient)"
+           L 75 154
+           Z"
+        fill="rgba(168, 85, 247, 0.14)"
         stroke="rgba(168, 85, 247, 0.45)"
         strokeWidth={1.5}
       />
@@ -752,8 +803,13 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
 }
 
 export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
-  const { activeProfile, settings } = useAppStore();
+  const { activeProfile, settings, setShowLevelingAssistant } = useAppStore();
   const { pitchDeg, rollDeg } = useDeviceAttitude();
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Responsive vehicle diagram sizing
+  const VEHICLE_WIDTH = Math.min(screenWidth - 48, 320);
+  const VEHICLE_HEIGHT = VEHICLE_WIDTH * 0.6;
   const [levelingPlan, setLevelingPlan] = useState<LevelingPlan | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -849,6 +905,10 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
   // Handle Check Level button press - show orientation instructions first
   const handleCheckLevel = () => {
+    // Close the results modal first if it's open
+    setIsCheckingLevel(false);
+    setCheckLevelReadings(null);
+    // Then show the orientation prompt
     setShowOrientationPrompt(true);
   };
 
@@ -902,8 +962,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const isCloseEnough = totalDeviation >= 0.5 && totalDeviation <= 2.0;
   const isNearLevel = isLevel; // Keep for backward compatibility with "Level!" banner
 
-  // Calculate percentage (3° = 0%, 0° = 100%)
-  const levelPercentage = Math.max(0, Math.min(100, 100 - (totalDeviation / 3) * 100));
+  // Calculate percentage (10° = 0%, 0° = 100%)
+  // This gives more intuitive readings: 2° = 80%, 5° = 50%
+  const levelPercentage = Math.max(0, Math.min(100, 100 - (totalDeviation / 10) * 100));
 
   // Memoize wheel lifts that need attention
   const activeLifts = useMemo(() => {
@@ -983,6 +1044,16 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 <Text style={styles.statusSubtitle}>Your RV is properly leveled</Text>
               </View>
             </View>
+            <View style={styles.levelDoneButtonContainer}>
+              <GlassButton
+                variant="success"
+                size="lg"
+                onPress={() => setShowLevelingAssistant(false)}
+                icon={<Check size={20} color="#fff" />}
+              >
+                Done
+              </GlassButton>
+            </View>
           </GlassCard>
         ) : (
           <>
@@ -999,6 +1070,8 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                       type={activeProfile.type}
                       wheelLifts={levelingPlan.wheelLifts}
                       blockStacks={levelingPlan.blockStacks}
+                      vehicleWidth={VEHICLE_WIDTH}
+                      vehicleHeight={VEHICLE_HEIGHT}
                     />
                   )}
                 </View>
@@ -1132,10 +1205,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 <Text style={styles.orientationText}>Keep phone still while checking</Text>
               </View>
             </View>
-            <View style={styles.modalButtons}>
-              <GlassButton variant="secondary" size="md" onPress={handleBackToPlan}>
-                Cancel
-              </GlassButton>
+            <View style={styles.modalButtonsStacked}>
               <GlassButton
                 variant="success"
                 size="md"
@@ -1143,6 +1213,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 icon={<Check size={18} color="#fff" />}
               >
                 Check Level Now
+              </GlassButton>
+              <GlassButton variant="default" size="md" onPress={handleBackToPlan}>
+                Cancel
               </GlassButton>
             </View>
           </View>
@@ -1246,10 +1319,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
               </>
             )}
 
-            <View style={styles.modalButtons}>
-              <GlassButton variant="secondary" size="md" onPress={handleBackToPlan}>
-                {isLevel || isCloseEnough ? 'Done' : 'View Original Plan'}
-              </GlassButton>
+            <View style={styles.modalButtonsStacked}>
               {!isLevel && (
                 <GlassButton
                   variant="primary"
@@ -1260,6 +1330,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                   Check Again
                 </GlassButton>
               )}
+              <GlassButton variant="default" size="md" onPress={handleBackToPlan}>
+                {isLevel || isCloseEnough ? 'Done' : 'View Original Plan'}
+              </GlassButton>
             </View>
           </View>
         </View>
@@ -1318,6 +1391,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: THEME.colors.textSecondary,
     marginTop: 2,
+  },
+  levelDoneButtonContainer: {
+    marginTop: 16,
+    width: '100%',
   },
   // Vehicle Diagram
   diagramContainer: {
@@ -1687,6 +1764,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  modalButtonsStacked: {
+    flexDirection: 'column',
+    gap: 10,
+    width: '100%',
+  },
   checkResultsTitleSuccess: {
     color: THEME.colors.success,
   },
@@ -1767,10 +1849,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   newInstructionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
+    flexDirection: 'column',
+    paddingVertical: 6,
+    gap: 2,
   },
   newInstructionWheel: {
     fontSize: 14,
@@ -1778,7 +1859,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   newInstructionAmount: {
-    fontSize: 14,
+    fontSize: 13,
     color: THEME.colors.primary,
     fontWeight: '600',
   },

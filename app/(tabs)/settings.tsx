@@ -161,14 +161,17 @@ export default function SettingsScreen() {
                           <View style={styles.unitRadioInner} />
                         )}
                       </View>
-                      <Text
-                        style={[
-                          styles.unitText,
-                          settings.measurementUnits === 'imperial' && styles.unitTextActive,
-                        ]}
-                      >
-                        Imperial (in/ft)
-                      </Text>
+                      <View style={styles.unitTextContainer}>
+                        <Text
+                          style={[
+                            styles.unitText,
+                            settings.measurementUnits === 'imperial' && styles.unitTextActive,
+                          ]}
+                        >
+                          Imperial
+                        </Text>
+                        <Text style={styles.unitAbbrev}>in / ft</Text>
+                      </View>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -188,14 +191,17 @@ export default function SettingsScreen() {
                           <View style={styles.unitRadioInner} />
                         )}
                       </View>
-                      <Text
-                        style={[
-                          styles.unitText,
-                          settings.measurementUnits === 'metric' && styles.unitTextActive,
-                        ]}
-                      >
-                        Metric (cm/m)
-                      </Text>
+                      <View style={styles.unitTextContainer}>
+                        <Text
+                          style={[
+                            styles.unitText,
+                            settings.measurementUnits === 'metric' && styles.unitTextActive,
+                          ]}
+                        >
+                          Metric
+                        </Text>
+                        <Text style={styles.unitAbbrev}>cm / m</Text>
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -411,6 +417,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#3b82f6',
   },
+  unitTextContainer: {
+    flex: 1,
+  },
   unitText: {
     fontSize: 14,
     fontWeight: '500',
@@ -418,6 +427,11 @@ const styles = StyleSheet.create({
   },
   unitTextActive: {
     color: THEME.colors.text,
+  },
+  unitAbbrev: {
+    fontSize: 11,
+    color: THEME.colors.textMuted,
+    marginTop: 2,
   },
   // Slider section
   sliderSection: {

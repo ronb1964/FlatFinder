@@ -55,9 +55,10 @@ export function normalizeAttitude(
     invertPitch?: boolean; // true if sensor +pitch = nose down
     invertRoll?: boolean; // true if sensor +roll = left side up
     swapAxes?: boolean; // true if pitch/roll are swapped
+    yawOffset?: number; // degrees to add to yaw (e.g., 180 if heading is inverted)
   } = {}
 ): AttitudeReading {
-  const { invertPitch = false, invertRoll = false, swapAxes = false } = options;
+  const { invertPitch = false, invertRoll = false, swapAxes = false, yawOffset = 0 } = options;
 
   let pitch = rawAttitude.pitch;
   let roll = rawAttitude.roll;
@@ -76,10 +77,16 @@ export function normalizeAttitude(
     roll = -roll;
   }
 
+  // Apply yaw offset and normalize to 0-360 range
+  let yaw = rawAttitude.yaw;
+  if (yaw !== undefined && yawOffset !== 0) {
+    yaw = (((yaw + yawOffset) % 360) + 360) % 360;
+  }
+
   return {
     pitch,
     roll,
-    yaw: rawAttitude.yaw,
+    yaw,
   };
 }
 
@@ -184,6 +191,7 @@ export const SENSOR_NORMALIZATION_PRESETS = {
     invertPitch: false, // rotation.beta: +nose up is correct
     invertRoll: true, // rotation.gamma: native reports opposite to our convention
     swapAxes: false,
+    yawOffset: 90, // Corrected offset for compass heading alignment
   },
 
   // Custom preset for sensors that use different conventions

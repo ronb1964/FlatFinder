@@ -126,9 +126,17 @@ export function GlassButton({
       <View style={[styles.highlight, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
       <View style={styles.content}>
         {icon && <View style={styles.icon}>{icon}</View>}
-        <Text style={[styles.text, { color: colors.text, fontSize: sizing.fontSize }, textStyle]}>
-          {children}
-        </Text>
+        <View style={styles.textWrapper}>
+          <Text
+            style={[
+              styles.text,
+              { color: colors.text, fontSize: sizing.fontSize, lineHeight: sizing.fontSize * 1.2 },
+              textStyle,
+            ]}
+          >
+            {children}
+          </Text>
+        </View>
         {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
       </View>
     </LinearGradient>
@@ -159,11 +167,21 @@ export function GlassButton({
         >
           <View style={styles.content}>
             {icon && <View style={styles.icon}>{icon}</View>}
-            <Text
-              style={[styles.text, { color: colors.text, fontSize: sizing.fontSize }, textStyle]}
-            >
-              {children}
-            </Text>
+            <View style={styles.textWrapper}>
+              <Text
+                style={[
+                  styles.text,
+                  {
+                    color: colors.text,
+                    fontSize: sizing.fontSize,
+                    lineHeight: sizing.fontSize * 1.2,
+                  },
+                  textStyle,
+                ]}
+              >
+                {children}
+              </Text>
+            </View>
             {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
           </View>
         </View>
@@ -228,10 +246,18 @@ const styles = StyleSheet.create({
   rightIcon: {
     marginLeft: 8,
   },
+  textWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
   text: {
     fontWeight: '600',
     textAlign: 'center',
     flexShrink: 1,
+    // Prevent iOS Dynamic Type from causing vertical misalignment
+    includeFontPadding: false, // Android: removes extra padding
+    textAlignVertical: 'center', // Android: explicit vertical centering
   },
 });
 

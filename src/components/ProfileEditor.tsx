@@ -443,7 +443,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                                 Add
                               </GlassButton>
                               <GlassButton
-                                variant="danger"
+                                variant="default"
                                 size="sm"
                                 onPress={() => {
                                   setShowAddBlockInput(false);
@@ -466,7 +466,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
 
           {/* Footer */}
           <View style={styles.footer}>
-            <GlassButton variant="danger" size="md" onPress={onCancel} style={styles.footerButton}>
+            <GlassButton variant="default" size="md" onPress={onCancel} style={styles.footerButton}>
               Cancel
             </GlassButton>
             <GlassButton
@@ -476,7 +476,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
               onPress={handleSave}
               style={styles.footerButton}
             >
-              Save Changes
+              Save
             </GlassButton>
           </View>
         </View>
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    height: '85%',
     backgroundColor: THEME.colors.background,
     borderRadius: 16,
     borderWidth: 1,
@@ -715,11 +715,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   addBlockInputGroup: {
     gap: 10,
+    width: '100%',
   },
   addBlockLabel: {
     fontSize: 13,
@@ -732,7 +731,7 @@ const styles = StyleSheet.create({
   },
   addBlockInput: {
     flex: 1,
-    maxWidth: 120,
+    minWidth: 80,
     padding: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,

@@ -660,7 +660,7 @@ export function CalibrationWizard({
 
               {currentStep !== 'complete' && (
                 <GlassButton
-                  variant="danger"
+                  variant="default"
                   size="sm"
                   onPress={() => setShowCancelConfirm(true)}
                   style={[styles.fullWidthButton, { marginTop: 10 }]}
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 350,
     alignItems: 'center',
     backgroundColor: 'rgba(26, 26, 26, 0.85)',
     borderRadius: 16,
@@ -873,9 +873,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     width: 280,
@@ -925,9 +925,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -985,16 +985,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonTextCompact: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#f87171',
+    color: '#fff',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -1304,16 +1304,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     width: '100%',
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f87171',
+    color: '#fff',
   },
 
   // Cancel confirmation modal styles

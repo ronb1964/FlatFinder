@@ -101,8 +101,11 @@ const VEHICLE_TYPES = [
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [addInputKey, setAddInputKey] = useState(0); // Forces clean remount of input
   const { updateSettings, addProfile, setActiveProfile } = useAppStore();
   const scrollViewRef = useRef<ScrollView>(null);
+  const blockInputRef = useRef<TextInput>(null);
+  const newBlockHeightRef = useRef('');
 
   // Block inventory tracks quantity for each block height
   // Key is the block height in inches, value is quantity
@@ -533,7 +536,7 @@ export default function OnboardingScreen() {
     const unitLabel = setupData.measurementUnits === 'imperial' ? 'inches' : 'cm';
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.stepContent}>
           <IconBox variant="purple">
             {selectedVehicleType && <selectedVehicleType.Icon size={36} color="#a855f7" />}
@@ -775,36 +778,44 @@ export default function OnboardingScreen() {
   }, []);
 
   // Add a new block size to inventory
-  const addBlockSize = useCallback(() => {
-    const heightStr = setupData.newBlockHeight.trim();
+  const addBlockSize = () => {
+    const heightStr = newBlockHeightRef.current.trim();
+
     if (!heightStr) return;
 
     let heightInches = parseFloat(heightStr);
+
     if (isNaN(heightInches) || heightInches <= 0) return;
 
-    // Convert to inches if metric
-    if (setupData.measurementUnits === 'metric') {
-      heightInches = heightInches / 2.54; // cm to inches
-    }
+    setSetupData((prev) => {
+      // Convert to inches if metric
+      let finalHeight = heightInches;
+      if (prev.measurementUnits === 'metric') {
+        finalHeight = heightInches / 2.54; // cm to inches
+      }
 
-    // Round to 1 decimal place for cleaner values
-    heightInches = Math.round(heightInches * 10) / 10;
+      // Round to 1 decimal place for cleaner values
+      finalHeight = Math.round(finalHeight * 10) / 10;
 
-    // Don't add if already exists
-    if (setupData.blockQuantities[heightInches] !== undefined) {
-      return;
-    }
+      // Don't add if already exists
+      if (prev.blockQuantities[finalHeight] !== undefined) {
+        return { ...prev, showAddBlockInput: false, newBlockHeight: '' };
+      }
 
-    setSetupData((prev) => ({
-      ...prev,
-      blockQuantities: {
-        ...prev.blockQuantities,
-        [heightInches]: 4, // Default quantity of 4
-      },
-      showAddBlockInput: false,
-      newBlockHeight: '',
-    }));
-  }, [setupData.newBlockHeight, setupData.measurementUnits, setupData.blockQuantities]);
+      // Clear the ref
+      newBlockHeightRef.current = '';
+
+      return {
+        ...prev,
+        blockQuantities: {
+          ...prev.blockQuantities,
+          [finalHeight]: 4, // Default quantity of 4
+        },
+        showAddBlockInput: false,
+        newBlockHeight: '',
+      };
+    });
+  };
 
   function renderBlocksStep() {
     // Get sorted block heights from current inventory
@@ -831,7 +842,7 @@ export default function OnboardingScreen() {
     };
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.stepContent}>
           <IconBox variant="success">
             <Package size={36} color="#22c55e" />
@@ -947,55 +958,70 @@ export default function OnboardingScreen() {
                   {!setupData.showAddBlockInput ? (
                     <TouchableOpacity
                       style={styles.addBlockButton}
-                      onPress={() => setSetupData((prev) => ({ ...prev, showAddBlockInput: true }))}
+                      onPress={() => {
+                        // Reset ref and increment key for clean state
+                        newBlockHeightRef.current = '';
+                        setAddInputKey((k) => k + 1);
+                        setSetupData((prev) => ({ ...prev, showAddBlockInput: true }));
+                      }}
                     >
                       <Plus size={20} color="#3b82f6" />
                       <Text style={styles.addBlockButtonText}>Add Block Size</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View style={styles.addBlockInputContainer}>
+                    <View key={addInputKey} style={styles.addBlockInputContainer}>
                       <Text style={styles.addBlockInputLabel}>
                         Enter height ({setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}
                         ):
                       </Text>
-                      <View style={styles.addBlockInputRow}>
-                        <TextInput
-                          style={styles.addBlockTextInput}
-                          placeholder={
-                            setupData.measurementUnits === 'imperial' ? 'e.g., 5' : 'e.g., 12'
-                          }
-                          placeholderTextColor="#737373"
-                          keyboardType="decimal-pad"
-                          value={setupData.newBlockHeight}
-                          onChangeText={(text) =>
-                            setSetupData((prev) => ({ ...prev, newBlockHeight: text }))
-                          }
-                          onFocus={() => {
-                            globalThis.setTimeout(() => {
-                              scrollViewRef.current?.scrollToEnd({ animated: true });
-                            }, 300);
+                      <TextInput
+                        ref={blockInputRef}
+                        style={styles.addBlockTextInput}
+                        placeholder={
+                          setupData.measurementUnits === 'imperial' ? 'e.g., 5' : 'e.g., 12'
+                        }
+                        placeholderTextColor="#737373"
+                        keyboardType="decimal-pad"
+                        defaultValue=""
+                        onChangeText={(text) => {
+                          newBlockHeightRef.current = text;
+                        }}
+                        onFocus={() => {
+                          globalThis.setTimeout(() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                          }, 300);
+                        }}
+                        autoFocus
+                        selectTextOnFocus={true}
+                      />
+                      <View style={styles.addBlockButtonRow}>
+                        <GlassButton
+                          variant="primary"
+                          size="md"
+                          style={{ flex: 1 }}
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            addBlockSize();
                           }}
-                          autoFocus
-                          selectTextOnFocus={true}
-                        />
-                        <TouchableOpacity
-                          style={styles.addBlockConfirmButton}
-                          onPress={addBlockSize}
                         >
-                          <Text style={styles.addBlockConfirmText}>Add</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.addBlockCancelButton}
-                          onPress={() =>
+                          Add
+                        </GlassButton>
+                        <GlassButton
+                          variant="default"
+                          size="md"
+                          style={{ flex: 1 }}
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            newBlockHeightRef.current = '';
                             setSetupData((prev) => ({
                               ...prev,
                               showAddBlockInput: false,
                               newBlockHeight: '',
-                            }))
-                          }
+                            }));
+                          }}
                         >
-                          <Text style={styles.addBlockCancelText}>Cancel</Text>
-                        </TouchableOpacity>
+                          Cancel
+                        </GlassButton>
                       </View>
                     </View>
                   )}
@@ -1132,23 +1158,11 @@ export default function OnboardingScreen() {
             {/* Navigation buttons - inside the card */}
             {!keyboardVisible && (
               <View style={styles.navigation}>
-                <View style={styles.navButtonsRow}>
-                  {currentStep > 0 && (
-                    <GlassButton
-                      variant="warning"
-                      onPress={handleBack}
-                      style={styles.navButton}
-                      icon={<ArrowLeft size={20} color="#fff" />}
-                    >
-                      Back
-                    </GlassButton>
-                  )}
-
+                <View style={styles.navButtonsColumn}>
                   <GlassButton
                     onPress={handleNext}
                     disabled={!canProceed()}
                     variant={canProceed() ? 'primary' : 'ghost'}
-                    style={styles.navButton}
                     rightIcon={
                       currentStep < STEPS.length - 1 ? (
                         <ArrowRight size={20} color={canProceed() ? '#fff' : '#a3a3a3'} />
@@ -1159,6 +1173,16 @@ export default function OnboardingScreen() {
                   >
                     {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
                   </GlassButton>
+
+                  {currentStep > 0 && (
+                    <GlassButton
+                      variant="warning"
+                      onPress={handleBack}
+                      icon={<ArrowLeft size={20} color="#fff" />}
+                    >
+                      Back
+                    </GlassButton>
+                  )}
                 </View>
               </View>
             )}
@@ -1186,6 +1210,7 @@ const styles = StyleSheet.create({
   glassCard: {
     width: '100%',
     maxWidth: 420,
+    flex: 1,
     maxHeight: '95%',
     backgroundColor: 'rgba(26, 26, 26, 0.85)',
     borderRadius: 20,
@@ -1711,31 +1736,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: THEME.colors.textSecondary,
     fontWeight: '500',
-  },
-  addBlockInputRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    textAlign: 'center',
   },
   addBlockTextInput: {
-    width: 110,
+    width: '100%',
     padding: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     color: THEME.colors.text,
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
   },
+  addBlockButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   addBlockConfirmButton: {
-    paddingHorizontal: 24,
+    flex: 1,
     paddingVertical: 14,
     backgroundColor: 'rgba(59, 130, 246, 0.3)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(96, 165, 250, 0.5)',
+    alignItems: 'center',
   },
   addBlockConfirmText: {
     color: '#fff',
@@ -1743,15 +1768,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   addBlockCancelButton: {
-    paddingHorizontal: 20,
+    flex: 1,
     paddingVertical: 14,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
   },
   addBlockCancelText: {
-    color: '#f87171',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -1790,9 +1816,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  navButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
+  navButtonsColumn: {
+    flexDirection: 'column',
+    gap: 10,
   },
   backButton: {
     flex: 1,
@@ -1846,11 +1872,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-
-  // Navigation button style
-  navButton: {
-    flex: 1,
   },
 
   // Button content row

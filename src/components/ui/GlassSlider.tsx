@@ -1,12 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -22,7 +17,7 @@ interface GlassSliderProps {
 }
 
 const TRACK_HEIGHT = 8;
-const THUMB_SIZE = 24;
+const THUMB_SIZE = 28;
 
 export function GlassSlider({
   value,
@@ -60,24 +55,35 @@ export function GlassSlider({
   const thumbPosition = useSharedValue(valueToPosition(value));
   const startPosition = useSharedValue(0);
   const isDragging = useSharedValue(false);
+  const justReleasedRef = React.useRef(false);
 
-  // Update thumb position when value changes externally
+  // Update thumb position when value changes externally (but not from our own drag)
   React.useEffect(() => {
+    // Skip if we just released - our position is already correct
+    if (justReleasedRef.current) {
+      justReleasedRef.current = false;
+      return;
+    }
     if (!isDragging.value && trackWidth > 0) {
-      thumbPosition.value = withSpring(valueToPosition(value), {
-        damping: 20,
-        stiffness: 150,
-      });
+      thumbPosition.value = valueToPosition(value);
     }
   }, [value, trackWidth]);
 
-  const updateValue = (pos: number) => {
+  const updateValue = (pos: number, fromDrag = false) => {
+    if (fromDrag) {
+      justReleasedRef.current = true;
+    }
     const newValue = positionToValue(pos);
     onValueChange(newValue);
   };
 
   const gesture = Gesture.Pan()
     .enabled(!disabled)
+    .hitSlop({ left: 20, right: 20, top: 30, bottom: 30 }) // Larger touch target
+    .minDistance(10) // Require minimum 10px movement before activating
+    .activeOffsetX([-15, 15]) // Only activate when moving horizontally
+    .failOffsetY([-15, 15]) // Cancel if moving too much vertically
+    .shouldCancelWhenOutside(true)
     .onStart(() => {
       isDragging.value = true;
       startPosition.value = thumbPosition.value;
@@ -89,10 +95,11 @@ export function GlassSlider({
         Math.min(trackWidth - THUMB_SIZE, startPosition.value + event.translationX)
       );
       thumbPosition.value = newPosition;
-      // Update value continuously while dragging for responsive feel
-      runOnJS(updateValue)(newPosition);
+      // Don't update value during drag - wait for release
     })
     .onEnd(() => {
+      // Only update value when finger is released
+      runOnJS(updateValue)(thumbPosition.value, true);
       isDragging.value = false;
     });
 
@@ -100,11 +107,12 @@ export function GlassSlider({
     .enabled(!disabled)
     .onEnd((event) => {
       const newPosition = Math.max(0, Math.min(trackWidth - THUMB_SIZE, event.x - THUMB_SIZE / 2));
-      thumbPosition.value = withSpring(newPosition, { damping: 20, stiffness: 150 });
+      thumbPosition.value = newPosition;
       runOnJS(updateValue)(newPosition);
     });
 
-  const composedGesture = Gesture.Simultaneous(gesture, tapGesture);
+  // Use Exclusive so tap works for quick touches, pan takes over for drags
+  const composedGesture = Gesture.Exclusive(gesture, tapGesture);
 
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: thumbPosition.value }],
@@ -228,6 +236,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: THUMB_SIZE,
     height: THUMB_SIZE,
+    top: '50%',
+    marginTop: -THUMB_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },

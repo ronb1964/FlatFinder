@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, Platform, View, StyleSheet } from 'react-native';
+import { useColorScheme, Platform, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingGate } from '../src/components/OnboardingGate';
 import { DebugControls } from '../src/components/DebugControls';
 import { useAppStore } from '../src/state/appStore';
@@ -38,7 +39,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <OnboardingGate>
         <Stack
@@ -48,7 +49,7 @@ export default function RootLayout() {
         />
         {Platform.OS === 'web' && <DebugControls />}
       </OnboardingGate>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
