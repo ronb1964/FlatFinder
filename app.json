@@ -12,7 +12,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "scheme": "flatfinder",
     "primaryColor": "#22c55e",
     "splash": {
@@ -26,10 +26,7 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSMotionUsageDescription": "FlatFinder uses motion sensors to detect your RV's tilt for accurate leveling assistance.",
-        "UIRequiredDeviceCapabilities": [
-          "accelerometer",
-          "gyroscope"
-        ],
+        "UIRequiredDeviceCapabilities": ["accelerometer", "gyroscope"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -41,9 +38,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.flatfinder.rvleveling",
       "versionCode": 1,
-      "permissions": [
-        "android.permission.WAKE_LOCK"
-      ]
+      "permissions": ["android.permission.WAKE_LOCK"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -56,10 +51,10 @@
         "expo-build-properties",
         {
           "ios": {
-            "newArchEnabled": false
+            "newArchEnabled": true
           },
           "android": {
-            "newArchEnabled": false
+            "newArchEnabled": true
           }
         }
       ],

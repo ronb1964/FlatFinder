@@ -14,11 +14,18 @@ interface GlassCardProps {
   glowColor?: string;
   variant?: 'default' | 'success' | 'primary';
   compact?: boolean;
+  /** Force light mode regardless of system theme (for outdoor visibility) */
+  forceLightMode?: boolean;
 }
 
 // Generate variant colors based on current theme
-function getVariantColors(theme: Theme, borderColor?: string, glowColor?: string) {
-  const isDark = theme.mode === 'dark';
+function getVariantColors(
+  theme: Theme,
+  borderColor?: string,
+  glowColor?: string,
+  forceLightMode?: boolean
+) {
+  const isDark = theme.mode === 'dark' && !forceLightMode;
 
   return {
     default: {
@@ -57,13 +64,17 @@ export function GlassCard({
   glowColor,
   variant = 'default',
   compact = false,
+  forceLightMode = false,
 }: GlassCardProps) {
   const theme = useTheme();
 
-  // Use provided tint or default based on theme
-  const blurTint = tint || (theme.mode === 'dark' ? 'dark' : 'light');
+  // Determine effective dark mode (respecting forceLightMode override)
+  const effectivelyDark = theme.mode === 'dark' && !forceLightMode;
 
-  const variantColors = getVariantColors(theme, borderColor, glowColor);
+  // Use provided tint or default based on effective theme
+  const blurTint = tint || (effectivelyDark ? 'dark' : 'light');
+
+  const variantColors = getVariantColors(theme, borderColor, glowColor, forceLightMode);
   const colors = variantColors[variant];
 
   const padding = compact ? 10 : 16;

@@ -18,12 +18,14 @@ interface GlassButtonProps {
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** Force light mode regardless of system theme (for outdoor visibility) */
+  forceLightMode?: boolean;
 }
 
 // Generate variant styles based on current theme
 // Note: Colored buttons use high saturation for visibility, especially in light mode
-function getVariantStyles(theme: Theme) {
-  const isDark = theme.mode === 'dark';
+function getVariantStyles(theme: Theme, forceLightMode?: boolean) {
+  const isDark = theme.mode === 'dark' && !forceLightMode;
 
   return {
     default: {
@@ -107,11 +109,12 @@ export function GlassButton({
   size = 'md',
   icon,
   rightIcon,
+  forceLightMode = false,
 }: GlassButtonProps) {
   const theme = useTheme();
   const scale = useSharedValue(1);
 
-  const variantStyles = getVariantStyles(theme);
+  const variantStyles = getVariantStyles(theme, forceLightMode);
 
   const sizeStyles = {
     sm: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },

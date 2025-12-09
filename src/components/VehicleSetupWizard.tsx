@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TextInput,
   Modal,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Check, Trash2, Plus } from 'lucide-react-native';
 import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
@@ -108,8 +110,9 @@ export function VehicleSetupWizard({
     // Tip box
     tipBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.4)',
     tipBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
-    // Input
-    inputBg: isDark ? theme.colors.surface : 'rgba(220, 230, 242, 0.95)',
+    // Input - glassy but visible in light mode
+    inputBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 130, 180, 0.12)',
+    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 180, 0.35)',
     placeholder: isDark ? '#737373' : '#9ca3af',
     // Block item
     blockItemBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(200, 215, 235, 0.5)',
@@ -154,6 +157,7 @@ export function VehicleSetupWizard({
     useState<Record<number, number>>(getInitialBlockQuantities);
   const [showAddBlockInput, setShowAddBlockInput] = useState(false);
   const [newBlockHeight, setNewBlockHeight] = useState('');
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -392,8 +396,13 @@ export function VehicleSetupWizard({
         <TextInput
           style={[
             styles.textInput,
-            { backgroundColor: screenColors.inputBg, color: screenColors.text },
-            vehicleNameTaken && { borderColor: '#ef4444', borderWidth: 1 },
+            {
+              backgroundColor: screenColors.inputBg,
+              borderColor: screenColors.inputBorder,
+              borderWidth: 1,
+              color: screenColors.text,
+            },
+            vehicleNameTaken && { borderColor: '#ef4444' },
           ]}
           placeholder={`My ${selectedVehicleType?.name}`}
           placeholderTextColor={screenColors.placeholder}
@@ -542,7 +551,12 @@ export function VehicleSetupWizard({
                 <TextInput
                   style={[
                     styles.textInput,
-                    { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                    {
+                      backgroundColor: screenColors.inputBg,
+                      borderColor: screenColors.inputBorder,
+                      borderWidth: 1,
+                      color: screenColors.text,
+                    },
                   ]}
                   placeholder={`e.g., ${convertForDisplay(240, settings.measurementUnits)}`}
                   placeholderTextColor={screenColors.placeholder}
@@ -589,7 +603,12 @@ export function VehicleSetupWizard({
               <TextInput
                 style={[
                   styles.textInput,
-                  { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                  {
+                    backgroundColor: screenColors.inputBg,
+                    borderColor: screenColors.inputBorder,
+                    borderWidth: 1,
+                    color: screenColors.text,
+                  },
                 ]}
                 placeholder={`e.g., ${convertForDisplay(96, settings.measurementUnits)}`}
                 placeholderTextColor={screenColors.placeholder}
@@ -636,7 +655,12 @@ export function VehicleSetupWizard({
                 <TextInput
                   style={[
                     styles.textInput,
-                    { backgroundColor: screenColors.inputBg, color: screenColors.text },
+                    {
+                      backgroundColor: screenColors.inputBg,
+                      borderColor: screenColors.inputBorder,
+                      borderWidth: 1,
+                      color: screenColors.text,
+                    },
                   ]}
                   placeholder={`e.g., ${convertForDisplay(120, settings.measurementUnits)}`}
                   placeholderTextColor={screenColors.placeholder}
@@ -706,8 +730,8 @@ export function VehicleSetupWizard({
       addBtnBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
       addInputBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
       addInputBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
-      addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(220, 230, 242, 0.95)',
-      addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+      addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 130, 180, 0.12)',
+      addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 180, 0.35)',
     };
 
     return (
@@ -851,7 +875,13 @@ export function VehicleSetupWizard({
                   styles.addBlockButton,
                   { backgroundColor: blockColors.addBtnBg, borderColor: blockColors.addBtnBorder },
                 ]}
-                onPress={() => setShowAddBlockInput(true)}
+                onPress={() => {
+                  setShowAddBlockInput(true);
+                  // Scroll to show the input above keyboard
+                  globalThis.setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
               >
                 <Plus size={18} color={screenColors.primary} />
                 <Text style={[styles.addBlockButtonText, { color: screenColors.primary }]}>
@@ -889,6 +919,11 @@ export function VehicleSetupWizard({
                       onChangeText={setNewBlockHeight}
                       autoFocus
                       selectTextOnFocus={true}
+                      onFocus={() => {
+                        globalThis.setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 100);
+                      }}
                     />
                     <GlassButton
                       variant="primary"
@@ -1045,13 +1080,21 @@ export function VehicleSetupWizard({
           </View>
 
           {/* Scrollable content */}
-          <ScrollView
-            style={styles.content}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={100}
           >
-            {currentStepData.component()}
-          </ScrollView>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.content}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {currentStepData.component()}
+            </ScrollView>
+          </KeyboardAvoidingView>
 
           {/* Fixed navigation buttons */}
           <View style={[styles.footer, { borderTopColor: screenColors.modalBorder }]}>
@@ -1673,19 +1716,23 @@ const styles = StyleSheet.create({
   },
   addBlockInputGroup: {
     gap: 10,
+    alignItems: 'center',
+    width: '100%',
   },
   addBlockLabel: {
     fontSize: 13,
     color: THEME.colors.textSecondary,
+    textAlign: 'center',
   },
   addBlockInputRow: {
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   addBlockInput: {
-    flex: 1,
-    maxWidth: 120,
+    width: 80,
     padding: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,

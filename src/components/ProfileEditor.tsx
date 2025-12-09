@@ -7,6 +7,8 @@ import {
   TextInput,
   Modal,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Trash2, Plus } from 'lucide-react-native';
 import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
@@ -82,8 +84,8 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
     success: theme.colors.success,
     danger: '#ef4444',
     // Input backgrounds
-    inputBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
-    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    inputBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 130, 180, 0.12)',
+    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 180, 0.35)',
     placeholder: isDark ? '#737373' : '#9ca3af',
     // Vehicle type option
     optionBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 215, 235, 0.5)',
@@ -107,8 +109,8 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
     addBtnBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
     addInputBg: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.15)',
     addInputBorder: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)',
-    addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(220, 230, 242, 0.95)',
-    addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 170, 0.3)',
+    addInputFieldBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 130, 180, 0.12)',
+    addInputFieldBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 180, 0.35)',
   };
 
   // Initialize state from profile
@@ -224,7 +226,8 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
       <View style={[styles.overlay, { backgroundColor: screenColors.overlayBg }]}>
-        <View
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={[
             styles.modalContainer,
             { backgroundColor: screenColors.modalBg, borderColor: screenColors.modalBorder },
@@ -241,6 +244,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollViewContent}
           >
             <View style={styles.content}>
               {/* Vehicle Name Section */}
@@ -567,7 +571,13 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                               borderColor: screenColors.addBtnBorder,
                             },
                           ]}
-                          onPress={() => setShowAddBlockInput(true)}
+                          onPress={() => {
+                            setShowAddBlockInput(true);
+                            // Scroll to bottom after input appears
+                            globalThis.setTimeout(() => {
+                              scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 150);
+                          }}
                         >
                           <Plus size={18} color={screenColors.primary} />
                           <Text
@@ -609,6 +619,12 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                                 onChangeText={setNewBlockHeight}
                                 autoFocus
                                 selectTextOnFocus={true}
+                                onFocus={() => {
+                                  // Scroll to bottom to ensure input is visible above keyboard
+                                  globalThis.setTimeout(() => {
+                                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                                  }, 100);
+                                }}
                               />
                               <GlassButton
                                 variant="primary"
@@ -655,7 +671,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
               Save
             </GlassButton>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -694,6 +710,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
   },
   content: {
     padding: 16,
@@ -900,19 +919,22 @@ const styles = StyleSheet.create({
   addBlockInputGroup: {
     gap: 10,
     width: '100%',
+    alignItems: 'center',
   },
   addBlockLabel: {
     fontSize: 13,
     color: THEME.colors.textSecondary,
+    textAlign: 'center',
   },
   addBlockInputRow: {
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   addBlockInput: {
-    flex: 1,
-    minWidth: 80,
+    width: 80,
     padding: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,

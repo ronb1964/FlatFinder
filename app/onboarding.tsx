@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Switch,
   StyleSheet,
   Platform,
   Keyboard,
@@ -26,6 +25,10 @@ import {
   Plus,
   Compass,
   Check,
+  Lightbulb,
+  Sun,
+  Volume2,
+  Smartphone,
 } from 'lucide-react-native';
 import { TrailerIcon, MotorhomeIcon, VanIcon } from '../src/components/icons/VehicleIcons';
 import { useTheme } from '../src/hooks/useTheme';
@@ -36,6 +39,7 @@ import { getTypicalMeasurements, convertToInches } from '../src/lib/units';
 import { THEME } from '../src/theme';
 import { GlassCard } from '../src/components/ui/GlassCard';
 import { GlassButton } from '../src/components/ui/GlassButton';
+import { GlassToggle } from '../src/components/ui/GlassToggle';
 
 // Icon container colors - subtle, matching the level screen style
 const ICON_COLORS = {
@@ -117,9 +121,9 @@ export default function OnboardingScreen() {
     // Radio/checkbox
     radio: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
     radioBorder: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
-    // Inputs
-    input: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    // Inputs - glassy but visible in light mode
+    input: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 130, 180, 0.12)',
+    inputBorder: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(100, 130, 180, 0.35)',
     // Progress
     progressDot: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
     progressDotBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
@@ -175,7 +179,7 @@ export default function OnboardingScreen() {
       setKeyboardVisible(false);
       // When keyboard hides on blocks step with add input showing, scroll to bottom
       // so the Add button stays visible
-      if (currentStep === 6 && setupData.showAddBlockInput) {
+      if (currentStep === 7 && setupData.showAddBlockInput) {
         globalThis.setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
@@ -192,6 +196,7 @@ export default function OnboardingScreen() {
     { title: 'Welcome', component: renderWelcomeStep },
     { title: 'How It Works', component: renderHowItWorksStep },
     { title: 'Safety First', component: renderSafetyStep },
+    { title: 'Tips & Features', component: renderTipsStep },
     { title: 'Choose Units', component: renderUnitsStep },
     { title: 'Your Vehicle', component: renderVehicleStep },
     { title: 'Vehicle Details', component: renderVehicleDetailsStep },
@@ -202,7 +207,7 @@ export default function OnboardingScreen() {
   const currentStepData = STEPS[currentStep];
 
   const handleNext = () => {
-    if (currentStep === 4 && setupData.vehicleType) {
+    if (currentStep === 5 && setupData.vehicleType) {
       const typical =
         typicalMeasurements[setupData.vehicleType as keyof typeof typicalMeasurements];
       if (typical) {
@@ -284,14 +289,14 @@ export default function OnboardingScreen() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 3:
-        return !!setupData.measurementUnits;
       case 4:
-        return !!setupData.vehicleType;
+        return !!setupData.measurementUnits;
       case 5:
+        return !!setupData.vehicleType;
+      case 6:
         // Must have a name AND it can't already be taken
         return !!setupData.vehicleName.trim() && !vehicleNameTaken;
-      case 6: {
+      case 7: {
         if (!setupData.hasLevelingBlocks) return true;
         // Check if at least one block type has quantity > 0
         return Object.values(setupData.blockQuantities).some((qty) => qty > 0);
@@ -453,6 +458,89 @@ export default function OnboardingScreen() {
             <Text style={[styles.cardText, { color: screenColors.text }]}>
               FlatFinder will warn you if angles become unsafe during leveling.
             </Text>
+          </View>
+        </GlassCard>
+      </View>
+    );
+  }
+
+  function renderTipsStep() {
+    return (
+      <View style={styles.stepContent}>
+        <IconBox variant="yellow">
+          <Lightbulb size={36} color="#eab308" />
+        </IconBox>
+
+        <View style={styles.titleContainer}>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Tips & Features</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Get the Most Out of FlatFinder
+          </Text>
+        </View>
+
+        <GlassCard variant="default">
+          <View style={styles.cardContent}>
+            {/* Sun Button Feature */}
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconContainer}>
+                <Sun size={22} color="#f59e0b" />
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={[styles.featureTitle, { color: screenColors.text }]}>
+                  Outdoor Mode
+                </Text>
+                <Text style={[styles.featureDescription, { color: screenColors.textSecondary }]}>
+                  Tap the sun icon on the Leveling Plan screen to switch to light mode for better
+                  visibility in bright sunlight.
+                </Text>
+              </View>
+            </View>
+
+            {/* Audio Feedback Feature */}
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconContainer}>
+                <Volume2 size={22} color="#3b82f6" />
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={[styles.featureTitle, { color: screenColors.text }]}>
+                  Audio Feedback
+                </Text>
+                <Text style={[styles.featureDescription, { color: screenColors.textSecondary }]}>
+                  When enabled, you&apos;ll hear beeps that speed up as you get closer to level—no
+                  need to watch the screen!
+                </Text>
+              </View>
+            </View>
+
+            {/* Haptic Feedback Feature */}
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconContainer}>
+                <Smartphone size={22} color="#22c55e" />
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={[styles.featureTitle, { color: screenColors.text }]}>
+                  Haptic Feedback
+                </Text>
+                <Text style={[styles.featureDescription, { color: screenColors.textSecondary }]}>
+                  Feel a vibration when you reach level. Great for noisy environments.
+                </Text>
+              </View>
+            </View>
+
+            {/* Keep Screen Awake Feature */}
+            <View style={[styles.featureRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.featureIconContainer}>
+                <Zap size={22} color="#a855f7" />
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={[styles.featureTitle, { color: screenColors.text }]}>
+                  Keep Screen Awake
+                </Text>
+                <Text style={[styles.featureDescription, { color: screenColors.textSecondary }]}>
+                  Prevents your phone from sleeping while leveling. Toggle in Settings.
+                </Text>
+              </View>
+            </View>
           </View>
         </GlassCard>
       </View>
@@ -673,196 +761,146 @@ export default function OnboardingScreen() {
     const unitLabel = setupData.measurementUnits === 'imperial' ? 'inches' : 'cm';
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.stepContent}>
-          <IconBox variant="purple">
-            {selectedVehicleType && <selectedVehicleType.Icon size={36} color="#a855f7" />}
-          </IconBox>
+      <View style={styles.stepContent}>
+        <IconBox variant="purple">
+          {selectedVehicleType && <selectedVehicleType.Icon size={36} color="#a855f7" />}
+        </IconBox>
 
-          <View style={styles.titleContainer}>
-            <Text style={[styles.stepTitle, { color: screenColors.text }]}>Vehicle Details</Text>
-            <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
-              Tell us about your {selectedVehicleType?.name}
-            </Text>
-          </View>
+        <View style={styles.titleContainer}>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Vehicle Details</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Tell us about your {selectedVehicleType?.name}
+          </Text>
+        </View>
 
-          <GlassCard variant="default">
-            <View style={styles.cardContent}>
-              {/* Vehicle Name Input */}
-              <View style={styles.vehicleNameContainer}>
-                <View style={styles.vehicleNameHeader}>
-                  <Text style={[styles.vehicleNameLabel, { color: screenColors.textSecondary }]}>
-                    Vehicle Name
-                  </Text>
-                  <Text style={styles.requiredBadge}>*</Text>
-                </View>
-                <TextInput
-                  style={[
-                    styles.vehicleNameInput,
-                    {
-                      backgroundColor: screenColors.input,
-                      borderColor: vehicleNameTaken ? '#ef4444' : screenColors.inputBorder,
-                      color: screenColors.text,
-                    },
-                  ]}
-                  placeholder={`e.g., "Big Blue"`}
-                  placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
-                  value={setupData.vehicleName}
-                  onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
-                  selectTextOnFocus={true}
-                  autoFocus={true}
-                />
-                {vehicleNameTaken && (
-                  <Text style={styles.errorText}>A vehicle with this name already exists</Text>
-                )}
+        <GlassCard variant="default">
+          <View style={styles.cardContent}>
+            {/* Vehicle Name Input */}
+            <View style={styles.vehicleNameContainer}>
+              <View style={styles.vehicleNameHeader}>
+                <Text style={[styles.vehicleNameLabel, { color: screenColors.textSecondary }]}>
+                  Vehicle Name
+                </Text>
+                <Text style={styles.requiredBadge}>*</Text>
               </View>
-
-              {/* Measurements Section */}
-              <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
-                <View style={styles.infoCardContent}>
-                  <View style={styles.blockHeaderRow}>
-                    <Ruler size={20} color="#a855f7" />
-                    <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
-                      Vehicle Measurements
-                    </Text>
-                  </View>
-                  <View style={styles.switchRow}>
-                    <Switch
-                      value={setupData.useCustomMeasurements}
-                      onValueChange={(checked) =>
-                        setSetupData((prev) => ({ ...prev, useCustomMeasurements: checked }))
-                      }
-                      trackColor={{ false: isDark ? '#555' : '#d1d5db', true: '#a855f7' }}
-                      thumbColor="#fff"
-                    />
-                    <Text style={[styles.switchLabel, { color: screenColors.text }]}>
-                      I know my exact measurements
-                    </Text>
-                  </View>
-                  <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
-                    {setupData.useCustomMeasurements
-                      ? 'Enter your vehicle measurements below for more accurate leveling calculations.'
-                      : `We'll use typical measurements for a ${selectedVehicleType?.name}. You can adjust these later in Profiles.`}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Default Measurements Display */}
-              {!setupData.useCustomMeasurements && typical && (
-                <View
-                  style={[
-                    styles.measurementsSummary,
-                    {
-                      backgroundColor: screenColors.surface,
-                      borderColor: screenColors.surfaceBorder,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.measurementsSummaryTitle, { color: screenColors.textSecondary }]}
-                  >
-                    Default measurements:
-                  </Text>
-                  <View style={styles.measurementsList}>
-                    {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
-                    {setupData.vehicleType !== 'trailer' && (
-                      <View style={styles.measurementItem}>
-                        <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
-                          {'\u2022'} Wheelbase:{' '}
-                          {setupData.measurementUnits === 'imperial'
-                            ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
-                            : `${typical.wheelbase} cm`}
-                        </Text>
-                        <Text
-                          style={[styles.measurementHint, { color: screenColors.textSecondary }]}
-                        >
-                          Distance between front and rear axles
-                        </Text>
-                      </View>
-                    )}
-                    <View style={styles.measurementItem}>
-                      <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
-                        {'\u2022'} Track Width:{' '}
-                        {setupData.measurementUnits === 'imperial'
-                          ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
-                          : `${typical.track} cm`}
-                      </Text>
-                      <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
-                        Distance between left and right wheels
-                      </Text>
-                    </View>
-                    {/* Hitch Offset - only for trailers (single axle + tongue jack) */}
-                    {setupData.vehicleType === 'trailer' && typical.hitch && (
-                      <View style={styles.measurementItem}>
-                        <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
-                          {'\u2022'} Hitch Offset:{' '}
-                          {setupData.measurementUnits === 'imperial'
-                            ? `${convertToInches(typical.hitch, setupData.measurementUnits)}"`
-                            : `${typical.hitch} cm`}
-                        </Text>
-                        <Text
-                          style={[styles.measurementHint, { color: screenColors.textSecondary }]}
-                        >
-                          Distance from rear axle center to hitch ball
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
+              <TextInput
+                style={[
+                  styles.vehicleNameInput,
+                  {
+                    backgroundColor: screenColors.input,
+                    borderColor: vehicleNameTaken ? '#ef4444' : screenColors.inputBorder,
+                    color: screenColors.text,
+                  },
+                ]}
+                placeholder={`e.g., "Big Blue"`}
+                placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
+                value={setupData.vehicleName}
+                onChangeText={(text) => setSetupData((prev) => ({ ...prev, vehicleName: text }))}
+                selectTextOnFocus={true}
+                autoFocus={true}
+              />
+              {vehicleNameTaken && (
+                <Text style={styles.errorText}>A vehicle with this name already exists</Text>
               )}
+            </View>
 
-              {/* Custom Measurements Input */}
-              {setupData.useCustomMeasurements && (
-                <View style={styles.customMeasurementsContainer}>
+            {/* Measurements Section */}
+            <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
+              <View style={styles.infoCardContent}>
+                <View style={styles.blockHeaderRow}>
+                  <Ruler size={20} color="#a855f7" />
+                  <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
+                    Vehicle Measurements
+                  </Text>
+                </View>
+                <View style={styles.switchRow}>
+                  <GlassToggle
+                    value={setupData.useCustomMeasurements}
+                    onValueChange={(checked) =>
+                      setSetupData((prev) => ({ ...prev, useCustomMeasurements: checked }))
+                    }
+                  />
+                  <Text style={[styles.switchLabel, { color: screenColors.text }]}>
+                    I know my exact measurements
+                  </Text>
+                </View>
+                <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
+                  {setupData.useCustomMeasurements
+                    ? 'Enter your vehicle measurements below for more accurate leveling calculations.'
+                    : `We'll use typical measurements for a ${selectedVehicleType?.name}. You can adjust these later in Profiles.`}
+                </Text>
+              </View>
+            </View>
+
+            {/* Default Measurements Display */}
+            {!setupData.useCustomMeasurements && typical && (
+              <View
+                style={[
+                  styles.measurementsSummary,
+                  {
+                    backgroundColor: screenColors.surface,
+                    borderColor: screenColors.surfaceBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.measurementsSummaryTitle, { color: screenColors.textSecondary }]}
+                >
+                  Default measurements:
+                </Text>
+                <View style={styles.measurementsList}>
                   {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
                   {setupData.vehicleType !== 'trailer' && (
-                    <View style={styles.measurementInputRow}>
-                      <View style={styles.measurementInputContainer}>
-                        <Text style={[styles.inputLabel, { color: screenColors.text }]}>
-                          Wheelbase ({unitLabel})
-                        </Text>
-                        <TextInput
-                          style={[
-                            styles.textInput,
-                            {
-                              backgroundColor: screenColors.input,
-                              borderColor: screenColors.inputBorder,
-                              color: screenColors.text,
-                            },
-                          ]}
-                          placeholder={typical ? String(typical.wheelbase) : '240'}
-                          placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
-                          keyboardType="decimal-pad"
-                          value={String(
-                            setupData.measurementUnits === 'imperial'
-                              ? setupData.wheelbaseInches
-                              : Math.round(setupData.wheelbaseInches * 2.54)
-                          )}
-                          onChangeText={(text) => {
-                            const value = parseFloat(text) || 0;
-                            const inches =
-                              setupData.measurementUnits === 'imperial' ? value : value / 2.54;
-                            setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
-                          }}
-                          onFocus={() => {
-                            globalThis.setTimeout(() => {
-                              scrollViewRef.current?.scrollToEnd({ animated: true });
-                            }, 300);
-                          }}
-                          selectTextOnFocus={true}
-                        />
-                        <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
-                          Distance between front and rear axles
-                        </Text>
-                      </View>
+                    <View style={styles.measurementItem}>
+                      <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
+                        {'\u2022'} Wheelbase:{' '}
+                        {setupData.measurementUnits === 'imperial'
+                          ? `${convertToInches(typical.wheelbase, setupData.measurementUnits)}"`
+                          : `${typical.wheelbase} cm`}
+                      </Text>
+                      <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                        Distance between front and rear axles
+                      </Text>
                     </View>
                   )}
+                  <View style={styles.measurementItem}>
+                    <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
+                      {'\u2022'} Track Width:{' '}
+                      {setupData.measurementUnits === 'imperial'
+                        ? `${convertToInches(typical.track, setupData.measurementUnits)}"`
+                        : `${typical.track} cm`}
+                    </Text>
+                    <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                      Distance between left and right wheels
+                    </Text>
+                  </View>
+                  {/* Hitch Offset - only for trailers (single axle + tongue jack) */}
+                  {setupData.vehicleType === 'trailer' && typical.hitch && (
+                    <View style={styles.measurementItem}>
+                      <Text style={[styles.measurementLabel, { color: screenColors.text }]}>
+                        {'\u2022'} Hitch Offset:{' '}
+                        {setupData.measurementUnits === 'imperial'
+                          ? `${convertToInches(typical.hitch, setupData.measurementUnits)}"`
+                          : `${typical.hitch} cm`}
+                      </Text>
+                      <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
+                        Distance from rear axle center to hitch ball
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
 
-                  {/* Track Width */}
+            {/* Custom Measurements Input */}
+            {setupData.useCustomMeasurements && (
+              <View style={styles.customMeasurementsContainer}>
+                {/* Wheelbase - only for motorhomes/vans (vehicles with 2 axles) */}
+                {setupData.vehicleType !== 'trailer' && (
                   <View style={styles.measurementInputRow}>
                     <View style={styles.measurementInputContainer}>
                       <Text style={[styles.inputLabel, { color: screenColors.text }]}>
-                        Track Width ({unitLabel})
+                        Wheelbase ({unitLabel})
                       </Text>
                       <TextInput
                         style={[
@@ -873,19 +911,19 @@ export default function OnboardingScreen() {
                             color: screenColors.text,
                           },
                         ]}
-                        placeholder={typical ? String(typical.track) : '96'}
+                        placeholder={typical ? String(typical.wheelbase) : '240'}
                         placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
                         keyboardType="decimal-pad"
                         value={String(
                           setupData.measurementUnits === 'imperial'
-                            ? setupData.trackWidthInches
-                            : Math.round(setupData.trackWidthInches * 2.54)
+                            ? setupData.wheelbaseInches
+                            : Math.round(setupData.wheelbaseInches * 2.54)
                         )}
                         onChangeText={(text) => {
                           const value = parseFloat(text) || 0;
                           const inches =
                             setupData.measurementUnits === 'imperial' ? value : value / 2.54;
-                          setSetupData((prev) => ({ ...prev, trackWidthInches: inches }));
+                          setSetupData((prev) => ({ ...prev, wheelbaseInches: inches }));
                         }}
                         onFocus={() => {
                           globalThis.setTimeout(() => {
@@ -895,60 +933,102 @@ export default function OnboardingScreen() {
                         selectTextOnFocus={true}
                       />
                       <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
-                        Distance between left and right wheels
+                        Distance between front and rear axles
                       </Text>
                     </View>
                   </View>
+                )}
 
-                  {/* Hitch Offset (only for trailers) */}
-                  {setupData.vehicleType === 'trailer' && (
-                    <View style={styles.measurementInputRow}>
-                      <View style={styles.measurementInputContainer}>
-                        <Text style={[styles.inputLabel, { color: screenColors.text }]}>
-                          Hitch Offset ({unitLabel})
-                        </Text>
-                        <TextInput
-                          style={[
-                            styles.textInput,
-                            {
-                              backgroundColor: screenColors.input,
-                              borderColor: screenColors.inputBorder,
-                              color: screenColors.text,
-                            },
-                          ]}
-                          placeholder={typical?.hitch ? String(typical.hitch) : '120'}
-                          placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
-                          keyboardType="decimal-pad"
-                          value={String(
-                            setupData.measurementUnits === 'imperial'
-                              ? setupData.hitchOffsetInches
-                              : Math.round(setupData.hitchOffsetInches * 2.54)
-                          )}
-                          onChangeText={(text) => {
-                            const value = parseFloat(text) || 0;
-                            const inches =
-                              setupData.measurementUnits === 'imperial' ? value : value / 2.54;
-                            setSetupData((prev) => ({ ...prev, hitchOffsetInches: inches }));
-                          }}
-                          onFocus={() => {
-                            globalThis.setTimeout(() => {
-                              scrollViewRef.current?.scrollToEnd({ animated: true });
-                            }, 300);
-                          }}
-                          selectTextOnFocus={true}
-                        />
-                        <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
-                          Distance from rear axle center to hitch ball
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+                {/* Track Width */}
+                <View style={styles.measurementInputRow}>
+                  <View style={styles.measurementInputContainer}>
+                    <Text style={[styles.inputLabel, { color: screenColors.text }]}>
+                      Track Width ({unitLabel})
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        {
+                          backgroundColor: screenColors.input,
+                          borderColor: screenColors.inputBorder,
+                          color: screenColors.text,
+                        },
+                      ]}
+                      placeholder={typical ? String(typical.track) : '96'}
+                      placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
+                      keyboardType="decimal-pad"
+                      value={String(
+                        setupData.measurementUnits === 'imperial'
+                          ? setupData.trackWidthInches
+                          : Math.round(setupData.trackWidthInches * 2.54)
+                      )}
+                      onChangeText={(text) => {
+                        const value = parseFloat(text) || 0;
+                        const inches =
+                          setupData.measurementUnits === 'imperial' ? value : value / 2.54;
+                        setSetupData((prev) => ({ ...prev, trackWidthInches: inches }));
+                      }}
+                      onFocus={() => {
+                        globalThis.setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 300);
+                      }}
+                      selectTextOnFocus={true}
+                    />
+                    <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
+                      Distance between left and right wheels
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </View>
-          </GlassCard>
-        </View>
-      </ScrollView>
+
+                {/* Hitch Offset (only for trailers) */}
+                {setupData.vehicleType === 'trailer' && (
+                  <View style={styles.measurementInputRow}>
+                    <View style={styles.measurementInputContainer}>
+                      <Text style={[styles.inputLabel, { color: screenColors.text }]}>
+                        Hitch Offset ({unitLabel})
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.textInput,
+                          {
+                            backgroundColor: screenColors.input,
+                            borderColor: screenColors.inputBorder,
+                            color: screenColors.text,
+                          },
+                        ]}
+                        placeholder={typical?.hitch ? String(typical.hitch) : '120'}
+                        placeholderTextColor={isDark ? '#737373' : '#9ca3af'}
+                        keyboardType="decimal-pad"
+                        value={String(
+                          setupData.measurementUnits === 'imperial'
+                            ? setupData.hitchOffsetInches
+                            : Math.round(setupData.hitchOffsetInches * 2.54)
+                        )}
+                        onChangeText={(text) => {
+                          const value = parseFloat(text) || 0;
+                          const inches =
+                            setupData.measurementUnits === 'imperial' ? value : value / 2.54;
+                          setSetupData((prev) => ({ ...prev, hitchOffsetInches: inches }));
+                        }}
+                        onFocus={() => {
+                          globalThis.setTimeout(() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                          }, 300);
+                        }}
+                        selectTextOnFocus={true}
+                      />
+                      <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
+                        Distance from rear axle center to hitch ball
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </GlassCard>
+      </View>
     );
   }
 
@@ -1044,180 +1124,181 @@ export default function OnboardingScreen() {
     };
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.stepContent}>
-          <IconBox variant="success">
-            <Package size={36} color="#22c55e" />
-          </IconBox>
+      <View style={styles.stepContent}>
+        <IconBox variant="success">
+          <Package size={36} color="#22c55e" />
+        </IconBox>
 
-          <View style={styles.titleContainer}>
-            <Text style={[styles.stepTitle, { color: screenColors.text }]}>Leveling Blocks</Text>
-            <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
-              Build your block inventory
-            </Text>
-          </View>
+        <View style={styles.titleContainer}>
+          <Text style={[styles.stepTitle, { color: screenColors.text }]}>Leveling Blocks</Text>
+          <Text style={[styles.stepSubtitle, { color: screenColors.textSecondary }]}>
+            Build your block inventory
+          </Text>
+        </View>
 
-          <GlassCard variant="default">
-            <View style={styles.cardContent}>
-              <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
-                <View style={styles.infoCardContent}>
-                  <View style={styles.blockHeaderRow}>
-                    <Package size={20} color="#3b82f6" />
-                    <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
-                      Block Inventory
-                    </Text>
-                  </View>
-                  <View style={styles.switchRow}>
-                    <Switch
-                      value={setupData.hasLevelingBlocks}
-                      onValueChange={(checked) =>
-                        setSetupData((prev) => ({ ...prev, hasLevelingBlocks: checked }))
-                      }
-                      trackColor={{ false: isDark ? '#555' : '#d1d5db', true: '#3b82f6' }}
-                      thumbColor="#fff"
-                    />
-                    <Text style={[styles.switchLabel, { color: screenColors.text }]}>
-                      {setupData.hasLevelingBlocks
-                        ? 'I have leveling blocks'
-                        : "I don't have leveling blocks"}
-                    </Text>
-                  </View>
-                  <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
-                    {setupData.hasLevelingBlocks
-                      ? "Tap the trash icon to remove sizes you don't have. Add custom sizes with the button below."
-                      : 'No problem! The app will show you exact measurements instead.'}
+        <GlassCard variant="default">
+          <View style={styles.cardContent}>
+            <View style={[styles.infoCard, { backgroundColor: screenColors.infoCard }]}>
+              <View style={styles.infoCardContent}>
+                <View style={styles.blockHeaderRow}>
+                  <Package size={20} color="#3b82f6" />
+                  <Text style={[styles.infoCardTitle, { color: screenColors.text }]}>
+                    Block Inventory
                   </Text>
                 </View>
-              </View>
-
-              {setupData.hasLevelingBlocks && (
-                <View style={styles.blocksSection}>
-                  <Text style={[styles.blocksSectionTitle, { color: screenColors.text }]}>
-                    Your block sizes:
+                <View style={styles.switchRow}>
+                  <GlassToggle
+                    value={setupData.hasLevelingBlocks}
+                    onValueChange={(checked) =>
+                      setSetupData((prev) => ({ ...prev, hasLevelingBlocks: checked }))
+                    }
+                  />
+                  <Text style={[styles.switchLabel, { color: screenColors.text }]}>
+                    {setupData.hasLevelingBlocks
+                      ? 'I have leveling blocks'
+                      : "I don't have leveling blocks"}
                   </Text>
+                </View>
+                <Text style={[styles.infoCardText, { color: screenColors.textSecondary }]}>
+                  {setupData.hasLevelingBlocks
+                    ? "Tap the trash icon to remove sizes you don't have. Add custom sizes with the button below."
+                    : 'No problem! The app will show you exact measurements instead.'}
+                </Text>
+              </View>
+            </View>
 
-                  <View style={styles.optionsContainer}>
-                    {sortedHeights.map((height) => {
-                      const quantity = setupData.blockQuantities[height] || 0;
-                      const hasBlocks = quantity > 0;
+            {setupData.hasLevelingBlocks && (
+              <View style={styles.blocksSection}>
+                <Text style={[styles.blocksSectionTitle, { color: screenColors.text }]}>
+                  Your block sizes:
+                </Text>
 
-                      return (
-                        <View
-                          key={height}
-                          style={[
-                            styles.blockOption,
-                            {
-                              backgroundColor: screenColors.optionCard,
-                              borderColor: screenColors.optionCardBorder,
-                            },
-                            hasBlocks && styles.blockOptionSelected,
-                          ]}
-                        >
-                          <View style={styles.blockQuantityRow}>
+                <View style={styles.optionsContainer}>
+                  {sortedHeights.map((height) => {
+                    const quantity = setupData.blockQuantities[height] || 0;
+                    const hasBlocks = quantity > 0;
+
+                    return (
+                      <View
+                        key={height}
+                        style={[
+                          styles.blockOption,
+                          {
+                            backgroundColor: screenColors.optionCard,
+                            borderColor: screenColors.optionCardBorder,
+                          },
+                          hasBlocks && styles.blockOptionSelected,
+                        ]}
+                      >
+                        <View style={styles.blockQuantityRow}>
+                          <TouchableOpacity
+                            style={styles.deleteBlockButton}
+                            onPress={() => deleteBlockSize(height)}
+                            activeOpacity={0.6}
+                          >
+                            <Trash2 size={18} color="#ef4444" />
+                          </TouchableOpacity>
+                          <View style={styles.blockInfoSection}>
+                            <Text style={[styles.optionTitle, { color: screenColors.text }]}>
+                              {formatHeight(height)}
+                            </Text>
+                          </View>
+                          <View style={styles.quantityControls}>
                             <TouchableOpacity
-                              style={styles.deleteBlockButton}
-                              onPress={() => deleteBlockSize(height)}
+                              style={[
+                                styles.quantityButton,
+                                {
+                                  backgroundColor: screenColors.quantityButton,
+                                  borderColor: screenColors.quantityButtonBorder,
+                                },
+                                quantity === 0 && styles.quantityButtonDisabled,
+                              ]}
+                              onPress={() => updateBlockQuantity(height, -1)}
+                              disabled={quantity === 0}
                               activeOpacity={0.6}
+                              delayPressIn={0}
                             >
-                              <Trash2 size={18} color="#ef4444" />
-                            </TouchableOpacity>
-                            <View style={styles.blockInfoSection}>
-                              <Text style={[styles.optionTitle, { color: screenColors.text }]}>
-                                {formatHeight(height)}
-                              </Text>
-                            </View>
-                            <View style={styles.quantityControls}>
-                              <TouchableOpacity
-                                style={[
-                                  styles.quantityButton,
-                                  {
-                                    backgroundColor: screenColors.quantityButton,
-                                    borderColor: screenColors.quantityButtonBorder,
-                                  },
-                                  quantity === 0 && styles.quantityButtonDisabled,
-                                ]}
-                                onPress={() => updateBlockQuantity(height, -1)}
-                                disabled={quantity === 0}
-                                activeOpacity={0.6}
-                                delayPressIn={0}
-                              >
-                                <Text
-                                  style={[styles.quantityButtonText, { color: screenColors.text }]}
-                                >
-                                  −
-                                </Text>
-                              </TouchableOpacity>
                               <Text
-                                style={[
-                                  styles.quantityValue,
-                                  { color: screenColors.textSecondary },
-                                  hasBlocks && styles.quantityValueActive,
-                                ]}
+                                style={[styles.quantityButtonText, { color: screenColors.text }]}
                               >
-                                {quantity}
+                                −
                               </Text>
-                              <TouchableOpacity
-                                style={[
-                                  styles.quantityButton,
-                                  {
-                                    backgroundColor: screenColors.quantityButton,
-                                    borderColor: screenColors.quantityButtonBorder,
-                                  },
-                                ]}
-                                onPress={() => updateBlockQuantity(height, 1)}
-                                activeOpacity={0.6}
-                                delayPressIn={0}
+                            </TouchableOpacity>
+                            <Text
+                              style={[
+                                styles.quantityValue,
+                                { color: screenColors.textSecondary },
+                                hasBlocks && styles.quantityValueActive,
+                              ]}
+                            >
+                              {quantity}
+                            </Text>
+                            <TouchableOpacity
+                              style={[
+                                styles.quantityButton,
+                                {
+                                  backgroundColor: screenColors.quantityButton,
+                                  borderColor: screenColors.quantityButtonBorder,
+                                },
+                              ]}
+                              onPress={() => updateBlockQuantity(height, 1)}
+                              activeOpacity={0.6}
+                              delayPressIn={0}
+                            >
+                              <Text
+                                style={[styles.quantityButtonText, { color: screenColors.text }]}
                               >
-                                <Text
-                                  style={[styles.quantityButtonText, { color: screenColors.text }]}
-                                >
-                                  +
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
+                                +
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                         </View>
-                      );
-                    })}
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {totalBlocks > 0 && (
+                  <View style={styles.selectedBlocksCard}>
+                    <Text style={styles.selectedBlocksText}>
+                      ✓ Total inventory: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} (
+                      {sortedHeights.length} size{sortedHeights.length !== 1 ? 's' : ''})
+                    </Text>
                   </View>
+                )}
 
-                  {totalBlocks > 0 && (
-                    <View style={styles.selectedBlocksCard}>
-                      <Text style={styles.selectedBlocksText}>
-                        ✓ Total inventory: {totalBlocks} block{totalBlocks !== 1 ? 's' : ''} (
-                        {sortedHeights.length} size{sortedHeights.length !== 1 ? 's' : ''})
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Add Block Size Button/Input */}
-                  {!setupData.showAddBlockInput ? (
-                    <TouchableOpacity
-                      style={[styles.addBlockButton, { backgroundColor: screenColors.addBlockBg }]}
-                      onPress={() => {
-                        // Reset ref and increment key for clean state
-                        newBlockHeightRef.current = '';
-                        setAddInputKey((k) => k + 1);
-                        setSetupData((prev) => ({ ...prev, showAddBlockInput: true }));
-                      }}
+                {/* Add Block Size Button/Input */}
+                {!setupData.showAddBlockInput ? (
+                  <TouchableOpacity
+                    style={[styles.addBlockButton, { backgroundColor: screenColors.addBlockBg }]}
+                    onPress={() => {
+                      // Reset ref and increment key for clean state
+                      newBlockHeightRef.current = '';
+                      setAddInputKey((k) => k + 1);
+                      setSetupData((prev) => ({ ...prev, showAddBlockInput: true }));
+                      // Scroll to show the input above keyboard
+                      globalThis.setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 150);
+                    }}
+                  >
+                    <Plus size={20} color="#3b82f6" />
+                    <Text style={styles.addBlockButtonText}>Add Block Size</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View
+                    key={addInputKey}
+                    style={[
+                      styles.addBlockInputContainer,
+                      { backgroundColor: screenColors.addBlockInputBg },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.addBlockInputLabel, { color: screenColors.textSecondary }]}
                     >
-                      <Plus size={20} color="#3b82f6" />
-                      <Text style={styles.addBlockButtonText}>Add Block Size</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View
-                      key={addInputKey}
-                      style={[
-                        styles.addBlockInputContainer,
-                        { backgroundColor: screenColors.addBlockInputBg },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.addBlockInputLabel, { color: screenColors.textSecondary }]}
-                      >
-                        Enter height ({setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}
-                        ):
-                      </Text>
+                      Height ({setupData.measurementUnits === 'imperial' ? 'inches' : 'cm'}):
+                    </Text>
+                    <View style={styles.addBlockInputRow}>
                       <TextInput
                         ref={blockInputRef}
                         style={[
@@ -1245,43 +1326,39 @@ export default function OnboardingScreen() {
                         autoFocus
                         selectTextOnFocus={true}
                       />
-                      <View style={styles.addBlockButtonRow}>
-                        <GlassButton
-                          variant="primary"
-                          size="md"
-                          style={{ flex: 1 }}
-                          onPress={() => {
-                            Keyboard.dismiss();
-                            addBlockSize();
-                          }}
-                        >
-                          Add
-                        </GlassButton>
-                        <GlassButton
-                          variant="default"
-                          size="md"
-                          style={{ flex: 1 }}
-                          onPress={() => {
-                            Keyboard.dismiss();
-                            newBlockHeightRef.current = '';
-                            setSetupData((prev) => ({
-                              ...prev,
-                              showAddBlockInput: false,
-                              newBlockHeight: '',
-                            }));
-                          }}
-                        >
-                          Cancel
-                        </GlassButton>
-                      </View>
+                      <GlassButton
+                        variant="primary"
+                        size="sm"
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          addBlockSize();
+                        }}
+                      >
+                        Add
+                      </GlassButton>
+                      <GlassButton
+                        variant="default"
+                        size="sm"
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          newBlockHeightRef.current = '';
+                          setSetupData((prev) => ({
+                            ...prev,
+                            showAddBlockInput: false,
+                            newBlockHeight: '',
+                          }));
+                        }}
+                      >
+                        Cancel
+                      </GlassButton>
                     </View>
-                  )}
-                </View>
-              )}
-            </View>
-          </GlassCard>
-        </View>
-      </ScrollView>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </GlassCard>
+      </View>
     );
   }
 
@@ -1430,7 +1507,7 @@ export default function OnboardingScreen() {
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.scrollContentContainer}
+              contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: 40 }]}
             >
               <View style={styles.scrollContent}>{currentStepData.component()}</View>
             </ScrollView>
@@ -1632,6 +1709,35 @@ const styles = StyleSheet.create({
     color: THEME.colors.text,
     marginRight: 8,
     lineHeight: 22,
+  },
+  // Tips & Features screen styles
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.15)',
+  },
+  featureIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  featureTextContainer: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   bulletText: {
     fontSize: 16,
@@ -2030,19 +2136,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addBlockTextInput: {
-    width: '100%',
-    padding: 14,
+    width: 80,
+    padding: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     color: THEME.colors.text,
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
   },
-  addBlockButtonRow: {
+  addBlockInputRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   addBlockConfirmButton: {
     flex: 1,

@@ -8,6 +8,7 @@ import {
   Modal,
   Animated,
   ScrollView,
+  Platform,
 } from 'react-native';
 import Svg, {
   Path,
@@ -17,7 +18,6 @@ import Svg, {
   Stop,
   Ellipse,
 } from 'react-native-svg';
-import { useKeepAwake } from 'expo-keep-awake';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaSimulator } from '../../src/components/SafeAreaSimulator';
 import {
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react-native';
 import { MotorhomeIcon, VanIcon } from '../../src/components/icons/VehicleIcons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Platform } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useDeviceAttitude } from '../../src/hooks/useDeviceAttitude';
@@ -44,16 +44,12 @@ import { GlassButton } from '../../src/components/ui/GlassButton';
 
 import { useAppStore } from '../../src/state/appStore';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useLevelSounds } from '../../src/hooks/useLevelSounds';
 import {
   applyCalibration,
   calculateCalibrationOffsets,
   getLevelStatus,
 } from '../../src/lib/calibration';
-
-function KeepAwakeWrapper() {
-  useKeepAwake();
-  return null;
-}
 
 // Get cardinal direction from heading
 function getCardinalDirection(heading: number): string {
@@ -77,6 +73,16 @@ export default function LevelScreen() {
   const insets = useSafeInsets();
   const theme = useTheme();
   const isDark = theme.mode === 'dark';
+  const isFocused = useIsFocused(); // Track if this tab is active
+
+  // Calculate if bubble level is visible (for audio/haptic feedback)
+  const bubbleLevelVisible = isFocused && !showLevelingAssistant;
+
+  // Level sounds (repeating when bubble is in level zone)
+  const { updateAudioFeedback, stopRepeating } = useLevelSounds({
+    enabled: settings.audioEnabled,
+    isActive: bubbleLevelVisible,
+  });
 
   // Theme-aware colors for this screen
   const screenColors = {
@@ -157,6 +163,11 @@ export default function LevelScreen() {
   const [justCalibratedFromHome, setJustCalibratedFromHome] = useState(false);
   const [modalAnimation] = useState(new Animated.Value(0));
 
+  // Track if scrolling is needed (content taller than container)
+  const [scrollEnabled, setScrollEnabled] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+
   // Halo animations for status text
   const perfectGlowOpacity = useRef(new Animated.Value(0)).current;
   const nearlyGlowOpacity = useRef(new Animated.Value(0)).current;
@@ -170,6 +181,18 @@ export default function LevelScreen() {
       router.setParams({ showLeveling: undefined });
     }
   }, [showLeveling, setShowLevelingAssistant]);
+
+  // Enable scrolling only when content is taller than container
+  useEffect(() => {
+    if (contentHeight > 0 && containerHeight > 0) {
+      // The scrollContent has paddingBottom: 90 for tab bar spacing.
+      // This padding is included in contentHeight, so we need to account for it.
+      // Only enable scrolling if actual content (minus padding) exceeds container.
+      const CONTENT_PADDING_BOTTOM = 90;
+      const actualContentHeight = contentHeight - CONTENT_PADDING_BOTTOM;
+      setScrollEnabled(actualContentHeight > containerHeight);
+    }
+  }, [contentHeight, containerHeight]);
 
   const requestSensorPermission = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -208,7 +231,11 @@ export default function LevelScreen() {
       setSafetyWarningDismissed(false);
     }
 
-    if (settings.hapticsEnabled) {
+    // Determine if at perfect level vs just level
+    const isPerfect = status.description === 'Perfect Level!';
+
+    // Haptic feedback (one-shot when crossing level threshold)
+    if (settings.hapticsEnabled && bubbleLevelVisible) {
       if (status.isLevel && !lastHapticLevel) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else if (!status.isLevel && lastHapticLevel) {
@@ -217,9 +244,14 @@ export default function LevelScreen() {
       setLastHapticLevel(status.isLevel);
     }
 
-    // Determine target glow state and intensity
-    // "Perfect Level!" gets full intensity (1.0), "Level" gets reduced (0.6)
-    const isPerfect = status.description === 'Perfect Level!';
+    // Audio feedback (repeating while in level zone, speed varies with deviation)
+    // Calculate total deviation from level (using max of pitch/roll for consistency)
+    const totalDeviation = Math.max(Math.abs(calibrated.pitch), Math.abs(calibrated.roll));
+    if (bubbleLevelVisible && settings.audioEnabled) {
+      updateAudioFeedback(totalDeviation, settings.levelThreshold);
+    } else {
+      stopRepeating();
+    }
     const targetGlow: 'none' | 'green' | 'green-perfect' | 'yellow' = status.isLevel
       ? isPerfect
         ? 'green-perfect'
@@ -282,12 +314,16 @@ export default function LevelScreen() {
     rollDeg,
     activeProfile,
     settings.hapticsEnabled,
+    settings.audioEnabled,
     settings.levelThreshold,
     lastHapticLevel,
     cautionDismissed,
     safetyWarningDismissed,
     perfectGlowOpacity,
     nearlyGlowOpacity,
+    bubbleLevelVisible,
+    updateAudioFeedback,
+    stopRepeating,
   ]);
 
   const handleCalibrate = () => {
@@ -457,12 +493,19 @@ export default function LevelScreen() {
 
   return (
     <LinearGradient colors={screenColors.gradientColors} style={styles.gradient}>
-      {Platform.OS !== 'web' && settings.keepAwake && <KeepAwakeWrapper />}
       <SafeAreaSimulator style={styles.safeArea} showIndicators={false}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            // Center content vertically when scrolling is disabled
+            !scrollEnabled && { flexGrow: 1, justifyContent: 'center' },
+          ]}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollEnabled}
+          bounces={scrollEnabled}
+          onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_, height) => setContentHeight(height)}
         >
           {/* Caution Warning (yellow) - 6° to 10° */}
           {showCaution && (

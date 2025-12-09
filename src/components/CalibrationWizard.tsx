@@ -292,8 +292,27 @@ export function CalibrationWizard({
   const [isCapturing, setIsCapturing] = useState(false);
   const [result, setResult] = useState<MultiPositionCalibrationResult | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showMotionWarning, setShowMotionWarning] = useState(false);
 
-  const { pitchDeg, rollDeg, isReliable } = useDeviceAttitude();
+  const { pitchDeg, rollDeg, yawDeg, isReliable } = useDeviceAttitude();
+
+  // Keep refs to current sensor values for motion detection sampling
+  const pitchRef = React.useRef(pitchDeg);
+  const rollRef = React.useRef(rollDeg);
+  const yawRef = React.useRef(yawDeg);
+
+  // Update refs whenever sensor values change
+  React.useEffect(() => {
+    pitchRef.current = pitchDeg;
+    rollRef.current = rollDeg;
+    yawRef.current = yawDeg;
+  }, [pitchDeg, rollDeg, yawDeg]);
+
+  // Motion detection settings
+  const MOTION_SAMPLE_DURATION = 400; // ms to sample for motion
+  const MOTION_SAMPLE_INTERVAL = 50; // ms between samples
+  const MOTION_THRESHOLD = 1.5; // degrees - max allowed pitch/roll deviation during capture
+  const YAW_MOTION_THRESHOLD = 3.0; // degrees - max allowed yaw/spin deviation (more forgiving since compass can be jittery)
   // Animation values
   const containerRotation = useSharedValue(0);
   const contentOpacity = useSharedValue(1);
@@ -364,45 +383,96 @@ export function CalibrationWizard({
       withTiming(0, { duration: 500 })
     );
 
-    // Take reading after brief delay for visual feedback
-    globalThis.setTimeout(() => {
-      const reading = createOrientedReading(pitchDeg, rollDeg, config.orientation as 0 | 90 | 180);
-      const newReadings = [...readings, reading];
-      setReadings(newReadings);
+    // Collect samples to detect motion during capture
+    // Use refs to get LIVE sensor values, not stale closure values
+    const samples: { pitch: number; roll: number; yaw: number }[] = [];
+    const sampleCount = Math.floor(MOTION_SAMPLE_DURATION / MOTION_SAMPLE_INTERVAL);
+    let samplesCollected = 0;
 
-      // Determine next step - go to transition screen first
-      if (config.orientation === 0) {
-        contentOpacity.value = withSequence(
-          withTiming(0, { duration: 150 }),
-          withTiming(1, { duration: 150 })
-        );
-        globalThis.setTimeout(() => {
-          setCurrentStep('transition_to_90'); // Go to transition screen
+    const sampleInterval = globalThis.setInterval(() => {
+      // Read current values from refs (live data)
+      samples.push({ pitch: pitchRef.current, roll: rollRef.current, yaw: yawRef.current });
+      samplesCollected++;
+
+      if (samplesCollected >= sampleCount) {
+        globalThis.clearInterval(sampleInterval);
+
+        // Check for motion - calculate max deviation from first sample
+        const firstSample = samples[0];
+        let maxPitchDev = 0;
+        let maxRollDev = 0;
+        let maxYawDev = 0;
+
+        for (const sample of samples) {
+          const pitchDev = Math.abs(sample.pitch - firstSample.pitch);
+          const rollDev = Math.abs(sample.roll - firstSample.roll);
+          // Handle yaw wraparound (0° to 360°)
+          let yawDev = Math.abs(sample.yaw - firstSample.yaw);
+          if (yawDev > 180) yawDev = 360 - yawDev; // Handle crossing 0°/360° boundary
+
+          maxPitchDev = Math.max(maxPitchDev, pitchDev);
+          maxRollDev = Math.max(maxRollDev, rollDev);
+          maxYawDev = Math.max(maxYawDev, yawDev);
+        }
+
+        const hasMotion =
+          maxPitchDev > MOTION_THRESHOLD ||
+          maxRollDev > MOTION_THRESHOLD ||
+          maxYawDev > YAW_MOTION_THRESHOLD;
+
+        if (hasMotion) {
+          // Motion detected - show warning and abort capture
           setIsCapturing(false);
-        }, 150);
-      } else if (config.orientation === 90) {
-        contentOpacity.value = withSequence(
-          withTiming(0, { duration: 150 }),
-          withTiming(1, { duration: 150 })
+          setShowMotionWarning(true);
+          return;
+        }
+
+        // No motion - use the average of all samples for a more stable reading
+        const avgPitch = samples.reduce((sum, s) => sum + s.pitch, 0) / samples.length;
+        const avgRoll = samples.reduce((sum, s) => sum + s.roll, 0) / samples.length;
+
+        const reading = createOrientedReading(
+          avgPitch,
+          avgRoll,
+          config.orientation as 0 | 90 | 180
         );
-        globalThis.setTimeout(() => {
-          setCurrentStep('transition_to_180'); // Go to transition screen
-          setIsCapturing(false);
-        }, 150);
-      } else if (config.orientation === 180) {
-        // All readings complete - solve calibration
-        const calibrationResult = solveMultiPositionCalibration(newReadings);
-        setResult(calibrationResult);
-        contentOpacity.value = withSequence(
-          withTiming(0, { duration: 150 }),
-          withTiming(1, { duration: 150 })
-        );
-        globalThis.setTimeout(() => {
-          setCurrentStep('complete');
-          setIsCapturing(false);
-        }, 150);
+        const newReadings = [...readings, reading];
+        setReadings(newReadings);
+
+        // Determine next step - go to transition screen first
+        if (config.orientation === 0) {
+          contentOpacity.value = withSequence(
+            withTiming(0, { duration: 150 }),
+            withTiming(1, { duration: 150 })
+          );
+          globalThis.setTimeout(() => {
+            setCurrentStep('transition_to_90'); // Go to transition screen
+            setIsCapturing(false);
+          }, 150);
+        } else if (config.orientation === 90) {
+          contentOpacity.value = withSequence(
+            withTiming(0, { duration: 150 }),
+            withTiming(1, { duration: 150 })
+          );
+          globalThis.setTimeout(() => {
+            setCurrentStep('transition_to_180'); // Go to transition screen
+            setIsCapturing(false);
+          }, 150);
+        } else if (config.orientation === 180) {
+          // All readings complete - solve calibration
+          const calibrationResult = solveMultiPositionCalibration(newReadings);
+          setResult(calibrationResult);
+          contentOpacity.value = withSequence(
+            withTiming(0, { duration: 150 }),
+            withTiming(1, { duration: 150 })
+          );
+          globalThis.setTimeout(() => {
+            setCurrentStep('complete');
+            setIsCapturing(false);
+          }, 150);
+        }
       }
-    }, 300);
+    }, MOTION_SAMPLE_INTERVAL);
   }, [
     currentStep,
     isReliable,
@@ -886,6 +956,50 @@ export function CalibrationWizard({
                 style={styles.confirmModalButton}
               >
                 Cancel Anyway
+              </GlassButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Motion Warning Modal */}
+      <Modal
+        visible={showMotionWarning}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMotionWarning(false)}
+      >
+        <View
+          style={[
+            styles.confirmModalOverlay,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)' },
+          ]}
+        >
+          <View
+            style={[
+              styles.confirmModalContent,
+              {
+                transform: [{ rotate: `${config.uiRotation}deg` }],
+                backgroundColor: screenColors.contentBg,
+                borderColor: screenColors.contentBorder,
+              },
+            ]}
+          >
+            <Text style={[styles.confirmModalTitle, { color: '#f97316' }]}>
+              Phone Movement Detected
+            </Text>
+            <Text style={[styles.confirmModalText, { color: screenColors.instructionText }]}>
+              Please keep your phone completely still while capturing the reading. Place it on a
+              stable surface and tap the button gently.
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <GlassButton
+                variant="warning"
+                size="md"
+                onPress={() => setShowMotionWarning(false)}
+                style={styles.confirmModalButton}
+              >
+                Try Again
               </GlassButton>
             </View>
           </View>

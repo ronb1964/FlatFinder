@@ -58,6 +58,48 @@ This keeps continuity between sessions so you don't start fresh every time.
    - **Screenshots cost tokens and money** - analyze them thoroughly the first time
    - **Example:** "The gap at center is -35px (overlapping), card width is 254px but should be 305px" NOT "looks parallel"
 
+7. **THEME CONSISTENCY IS MANDATORY** - The app has a "Liquid Glass" theme that MUST be consistent across ALL screens in BOTH dark and light modes:
+
+   **Before making ANY style change:**
+   - Check how similar elements are styled elsewhere in the app
+   - If adding/fixing styles for one component, check ALL similar components
+   - Never fix one input field without checking all input fields
+   - Never fix one button without checking all buttons of that type
+
+   **When implementing light mode support:**
+   - Light mode must maintain the glassy/frosted aesthetic - use translucent colors (rgba), not solid colors
+   - Input fields need visible backgrounds AND borders in light mode (the white card background makes subtle colors invisible)
+   - Test the SAME component in BOTH dark and light modes
+
+   **Glassy style requirements:**
+   - Use `rgba()` colors, not hex, to maintain translucency
+   - Light mode inputs: use blue-tinted translucent backgrounds like `rgba(100, 130, 180, 0.12)` with visible borders like `rgba(100, 130, 180, 0.35)`
+   - Cards should have subtle borders and translucent backgrounds
+   - Never use fully opaque backgrounds for interactive elements
+
+   **After ANY style change:**
+   - Ask yourself: "Does this change need to apply to other similar components?"
+   - Search for similar patterns in the codebase and update them ALL
+   - Don't wait for Ron to ask about consistency - proactively ensure it
+
+8. **KEYBOARD HANDLING IS MANDATORY** - Input fields must NEVER be hidden by the keyboard:
+
+   **Screen structure for keyboard support:**
+   - Every screen with input fields MUST have ONE `KeyboardAvoidingView` at the screen level (NOT nested)
+   - Use `behavior={Platform.OS === 'ios' ? 'padding' : 'height'}` for cross-platform support
+   - NEVER nest ScrollViews - use a single ScrollView at the screen level
+   - NEVER nest KeyboardAvoidingViews - only one per screen
+
+   **When creating/editing screens with inputs:**
+   - Ensure the outer ScrollView has `keyboardShouldPersistTaps="handled"`
+   - Add sufficient `paddingBottom` to `contentContainerStyle` (at least 40px)
+   - Use `scrollToEnd()` on input focus to ensure the input is visible
+   - Test keyboard behavior on ACTUAL device - browser doesn't show keyboard issues
+
+   **Common mistakes to avoid:**
+   - Don't put KeyboardAvoidingView or ScrollView inside step/render functions - use the screen's main wrappers
+   - Don't assume keyboard handling "just works" - always test with real keyboard
+
 ---
 
 ## Project Overview
@@ -118,6 +160,8 @@ All modals should follow this structure:
 
 ### Color Palette (from theme.ts)
 
+**Dark Mode (default):**
+
 - **Background**: `#111111` (near black)
 - **Surface**: `#1a1a1a` (dark gray)
 - **Primary**: `#3b82f6` (electric blue)
@@ -125,6 +169,17 @@ All modals should follow this structure:
 - **Warning**: `#eab308` (yellow)
 - **Danger**: `#ef4444` (red)
 - **Text**: `#fafafa` (white), `#a3a3a3` (secondary), `#737373` (muted)
+- **Inputs**: `rgba(255, 255, 255, 0.05)` bg, `rgba(255, 255, 255, 0.15)` border
+
+**Light Mode:**
+
+- **Background**: `#dce4ed` (light blue-gray)
+- **Cards**: `rgba(255, 255, 255, 0.9)` (frosted white)
+- **Text**: `#1a1a1a` (near black), `#525252` (secondary)
+- **Inputs**: `rgba(100, 130, 180, 0.12)` bg, `rgba(100, 130, 180, 0.35)` border (blue-tinted glassy)
+- **Borders**: Use `rgba(0, 0, 0, 0.08)` to `rgba(0, 0, 0, 0.15)` range
+
+**IMPORTANT:** Both modes use the same accent colors (Primary, Success, Warning, Danger). Light mode must maintain the glassy aesthetic with translucent colors.
 
 ## Key Files
 

@@ -59,7 +59,14 @@
       "mcp__playwright__browser_handle_dialog",
       "Bash(npx:*)",
       "Bash(find:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(timeout 10 npx expo:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:expo.dev)",
+      "Bash(grep:*)",
+      "Bash(ffmpeg:*)",
+      "mcp__expo__expo_router_sitemap"
     ],
     "deny": [],
     "ask": []

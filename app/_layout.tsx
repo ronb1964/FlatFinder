@@ -2,11 +2,18 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { OnboardingGate } from '../src/components/OnboardingGate';
 import { DebugControls } from '../src/components/DebugControls';
 import { useAppStore } from '../src/state/appStore';
 import { useTheme } from '../src/hooks/useTheme';
 import { useEffect } from 'react';
+
+// Component that activates keep awake when mounted
+function KeepAwakeWhenEnabled() {
+  useKeepAwake();
+  return null;
+}
 
 export default function RootLayout() {
   // Get the current theme (respects system + user preference)
@@ -14,12 +21,33 @@ export default function RootLayout() {
 
   const loadProfiles = useAppStore((state) => state.loadProfiles);
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const keepAwake = useAppStore((state) => state.settings.keepAwake);
 
   // Load profiles and settings on app startup
   useEffect(() => {
     loadProfiles();
     loadSettings();
   }, [loadProfiles, loadSettings]);
+
+  // Clear any stale keep awake locks on app start
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    // Clear locks with various tags that might have been left behind
+    ['level-screen', 'flatfinder-app'].forEach((tag) => {
+      try {
+        deactivateKeepAwake(tag);
+      } catch {
+        /* ignore */
+      }
+    });
+    // Also clear the default (no tag) keep awake
+    try {
+      deactivateKeepAwake();
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // Proper mobile viewport setup
   useEffect(() => {
@@ -45,6 +73,8 @@ export default function RootLayout() {
     <GestureHandlerRootView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {/* Keep screen awake when setting is enabled (native only) */}
+      {Platform.OS !== 'web' && keepAwake && <KeepAwakeWhenEnabled />}
       {/* StatusBar: light content on dark bg, dark content on light bg */}
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       <OnboardingGate>

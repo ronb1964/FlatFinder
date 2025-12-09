@@ -12,6 +12,7 @@ import {
   Gauge,
   RotateCcw,
   Ruler,
+  Zap,
 } from 'lucide-react-native';
 
 import { ThemePreference } from '../../src/state/appStore';
@@ -198,6 +199,101 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
+          {/* Tips & Features Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+              TIPS & FEATURES
+            </Text>
+            <GlassCard variant="primary">
+              <View style={styles.cardContent}>
+                {/* Sun Button Feature */}
+                <View style={styles.featureRow}>
+                  <View
+                    style={[styles.featureIconContainer, { backgroundColor: colors.iconWrapperBg }]}
+                  >
+                    <Sun size={20} color="#f59e0b" />
+                  </View>
+                  <View style={styles.featureTextContainer}>
+                    <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                      Outdoor Mode
+                    </Text>
+                    <Text
+                      style={[styles.featureDescription, { color: theme.colors.textSecondary }]}
+                    >
+                      Tap the sun icon on the Leveling Plan screen to switch to light mode for
+                      better visibility in bright sunlight.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
+
+                {/* Audio Feedback Feature */}
+                <View style={styles.featureRow}>
+                  <View
+                    style={[styles.featureIconContainer, { backgroundColor: colors.iconWrapperBg }]}
+                  >
+                    <Volume2 size={20} color="#3b82f6" />
+                  </View>
+                  <View style={styles.featureTextContainer}>
+                    <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                      Audio Feedback
+                    </Text>
+                    <Text
+                      style={[styles.featureDescription, { color: theme.colors.textSecondary }]}
+                    >
+                      When enabled, you&apos;ll hear beeps that speed up as you get closer to
+                      level—no need to watch the screen!
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
+
+                {/* Haptic Feedback Feature */}
+                <View style={styles.featureRow}>
+                  <View
+                    style={[styles.featureIconContainer, { backgroundColor: colors.iconWrapperBg }]}
+                  >
+                    <Smartphone size={20} color="#22c55e" />
+                  </View>
+                  <View style={styles.featureTextContainer}>
+                    <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                      Haptic Feedback
+                    </Text>
+                    <Text
+                      style={[styles.featureDescription, { color: theme.colors.textSecondary }]}
+                    >
+                      Feel a vibration when you reach level. Great for noisy environments.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.cardDivider, { backgroundColor: colors.divider }]} />
+
+                {/* Keep Screen Awake Feature */}
+                <View style={styles.featureRow}>
+                  <View
+                    style={[styles.featureIconContainer, { backgroundColor: colors.iconWrapperBg }]}
+                  >
+                    <Zap size={20} color="#a855f7" />
+                  </View>
+                  <View style={styles.featureTextContainer}>
+                    <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                      Keep Screen Awake
+                    </Text>
+                    <Text
+                      style={[styles.featureDescription, { color: theme.colors.textSecondary }]}
+                    >
+                      Prevents your phone from sleeping while leveling. Toggle it above in Display
+                      settings.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </GlassCard>
+          </View>
+
           {/* Measurement Settings */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
@@ -341,7 +437,7 @@ export default function SettingsScreen() {
                     </View>
                   </View>
                   <Text style={[styles.sliderDescription, { color: theme.colors.textSecondary }]}>
-                    Tolerance for considering the vehicle level
+                    Tolerance for considering the vehicle level (Default: 1.0°)
                   </Text>
                   <View style={styles.sliderContainer}>
                     <GlassSlider
@@ -613,6 +709,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  // Feature row styles (Tips & Features section)
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  featureIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  featureTextContainer: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  featureDescription: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   // Reset section
   resetSection: {

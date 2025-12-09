@@ -11,12 +11,12 @@ import {
 // Note: Using global setInterval/clearInterval which are available in React Native runtime
 import {
   AlertCircle,
-  ArrowLeft,
   Check,
   AlertTriangle,
   Caravan,
   Plus,
   RefreshCw,
+  Sun,
 } from 'lucide-react-native';
 import Svg, {
   Path,
@@ -40,6 +40,7 @@ import {
 } from '../lib/coordinateSystem';
 import { useAppStore } from '../state/appStore';
 import { formatMeasurement } from '../lib/units';
+import { useLevelSounds } from '../hooks/useLevelSounds';
 import { GlassCard } from './ui/GlassCard';
 import { GlassButton } from './ui/GlassButton';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -821,24 +822,35 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
 
 export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const theme = useTheme();
-  const isDark = theme.mode === 'dark';
+  const actuallyDark = theme.mode === 'dark';
+
+  // Temporary light mode override for outdoor visibility
+  const [forceLightMode, setForceLightMode] = useState(false);
+  const isDark = actuallyDark && !forceLightMode;
+
   const { activeProfile, settings, setShowLevelingAssistant } = useAppStore();
   const { pitchDeg, rollDeg } = useDeviceAttitude();
   const { width: screenWidth } = useWindowDimensions();
 
-  // Theme-aware colors
+  // Level sounds for Check Level results (single sounds, not repeating)
+  const { playDing, playTada } = useLevelSounds({
+    enabled: settings.audioEnabled,
+    isActive: true, // Always active in LevelingAssistant when audio enabled
+  });
+
+  // Theme-aware colors - ALL must use isDark (not theme.colors) to support forceLightMode
   const screenColors = {
     // Backgrounds - blue-gray for light mode
     gradientColors: isDark
       ? (['#0a0a0f', '#111118', '#0d0d12'] as const)
       : (['#dce4ed', '#d6dfe9', '#dae3ec'] as const),
-    containerBg: theme.colors.background,
+    containerBg: isDark ? '#111111' : '#dce4ed',
     headerBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.15)',
     footerBg: isDark ? 'rgba(10, 10, 15, 0.95)' : 'rgba(200, 212, 228, 0.98)',
-    // Text colors
-    text: theme.colors.text,
-    textSecondary: theme.colors.textSecondary,
-    textMuted: theme.colors.textMuted,
+    // Text colors - must be explicit, not from theme
+    text: isDark ? '#fafafa' : '#1a1a1a',
+    textSecondary: isDark ? '#a3a3a3' : '#525252',
+    textMuted: isDark ? '#737373' : '#737373',
     // Status colors (same in both modes for consistency)
     success: '#22c55e',
     warning: '#eab308',
@@ -849,6 +861,8 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
     modalBorder: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.25)',
     modalOverlay: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
     // Card backgrounds
+    cardBg: isDark ? 'rgba(26, 26, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+    cardBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(100, 130, 170, 0.2)',
     blockItemBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
     newInstructionsBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
     // Icon container
@@ -860,6 +874,17 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
     // Close enough hint
     closeEnoughBg: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.12)',
     closeEnoughBorder: isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.25)',
+    // Sun button
+    sunButtonBg: isDark
+      ? forceLightMode
+        ? 'rgba(245, 158, 11, 0.2)'
+        : 'rgba(255, 255, 255, 0.08)'
+      : 'transparent',
+    sunButtonBorder: isDark
+      ? forceLightMode
+        ? 'rgba(245, 158, 11, 0.4)'
+        : 'rgba(255, 255, 255, 0.15)'
+      : 'transparent',
   };
 
   // Responsive vehicle diagram sizing
@@ -1017,9 +1042,41 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const isCloseEnough = totalDeviation >= 0.5 && totalDeviation <= 2.0;
   const isNearLevel = isLevel; // Keep for backward compatibility with "Level!" banner
 
-  // Calculate percentage (10° = 0%, 0° = 100%)
-  // This gives more intuitive readings: 2° = 80%, 5° = 50%
-  const levelPercentage = Math.max(0, Math.min(100, 100 - (totalDeviation / 10) * 100));
+  // Calculate percentage based on level threshold and max acceptable deviation
+  // - Within threshold = 100% (perfect)
+  // - 4° or more = 0% (unacceptable)
+  // - Linear scale between threshold and 4°
+  const MAX_ACCEPTABLE_DEVIATION = 4; // 4° is the maximum acceptable deviation
+  const threshold = settings.levelThreshold; // User's configured threshold (default 1.0°)
+
+  let levelPercentage: number;
+  if (totalDeviation <= threshold) {
+    // Within tolerance = 100%
+    levelPercentage = 100;
+  } else if (totalDeviation >= MAX_ACCEPTABLE_DEVIATION) {
+    // 4° or more = 0%
+    levelPercentage = 0;
+  } else {
+    // Linear interpolation between threshold (100%) and 4° (0%)
+    const range = MAX_ACCEPTABLE_DEVIATION - threshold;
+    const excessDeviation = totalDeviation - threshold;
+    levelPercentage = Math.max(0, 100 - (excessDeviation / range) * 100);
+  }
+
+  // Play sound when Check Level results appear
+  useEffect(() => {
+    if (isCheckingLevel && checkLevelReadings) {
+      // Play appropriate sound based on level status
+      if (isLevel) {
+        // Perfect level - ta-da!
+        playTada();
+      } else if (isCloseEnough) {
+        // Close enough - ding
+        playDing();
+      }
+      // No sound for "needs adjustment" - that's not a success
+    }
+  }, [isCheckingLevel, checkLevelReadings, isLevel, isCloseEnough, playTada, playDing]);
 
   // Memoize wheel lifts that need attention
   const activeLifts = useMemo(() => {
@@ -1086,22 +1143,34 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const units = settings.measurementUnits || 'imperial';
 
   return (
-    <View style={[styles.container, { backgroundColor: screenColors.containerBg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: screenColors.containerBg }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: screenColors.headerBorder }]}>
-        {onBack && (
-          <Pressable style={styles.backButton} onPress={onBack}>
-            <ArrowLeft size={24} color={screenColors.text} />
-          </Pressable>
-        )}
-        <Text style={[styles.headerTitle, { color: screenColors.text }]}>Leveling Plan</Text>
         <View style={styles.headerSpacer} />
+        <Text style={[styles.headerTitle, { color: screenColors.text }]}>Leveling Plan</Text>
+        {/* Sun button for outdoor visibility - only show when theme is dark */}
+        {actuallyDark ? (
+          <Pressable
+            style={[
+              styles.sunButton,
+              {
+                backgroundColor: screenColors.sunButtonBg,
+                borderColor: screenColors.sunButtonBorder,
+              },
+            ]}
+            onPress={() => setForceLightMode(!forceLightMode)}
+          >
+            <Sun size={24} color={forceLightMode ? '#f59e0b' : screenColors.textMuted} />
+          </Pressable>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Level Status Banner */}
         {isNearLevel ? (
-          <GlassCard variant="success">
+          <GlassCard variant="success" forceLightMode={forceLightMode}>
             <View style={styles.statusBanner}>
               <Check size={32} color={screenColors.success} />
               <View style={styles.statusTextContainer}>
@@ -1117,6 +1186,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 size="lg"
                 onPress={() => setShowLevelingAssistant(false)}
                 icon={<Check size={20} color="#fff" />}
+                forceLightMode={forceLightMode}
               >
                 Done
               </GlassButton>
@@ -1125,7 +1195,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         ) : (
           <>
             {/* Vehicle Diagram */}
-            <GlassCard>
+            <GlassCard forceLightMode={forceLightMode}>
               <View style={styles.diagramContainer}>
                 <View style={styles.diagramHeader}>
                   <Text style={[styles.diagramTitle, { color: screenColors.text }]}>
@@ -1243,7 +1313,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
 
         {/* Loading state */}
         {!levelingPlan && isCalculating && (
-          <GlassCard>
+          <GlassCard forceLightMode={forceLightMode}>
             <View style={styles.loadingContainer}>
               <Text style={[styles.loadingText, { color: screenColors.textSecondary }]}>
                 Calculating leveling plan...
@@ -1255,7 +1325,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Footer - Check Level Button (part of normal layout flow, not absolute) */}
+      {/* Footer - Check Level and Back buttons */}
       {!isNearLevel && !showOrientationPrompt && !isCheckingLevel && levelingPlan && (
         <View
           style={[
@@ -1271,8 +1341,18 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
             size="lg"
             onPress={handleCheckLevel}
             icon={<RefreshCw size={20} color="#fff" />}
+            forceLightMode={forceLightMode}
           >
             Check Level
+          </GlassButton>
+          <GlassButton
+            variant="warning"
+            size="md"
+            onPress={onBack}
+            forceLightMode={forceLightMode}
+            style={{ marginTop: 10 }}
+          >
+            Back
           </GlassButton>
         </View>
       )}
@@ -1353,10 +1433,16 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 size="md"
                 onPress={handleConfirmCheckLevel}
                 icon={<Check size={18} color="#fff" />}
+                forceLightMode={forceLightMode}
               >
                 Check Level Now
               </GlassButton>
-              <GlassButton variant="default" size="md" onPress={handleBackToPlan}>
+              <GlassButton
+                variant="default"
+                size="md"
+                onPress={handleBackToPlan}
+                forceLightMode={forceLightMode}
+              >
                 Cancel
               </GlassButton>
             </View>
@@ -1386,8 +1472,18 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                 <Text style={[styles.checkResultsTitle, { color: screenColors.success }]}>
                   ✓ Level Achieved!
                 </Text>
+                <View style={styles.percentageContainer}>
+                  <Text style={[styles.percentageValue, { color: screenColors.success }]}>
+                    100%
+                  </Text>
+                  <Text style={[styles.percentageLabel, { color: screenColors.textMuted }]}>
+                    Level
+                  </Text>
+                </View>
                 <Text style={[styles.levelAchievedText, { color: screenColors.textSecondary }]}>
-                  Your RV is perfectly level. You&apos;re all set!
+                  {totalDeviation < 0.1
+                    ? 'Your RV is virtually perfect at true level!'
+                    : `Your RV is ${totalDeviation.toFixed(1)}° from true level — well within your ${threshold.toFixed(1)}° tolerance.`}
                 </Text>
               </>
             )}
@@ -1407,8 +1503,9 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                   </Text>
                 </View>
                 <Text style={[styles.closeEnoughText, { color: screenColors.textSecondary }]}>
-                  You&apos;re within {totalDeviation.toFixed(1)}° of perfectly level. This is
-                  acceptable for comfort and safe for your fridge and appliances.
+                  You&apos;re {totalDeviation.toFixed(1)}° from true level (tolerance:{' '}
+                  {threshold.toFixed(1)}°). This is acceptable for comfort and safe for your fridge
+                  and appliances.
                 </Text>
                 <View
                   style={[
@@ -1442,8 +1539,8 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                   </Text>
                 </View>
                 <Text style={[styles.adjustmentNeededText, { color: screenColors.textSecondary }]}>
-                  {totalDeviation.toFixed(1)}° from level. Add more blocks to reach safe operating
-                  range.
+                  {totalDeviation.toFixed(1)}° from true level (tolerance: {threshold.toFixed(1)}°).
+                  Add more blocks to reach safe operating range.
                 </Text>
 
                 {/* Show new block instructions */}
@@ -1502,18 +1599,24 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                   size="md"
                   onPress={handleCheckLevel}
                   icon={<RefreshCw size={16} color="#fff" />}
+                  forceLightMode={forceLightMode}
                 >
                   Check Again
                 </GlassButton>
               )}
-              <GlassButton variant="default" size="md" onPress={handleBackToPlan}>
+              <GlassButton
+                variant="default"
+                size="md"
+                onPress={handleBackToPlan}
+                forceLightMode={forceLightMode}
+              >
                 {isLevel || isCloseEnough ? 'Done' : 'View Original Plan'}
               </GlassButton>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1538,6 +1641,14 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  sunButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
   },
   scrollView: {
     flex: 1,
