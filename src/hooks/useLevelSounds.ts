@@ -9,7 +9,7 @@ const DING_SOUND = require('../../assets/sounds/ding.mp3') as number;
 const TADA_SOUND = require('../../assets/sounds/tada.mp3') as number;
 
 // Interval constants (in ms)
-const TADA_INTERVAL = 1500; // Fixed interval for perfect level
+const TADA_INTERVAL = 2500; // Fixed interval for perfect level (2.5 seconds)
 const DING_INTERVAL_SLOW = 1500; // At threshold (furthest from perfect)
 const DING_INTERVAL_FAST = 300; // Nearly at perfect level
 
