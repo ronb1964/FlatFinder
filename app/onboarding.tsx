@@ -1451,8 +1451,8 @@ export default function OnboardingScreen() {
               style={[styles.glassCardHighlight, { backgroundColor: screenColors.glassHighlight }]}
             />
 
-            {/* Progress Indicator */}
-            {!keyboardVisible && (
+            {/* Progress Indicator - hidden on Welcome screen (step 0) */}
+            {!keyboardVisible && currentStep > 0 && (
               <View
                 style={[
                   styles.progressSection,
@@ -1460,10 +1460,11 @@ export default function OnboardingScreen() {
                 ]}
               >
                 <View style={styles.progressRow}>
-                  {STEPS.map((_, index) => {
-                    const isActive = index === currentStep;
-                    const isComplete = index < currentStep;
-                    const showLine = index < STEPS.length - 1;
+                  {STEPS.slice(1).map((_, index) => {
+                    const actualIndex = index + 1; // Offset since we sliced off Welcome
+                    const isActive = actualIndex === currentStep;
+                    const isComplete = actualIndex < currentStep;
+                    const showLine = index < STEPS.length - 2; // -2 because we sliced one off
 
                     return (
                       <View key={index} style={styles.progressDotWrapper}>
@@ -1496,7 +1497,7 @@ export default function OnboardingScreen() {
                 </View>
                 {/* Step indicator text */}
                 <Text style={[styles.stepIndicator, { color: screenColors.textSecondary }]}>
-                  Step {currentStep + 1} of {STEPS.length}: {currentStepData.title}
+                  Step {currentStep} of {STEPS.length - 1}: {currentStepData.title}
                 </Text>
               </View>
             )}
@@ -1534,7 +1535,7 @@ export default function OnboardingScreen() {
                       )
                     }
                   >
-                    {currentStep < STEPS.length - 1 ? 'Next' : 'Get Started'}
+                    {currentStep === 0 ? 'Get Started' : currentStep < STEPS.length - 1 ? 'Next' : 'Finish'}
                   </GlassButton>
 
                   {currentStep > 0 && (
@@ -1591,8 +1592,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   progressSection: {
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 8,
+    paddingHorizontal: 12,
     gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -1635,7 +1637,7 @@ const styles = StyleSheet.create({
     top: -5,
   },
   progressLine: {
-    width: 16,
+    width: 10,
     height: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: 2,

@@ -1,4 +1,4 @@
-# LevelMate - Complete Feature Specification
+# FlatFinder - Complete Feature Specification
 
 ## 🚐 Trailer Mode (Primary Feature)
 

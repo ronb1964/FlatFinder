@@ -1,4 +1,4 @@
-# LevelMate — Design Brief
+# FlatFinder — Design Brief
 
 ## Visual Style
 - Minimalist dark UI with soft shadows and 2xl rounded corners

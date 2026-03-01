@@ -88,9 +88,9 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 const STORAGE_KEYS = {
-  PROFILES: 'levelmate_profiles',
-  ACTIVE_PROFILE: 'levelmate_active_profile',
-  SETTINGS: 'levelmate_settings',
+  PROFILES: 'flatfinder_profiles',
+  ACTIVE_PROFILE: 'flatfinder_active_profile',
+  SETTINGS: 'flatfinder_settings',
 };
 
 export const useAppStore = create<AppState>((set, get) => ({

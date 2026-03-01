@@ -1,10 +1,10 @@
 /**
- * LevelMate Coordinate System Normalization
+ * FlatFinder Coordinate System Normalization
  *
- * This module defines the canonical coordinate system for LevelMate and provides
+ * This module defines the canonical coordinate system for FlatFinder and provides
  * normalization functions to ensure consistent behavior across all components.
  *
- * ## LevelMate Canonical Coordinate System:
+ * ## FlatFinder Canonical Coordinate System:
  *
  * - **+pitch (nose up)**: Front of vehicle is higher than rear
  * - **-pitch (nose down)**: Front of vehicle is lower than rear
@@ -36,7 +36,7 @@ export interface CalibratedAttitude extends AttitudeReading {
 }
 
 /**
- * Normalize raw sensor attitude to LevelMate canonical coordinate system.
+ * Normalize raw sensor attitude to FlatFinder canonical coordinate system.
  *
  * Different sensor sources may use different coordinate conventions:
  * - Some sensors: +roll = left side up
@@ -47,7 +47,7 @@ export interface CalibratedAttitude extends AttitudeReading {
  *
  * @param rawAttitude Raw attitude from sensors (any coordinate convention)
  * @param options Normalization options to handle different sensor conventions
- * @returns Normalized attitude in LevelMate canonical coordinate system
+ * @returns Normalized attitude in FlatFinder canonical coordinate system
  */
 export function normalizeAttitude(
   rawAttitude: AttitudeReading,

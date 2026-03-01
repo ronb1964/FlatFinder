@@ -190,7 +190,7 @@ All modals should follow this structure:
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 6, 2025)
+## Current State (as of Dec 9, 2025)
 
 **Core Functionality - WORKING:**
 
@@ -199,6 +199,7 @@ All modals should follow this structure:
 - Check Level feature with percentage feedback implemented
 - Calibration → Leveling flow with prompt modal implemented
 - Home screen UI stable on phone (reverted after failed browser-matching attempt)
+- **Onboarding progress dots fixed** - Welcome screen no longer shows progress indicator, reduced to 8 steps/dots that fit properly on screen
 
 **Known Issues:**
 
@@ -206,12 +207,22 @@ All modals should follow this structure:
 - ProfileEditor modal doesn't show form fields on phone (just header + buttons)
 - Browser preview doesn't match phone (browser shows larger usable area than phone actually has)
 - **Compass heading is 180° off** - both the displayed degrees AND the ring are wrong (pointing north shows ~180° instead of ~0°)
+- **App icon needs redesign** - current icon has white background and small RV graphic
 
 Branch: `ui-overhaul-checkpoint`
 
 ## NEXT TASK - START HERE
 
-### 1. Fix Cancel Button Colors (CAREFUL - test on phone!)
+### 1. App Icon Redesign
+
+Ron wants to update the app icon (`assets/icon.png`):
+- Make the RV graphic larger (fills more of the icon space)
+- Remove the white background/border
+- Use a darker or colored background that looks better on the home screen
+
+This is a graphic design task - Ron will create a new image.
+
+### 2. Fix Cancel Button Colors (CAREFUL - test on phone!)
 
 Cancel buttons should be gray (`variant="default"`), only Delete buttons should be red.
 
@@ -223,16 +234,16 @@ Cancel buttons should be gray (`variant="default"`), only Delete buttons should 
 
 **IMPORTANT:** After each change, test on the PHONE to verify nothing breaks. The browser preview is NOT accurate for layout testing.
 
-### 2. Fix ProfileEditor Modal Height on Phone
+### 3. Fix ProfileEditor Modal Height on Phone
 
 The Edit Profile modal only shows header + buttons, no form fields. Need to investigate why ScrollView content doesn't appear on native iOS.
 
-### 3. Block Tolerance Threshold
+### 4. Block Tolerance Threshold
 
 Constant already defined: `BLOCK_TOLERANCE_INCHES = 0.5`
 Just need to use it in `getWheelStatus()` and `WheelCard` component.
 
-### 4. Verify Trailer/Motorhome Diagrams
+### 5. Verify Trailer/Motorhome Diagrams
 
 Create test profiles for each vehicle type and verify wheel positions/labels.
 
