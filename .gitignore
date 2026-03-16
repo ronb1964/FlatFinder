@@ -44,3 +44,6 @@ test-*.js
 
 # Playwright MCP screenshots (testing artifacts)
 .playwright-mcp/
+
+# Google Play service account credentials (secret - never commit)
+google-play-service-account.json

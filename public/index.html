@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlatFinder — RV Leveling Assistant</title>
+  <meta name="description" content="Stop guessing. Start leveling. FlatFinder turns your iPhone into a precision RV leveling tool with smart block recommendations, real-time bubble level, and offline support." />
+  <link rel="icon" href="/icon.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080c10; --surface: #0f1520; --card: #141c2a;
+      --border: rgba(255,255,255,0.07); --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15); --green: #22c55e;
+      --gold: #f59e0b; --text: #e2e8f0; --muted: #64748b; --accent: #60a5fa;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 40px; display: flex; align-items: center; justify-content: space-between;
+      background: rgba(8,12,16,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-brand img { width: 36px; height: 36px; border-radius: 9px; }
+    .nav-brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; color: var(--text); }
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .btn-nav { background: var(--blue); color: #fff !important; padding: 8px 20px; border-radius: 8px; font-weight: 600 !important; }
+    .btn-nav:hover { background: #2563eb !important; }
+    .hero {
+      position: relative; min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; padding: 120px 24px 80px; overflow: hidden;
+    }
+    .hero::after {
+      content: ''; position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 500px;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.18) 0%, transparent 70%); pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.3); border-radius: 100px; padding: 6px 16px;
+      font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 32px;
+      animation: fadeUp 0.6s ease both;
+    }
+    .hero-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+    .hero-icon {
+      width: 96px; height: 96px; border-radius: 24px; margin: 0 auto 28px; display: block;
+      box-shadow: 0 0 60px rgba(59,130,246,0.3), 0 20px 60px rgba(0,0,0,0.5);
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+    .hero h1 {
+      font-family: 'Barlow Condensed', sans-serif; font-size: clamp(56px, 9vw, 110px);
+      font-weight: 900; line-height: 0.92; letter-spacing: -1px; color: #fff; margin-bottom: 24px;
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+    .hero h1 .highlight { color: var(--blue); }
+    .hero-sub { font-size: clamp(17px, 2.5vw, 21px); color: var(--muted); max-width: 560px; margin: 0 auto 40px; animation: fadeUp 0.6s 0.2s ease both; }
+    .hero-cta { display: flex; align-items: center; gap: 16px; justify-content: center; flex-wrap: wrap; animation: fadeUp 0.6s 0.25s ease both; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px; background: var(--blue); color: #fff;
+      text-decoration: none; font-weight: 600; font-size: 16px; padding: 14px 28px; border-radius: 12px;
+      transition: all 0.2s; box-shadow: 0 4px 24px rgba(59,130,246,0.35);
+    }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,0.45); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: color 0.2s; }
+    .btn-secondary:hover { color: var(--text); }
+    .hero-price { margin-top: 24px; font-size: 14px; color: var(--muted); animation: fadeUp 0.6s 0.3s ease both; }
+    .hero-price strong { color: var(--text); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    section { position: relative; z-index: 1; padding: 100px 24px; }
+    .container { max-width: 1080px; margin: 0 auto; }
+    .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+    .section-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(36px, 5vw, 56px); font-weight: 900; color: #fff; line-height: 1; margin-bottom: 16px; }
+    .section-body { color: var(--muted); font-size: 17px; max-width: 560px; line-height: 1.7; }
+    .features-section { background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 50%, var(--bg) 100%); }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2px; margin-top: 64px; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+    .feature-card { background: var(--card); padding: 36px; transition: background 0.2s; }
+    .feature-card:hover { background: #1a2438; }
+    .feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+    .icon-blue { background: rgba(59,130,246,0.15); } .icon-green { background: rgba(34,197,94,0.12); }
+    .icon-gold { background: rgba(245,158,11,0.12); } .icon-teal { background: rgba(20,184,166,0.12); }
+    .icon-purple { background: rgba(168,85,247,0.12); } .icon-red { background: rgba(239,68,68,0.12); }
+    .feature-card h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .feature-card p { color: var(--muted); font-size: 15px; line-height: 1.65; }
+    .stats-strip { padding: 64px 24px; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 48px; text-align: center; }
+    .stat-number { font-family: 'Barlow Condensed', sans-serif; font-size: 56px; font-weight: 900; color: #fff; line-height: 1; margin-bottom: 8px; }
+    .stat-number span { color: var(--blue); }
+    .stat-label { font-size: 14px; color: var(--muted); font-weight: 500; }
+    .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-top: 64px; }
+    .step-card { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px 28px; }
+    .step-number { font-family: 'Barlow Condensed', sans-serif; font-size: 80px; font-weight: 900; color: rgba(59,130,246,0.12); line-height: 1; position: absolute; top: 12px; right: 20px; }
+    .step-card h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .step-card p { color: var(--muted); font-size: 15px; line-height: 1.65; }
+    .vehicles-row { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; margin-top: 56px; }
+    .vehicle-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .vehicle-emoji { font-size: 56px; line-height: 1; }
+    .vehicle-label { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .offline-banner { background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(20,184,166,0.06)); border: 1px solid rgba(34,197,94,0.2); border-radius: 20px; padding: 48px; text-align: center; margin-top: 100px; }
+    .offline-banner .big-icon { font-size: 64px; margin-bottom: 20px; }
+    .offline-banner h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 900; color: #fff; margin-bottom: 12px; }
+    .offline-banner p { color: var(--muted); font-size: 17px; max-width: 480px; margin: 0 auto; }
+    .cta-section { text-align: center; }
+    .cta-box { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 80px 40px; position: relative; overflow: hidden; }
+    .cta-box::before { content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(ellipse, rgba(59,130,246,0.15) 0%, transparent 70%); pointer-events: none; }
+    .cta-box img { width: 80px; height: 80px; border-radius: 20px; margin: 0 auto 24px; display: block; box-shadow: 0 0 40px rgba(59,130,246,0.3); }
+    .cta-box h2 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(42px, 6vw, 64px); font-weight: 900; color: #fff; margin-bottom: 16px; line-height: 1; }
+    .cta-box p { color: var(--muted); font-size: 18px; margin-bottom: 40px; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .apple-badge { display: inline-flex; align-items: center; gap: 14px; background: #000; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 28px; text-decoration: none; transition: all 0.2s; }
+    .apple-badge:hover { border-color: rgba(255,255,255,0.25); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .apple-badge svg { width: 28px; height: 28px; fill: #fff; }
+    .apple-badge-text { text-align: left; }
+    .apple-badge-text .small { font-size: 11px; color: #999; display: block; }
+    .apple-badge-text .big { font-size: 18px; font-weight: 700; color: #fff; display: block; line-height: 1.2; }
+    footer { border-top: 1px solid var(--border); padding: 40px 24px; text-align: center; position: relative; z-index: 1; }
+    footer .footer-inner { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .footer-brand img { width: 28px; height: 28px; border-radius: 7px; }
+    .footer-brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: var(--muted); }
+    .footer-links { display: flex; gap: 24px; list-style: none; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { font-size: 13px; color: #374151; }
+    @media (max-width: 700px) {
+      nav { padding: 14px 20px; } .nav-links { display: none; } section { padding: 72px 20px; }
+      .stats-grid { gap: 32px; } .cta-box { padding: 56px 24px; } .offline-banner { padding: 36px 24px; }
+      .footer-inner { flex-direction: column; align-items: center; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-brand" href="/"><img src="/icon.png" alt="FlatFinder icon" /><span class="nav-brand-name">FlatFinder</span></a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/support" class="btn-nav">Support</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge"><span class="hero-badge-dot"></span> Now available on the App Store</div>
+    <img class="hero-icon" src="/icon.png" alt="FlatFinder App Icon" />
+    <h1>Level Your RV.<br/><span class="highlight">Every Time.</span></h1>
+    <p class="hero-sub">FlatFinder turns your iPhone into a precision leveling tool — smart block recommendations, real-time bubble level, works 100% offline.</p>
+    <div class="hero-cta">
+      <a href="https://apps.apple.com/app/flatfinder-rv-leveler/id6756286757" class="btn-primary">
+        <svg width="20" height="20" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 439.8 43.6 285.7 43.6 238.2c0-171.8 112.1-262.8 222.4-262.8 83.5 0 152.9 54.3 205.5 54.3 50.5 0 129.9-57.1 223.8-57.1 36.2 0 133.3 2.5 194.9 86.3zm-281-83.7c-26.5-12.7-57.3-20.2-87.4-20.2-67.2 0-137.8 45.5-193.6 124.8-57.1 81.2-81.5 176.8-81.5 267.7 0 58.3 13.2 118.8 43.1 169.3 29.1 49.1 66.3 78.1 105.7 78.1 43.8 0 73-30.1 130.8-30.1 55.8 0 92.2 30.1 137.4 30.1 43.1 0 82.6-32.1 110.4-80.3 27.5-47 36.2-94.7 37.2-97.6-1-0.3-92.5-35.7-92.5-136.1 0-86.7 68.5-128.3 73.4-131.5-42.7-62.4-108.9-74.2-141.1-74.2z"/></svg>
+        Download on the App Store
+      </a>
+      <a href="#features" class="btn-secondary">Learn more ↓</a>
+    </div>
+    <p class="hero-price">Available for <strong>$1.99</strong> · iPhone · Works Offline</p>
+  </div>
+
+  <div class="stats-strip">
+    <div class="container">
+      <div class="stats-grid">
+        <div><div class="stat-number"><span>±</span>0.1°</div><div class="stat-label">Precision accuracy</div></div>
+        <div><div class="stat-number">3</div><div class="stat-label">Vehicle types supported</div></div>
+        <div><div class="stat-number"><span>100</span>%</div><div class="stat-label">Works offline, anywhere</div></div>
+        <div><div class="stat-number">0</div><div class="stat-label">Data collected, ever</div></div>
+      </div>
+    </div>
+  </div>
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything you need.<br/>Nothing you don't.</h2>
+      <p class="section-body">Built for real campers who want to get level fast and get on with enjoying the campsite.</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon icon-blue">🎯</div><h3>Real-Time Bubble Level</h3><p>Watch pitch and roll update instantly as you adjust your rig. A green glow confirms the moment you hit perfect level — unmistakable even in bright sunlight.</p></div>
+        <div class="feature-card"><div class="feature-icon icon-gold">🧱</div><h3>Smart Block Calculator</h3><p>Tell FlatFinder what blocks you carry and it figures out exactly what to stack under each wheel — down to the inch. No more trial and error.</p></div>
+        <div class="feature-card"><div class="feature-icon icon-teal">🗺️</div><h3>Vehicle Overview Map</h3><p>A bird's-eye diagram shows your vehicle and exactly where to place each block stack. Hitch jack handled separately and automatically.</p></div>
+        <div class="feature-card"><div class="feature-icon icon-green">💾</div><h3>Save Vehicle Profiles</h3><p>Set up a profile once with your measurements and block inventory. FlatFinder remembers everything — pull in, tap, get your plan.</p></div>
+        <div class="feature-card"><div class="feature-icon icon-purple">🔔</div><h3>Audio &amp; Haptic Feedback</h3><p>Beeps speed up as you approach level — no need to stare at the screen while driving onto blocks. Vibration confirms when you're there.</p></div>
+        <div class="feature-card"><div class="feature-icon icon-red">⚠️</div><h3>Safety Warnings</h3><p>Warns you when slopes exceed safe leveling limits and reminds you to use wheel chocks. Because getting level shouldn't mean getting hurt.</p></div>
+      </div>
+      <div class="offline-banner">
+        <div class="big-icon">📡</div>
+        <h2>No Signal? No Problem.</h2>
+        <p>FlatFinder makes zero network requests. It works in remote deserts, deep forests, and off-grid spots — wherever you camp.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">Level in four steps.</h2>
+      <p class="section-body">From pulling in to perfectly level — faster than unpacking your camping chairs.</p>
+      <div class="steps-grid">
+        <div class="step-card"><div class="step-number">1</div><h3>Set Up Your Profile</h3><p>Enter your vehicle type, measurements, and the blocks you carry. Takes two minutes, once.</p></div>
+        <div class="step-card"><div class="step-number">2</div><h3>Place Your Phone</h3><p>Set your phone on a level surface inside your vehicle and run Quick Calibrate.</p></div>
+        <div class="step-card"><div class="step-number">3</div><h3>Get Your Plan</h3><p>Tap Leveling Assistant. FlatFinder reads the slope and tells you exactly what to stack and where.</p></div>
+        <div class="step-card"><div class="step-number">4</div><h3>Drive On &amp; Confirm</h3><p>Pull onto your blocks while listening for the beeps. Go green. Check Level. Enjoy your site.</p></div>
+      </div>
+    </div>
+  </section>
+  <section style="padding-top: 0;">
+    <div class="container" style="text-align: center;">
+      <div class="section-label" style="text-align:center;">Compatible With</div>
+      <h2 class="section-title">Your rig. Whatever it is.</h2>
+      <div class="vehicles-row">
+        <div class="vehicle-item"><div class="vehicle-emoji">🚐</div><div class="vehicle-label">Travel Trailer</div></div>
+        <div class="vehicle-item"><div class="vehicle-emoji">🚌</div><div class="vehicle-label">Motorhome</div></div>
+        <div class="vehicle-item"><div class="vehicle-emoji">🚐</div><div class="vehicle-label">Camper Van</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-box">
+        <img src="/icon.png" alt="FlatFinder" />
+        <h2>Stop Guessing.<br/>Start Leveling.</h2>
+        <p>FlatFinder is $1.99 — less than a bag of leveling shims. Available now on the App Store for iPhone.</p>
+        <a href="https://apps.apple.com/app/flatfinder-rv-leveler/id6756286757" class="apple-badge">
+          <svg viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;fill:#fff"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 439.8 43.6 285.7 43.6 238.2c0-171.8 112.1-262.8 222.4-262.8 83.5 0 152.9 54.3 205.5 54.3 50.5 0 129.9-57.1 223.8-57.1 36.2 0 133.3 2.5 194.9 86.3zm-281-83.7c-26.5-12.7-57.3-20.2-87.4-20.2-67.2 0-137.8 45.5-193.6 124.8-57.1 81.2-81.5 176.8-81.5 267.7 0 58.3 13.2 118.8 43.1 169.3 29.1 49.1 66.3 78.1 105.7 78.1 43.8 0 73-30.1 130.8-30.1 55.8 0 92.2 30.1 137.4 30.1 43.1 0 82.6-32.1 110.4-80.3 27.5-47 36.2-94.7 37.2-97.6-1-0.3-92.5-35.7-92.5-136.1 0-86.7 68.5-128.3 73.4-131.5-42.7-62.4-108.9-74.2-141.1-74.2z"/></svg>
+          <div class="apple-badge-text">
+            <span class="small">Download on the</span>
+            <span class="big">App Store</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <a class="footer-brand" href="/"><img src="/icon.png" alt="FlatFinder" /><span class="footer-brand-name">FlatFinder</span></a>
+      <ul class="footer-links">
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="/support">Support</a></li>
+        <li><a href="https://apps.apple.com/app/flatfinder-rv-leveler/id6756286757">App Store</a></li>
+      </ul>
+      <p class="footer-copy">&copy; 2025 FlatFinder. All rights reserved.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

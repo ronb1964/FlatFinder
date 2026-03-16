@@ -100,6 +100,13 @@ This keeps continuity between sessions so you don't start fresh every time.
    - Don't put KeyboardAvoidingView or ScrollView inside step/render functions - use the screen's main wrappers
    - Don't assume keyboard handling "just works" - always test with real keyboard
 
+9. **BRANCH PROTECTION - CRITICAL** - The `main` branch is the ONLY working branch. It contains the v1 App Store code.
+   - **NEVER** create new branches or switch branches without Ron's explicit permission
+   - **NEVER** merge or rebase without Ron's explicit approval
+   - The `archived/ui-rewrite` branch is a dead-end rewrite — do NOT use it, cherry-pick from it, or reference its code
+   - If you're unsure which branch you're on, run `git branch` and confirm you see `* main` before making any changes
+   - All development happens on `main` unless Ron specifically says otherwise
+
 ---
 
 ## Project Overview
@@ -190,7 +197,9 @@ All modals should follow this structure:
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of Dec 9, 2025)
+## Current State (as of March 15, 2026)
+
+**Branch: `main`** — This is the v1 App Store code (previously called `ui-overhaul-checkpoint`).
 
 **Core Functionality - WORKING:**
 
@@ -198,54 +207,61 @@ All modals should follow this structure:
 - Bubble correctly floats to HIGH side on actual phone
 - Check Level feature with percentage feedback implemented
 - Calibration → Leveling flow with prompt modal implemented
-- Home screen UI stable on phone (reverted after failed browser-matching attempt)
-- **Onboarding progress dots fixed** - Welcome screen no longer shows progress indicator, reduced to 8 steps/dots that fit properly on screen
+- Compass ring with heading display, cardinal directions (N/S/E/W)
+- Quick Calibrate and Full Calibration buttons
+- Block quantity tracking with +/- steppers in onboarding and profile editor
+- GestureHandlerRootView wrapper (iPad crash fix) in place
+- Privacy policy and support pages deployed at flatfinder-app.netlify.app
+
+**v1.0**: Released on iOS App Store ✅
+**v1.0.1**: In progress — URL fixes, iPad crash fix, Android/Google Play support
 
 **Known Issues:**
 
 - Cancel buttons are still RED (should be gray per design patterns)
 - ProfileEditor modal doesn't show form fields on phone (just header + buttons)
 - Browser preview doesn't match phone (browser shows larger usable area than phone actually has)
-- **Compass heading is 180° off** - both the displayed degrees AND the ring are wrong (pointing north shows ~180° instead of ~0°)
-- **App icon needs redesign** - current icon has white background and small RV graphic
+- **Compass heading is 180° off** — both the displayed degrees AND the ring are wrong
+- **App icon**: New icon created (FF_final.png) but may need verification for App Store/Play Store
 
-Branch: `ui-overhaul-checkpoint`
+**Archived branches (DO NOT USE):**
+
+- `archived/ui-rewrite` — dead-end complete UI rewrite, not the App Store code
+- `old-main-initial` — original initial commit
+- `expo-go-setup` — old experimental branch
 
 ## NEXT TASK - START HERE
 
-### 1. App Icon Redesign
+### 1. Google Play Store Release
 
-Ron wants to update the app icon (`assets/icon.png`):
-- Make the RV graphic larger (fills more of the icon space)
-- Remove the white background/border
-- Use a darker or colored background that looks better on the home screen
+- Ron has a Galaxy S26 Ultra for Android testing
+- EAS config updated with Android submit profile
+- **Next steps:**
+  1. Ron creates Google Play Developer account ($25 one-time fee)
+  2. Build Android dev client: `npx eas build --profile development --platform android`
+  3. Install on S26 Ultra and test sensors, UI, leveling
+  4. Fix any Android-specific issues
+  5. Ron sets up Google Play API service account (JSON credentials)
+  6. Build production AAB: `npx eas build --profile production --platform android`
+  7. Submit: `npx eas submit --platform android`
+  8. Complete Play Store listing (screenshots, descriptions, feature graphic)
 
-This is a graphic design task - Ron will create a new image.
+### 2. iOS v1.0.1 Resubmission
 
-### 2. Fix Cancel Button Colors (CAREFUL - test on phone!)
+- URL fixes done (privacy, support pages)
+- iPad crash fix already in place (GestureHandlerRootView)
+- Ron needs to update App Store Connect privacy policy URL to `https://flatfinder-app.netlify.app/privacy`
+- Build and submit: `npx eas build --profile production --platform ios && npx eas submit --platform ios`
 
-Cancel buttons should be gray (`variant="default"`), only Delete buttons should be red.
+### 3. Block Quantity Regression Fix
 
-**Files to update:**
+Block quantities in onboarding were working in v1 but need verification. See plan file for details.
 
-- `src/components/ProfileEditor.tsx` - 2 Cancel buttons (footer + add block input)
-- `src/components/CalibrationWizard.tsx` - Multiple cancel button styles (both GlassButton and custom Pressable styles)
-- `app/onboarding.tsx` - Add block cancel button
+### 4. Known UI Fixes (lower priority)
 
-**IMPORTANT:** After each change, test on the PHONE to verify nothing breaks. The browser preview is NOT accurate for layout testing.
-
-### 3. Fix ProfileEditor Modal Height on Phone
-
-The Edit Profile modal only shows header + buttons, no form fields. Need to investigate why ScrollView content doesn't appear on native iOS.
-
-### 4. Block Tolerance Threshold
-
-Constant already defined: `BLOCK_TOLERANCE_INCHES = 0.5`
-Just need to use it in `getWheelStatus()` and `WheelCard` component.
-
-### 5. Verify Trailer/Motorhome Diagrams
-
-Create test profiles for each vehicle type and verify wheel positions/labels.
+- Cancel buttons should be gray (`variant="default"`), not red
+- ProfileEditor modal doesn't show form fields on phone
+- Compass heading 180° off
 
 ---
 
