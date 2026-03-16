@@ -17,20 +17,21 @@
       --gold: #f59e0b; --text: #e2e8f0; --muted: #64748b; --accent: #60a5fa;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; overflow-y: scroll; scrollbar-gutter: stable; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      padding: 16px 40px; display: flex; align-items: center; justify-content: space-between;
+      height: 68px; padding: 0 40px;
+      display: flex; align-items: center; justify-content: space-between;
       background: rgba(8,12,16,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
     }
     .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .nav-brand img { width: 36px; height: 36px; border-radius: 9px; }
-    .nav-brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; color: var(--text); }
+    .nav-brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; color: var(--text); line-height: 1; }
     .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
-    .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: color 0.2s; line-height: 1; }
     .nav-links a:hover { color: var(--text); }
-    .btn-nav { background: var(--blue); color: #fff !important; padding: 8px 20px; border-radius: 8px; font-weight: 600 !important; }
+    .btn-nav { background: var(--blue); color: #fff !important; padding: 8px 20px; border-radius: 8px; font-weight: 600 !important; line-height: 1; }
     .btn-nav:hover { background: #2563eb !important; }
     .hero {
       position: relative; min-height: 100vh; display: flex; flex-direction: column;
@@ -101,6 +102,8 @@
     .vehicles-row { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; margin-top: 56px; }
     .vehicle-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .vehicle-emoji { font-size: 56px; line-height: 1; }
+    .vehicle-svg { width: 80px; height: 56px; }
+    .vehicle-svg svg { width: 100%; height: 100%; }
     .vehicle-label { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
     .offline-banner { background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(20,184,166,0.06)); border: 1px solid rgba(34,197,94,0.2); border-radius: 20px; padding: 48px; text-align: center; margin-top: 100px; }
     .offline-banner .big-icon { font-size: 64px; margin-bottom: 20px; }
@@ -209,9 +212,55 @@
       <div class="section-label" style="text-align:center;">Compatible With</div>
       <h2 class="section-title">Your rig. Whatever it is.</h2>
       <div class="vehicles-row">
-        <div class="vehicle-item"><div class="vehicle-emoji">🚐</div><div class="vehicle-label">Travel Trailer</div></div>
-        <div class="vehicle-item"><div class="vehicle-emoji">🚌</div><div class="vehicle-label">Motorhome</div></div>
-        <div class="vehicle-item"><div class="vehicle-emoji">🚐</div><div class="vehicle-label">Camper Van</div></div>
+        <div class="vehicle-item">
+          <div class="vehicle-svg">
+            <svg viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Travel Trailer: boxy towable with hitch tongue -->
+              <rect x="30" y="12" width="70" height="36" rx="4" stroke="#60a5fa" stroke-width="2.5" fill="rgba(59,130,246,0.1)"/>
+              <rect x="72" y="18" width="18" height="14" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <line x1="30" y1="36" x2="10" y2="42" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="8" cy="42" r="3" fill="#60a5fa"/>
+              <circle cx="50" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <circle cx="80" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <line x1="32" y1="48" x2="98" y2="48" stroke="#60a5fa" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="vehicle-label">Travel Trailer</div>
+        </div>
+        <div class="vehicle-item">
+          <div class="vehicle-svg">
+            <svg viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Motorhome: large bus-style RV with cab -->
+              <path d="M15 16 H90 Q100 16 105 26 L110 36 V48 H15 Z" stroke="#60a5fa" stroke-width="2.5" fill="rgba(59,130,246,0.1)"/>
+              <rect x="95" y="24" width="14" height="14" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <rect x="26" y="22" width="14" height="12" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <rect x="48" y="22" width="14" height="12" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <rect x="70" y="22" width="14" height="12" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <circle cx="35" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <circle cx="95" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <line x1="15" y1="48" x2="110" y2="48" stroke="#60a5fa" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="vehicle-label">Motorhome</div>
+        </div>
+        <div class="vehicle-item">
+          <div class="vehicle-svg">
+            <svg viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Camper Van: compact van with pop-top hint -->
+              <path d="M20 28 H75 Q85 28 90 38 L95 44 V48 H20 Z" stroke="#60a5fa" stroke-width="2.5" fill="rgba(59,130,246,0.1)"/>
+              <rect x="78" y="34" width="12" height="10" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <rect x="30" y="32" width="12" height="10" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <rect x="50" y="32" width="12" height="10" rx="2" stroke="#60a5fa" stroke-width="1.5" fill="rgba(59,130,246,0.08)"/>
+              <line x1="20" y1="22" x2="70" y2="22" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <line x1="20" y1="22" x2="20" y2="28" stroke="#60a5fa" stroke-width="1.5"/>
+              <line x1="70" y1="22" x2="70" y2="28" stroke="#60a5fa" stroke-width="1.5"/>
+              <circle cx="35" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <circle cx="82" cy="52" r="7" stroke="#60a5fa" stroke-width="2" fill="rgba(59,130,246,0.15)"/>
+              <line x1="20" y1="48" x2="95" y2="48" stroke="#60a5fa" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="vehicle-label">Camper Van</div>
+        </div>
       </div>
     </div>
   </section>
@@ -241,7 +290,7 @@
         <li><a href="/support">Support</a></li>
         <li><a href="https://apps.apple.com/app/flatfinder-rv-leveler/id6756286757">App Store</a></li>
       </ul>
-      <p class="footer-copy">&copy; 2025 FlatFinder. All rights reserved.</p>
+      <p class="footer-copy">&copy; 2026 FlatFinder. All rights reserved.</p>
     </div>
   </footer>
 

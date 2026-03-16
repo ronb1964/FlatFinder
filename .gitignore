@@ -47,3 +47,6 @@ test-*.js
 
 # Google Play service account credentials (secret - never commit)
 google-play-service-account.json
+
+# Local Netlify folder
+.netlify

@@ -67,7 +67,20 @@
       "Bash(grep:*)",
       "Bash(ffmpeg:*)",
       "mcp__expo__expo_router_sitemap",
-      "WebFetch(domain:apps.apple.com)"
+      "WebFetch(domain:apps.apple.com)",
+      "Bash(git branch -m ui-revamp-modern archived/ui-rewrite)",
+      "Bash(git branch -m main old-main-initial)",
+      "Bash(git branch -m ui-overhaul-checkpoint main)",
+      "Bash(identify /home/ron/Projects/FlatFinder/assets/icon_small.png)",
+      "Bash(git cherry-pick 09b7654)",
+      "WebFetch(domain:flatfinder-app.netlify.app)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "Bash(pgrep -a chrome)",
+      "Skill(commit-commands:commit)",
+      "Skill(commit-commands:commit:*)"
     ],
     "deny": [],
     "ask": []

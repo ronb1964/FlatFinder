@@ -7,7 +7,7 @@ redirects = []
 [functions."*"]
 
 [build]
-publish = "dist"
+publish = "/home/ron/Projects/FlatFinder/dist"
 publishOrigin = "ui"
 commandOrigin = "ui"
 command = "expo export -p web"

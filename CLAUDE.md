@@ -197,9 +197,9 @@ All modals should follow this structure:
 - `src/state/debugStore.ts` - Zustand store for mock sensor values
 - `src/theme.ts` - App color palette (Charcoal + Electric Blue theme)
 
-## Current State (as of March 15, 2026)
+## Current State (as of March 16, 2026)
 
-**Branch: `main`** — This is the v1 App Store code (previously called `ui-overhaul-checkpoint`).
+**Branch: `main`** — This is the v1 App Store code.
 
 **Core Functionality - WORKING:**
 
@@ -212,17 +212,22 @@ All modals should follow this structure:
 - Block quantity tracking with +/- steppers in onboarding and profile editor
 - GestureHandlerRootView wrapper (iPad crash fix) in place
 - Privacy policy and support pages deployed at flatfinder-app.netlify.app
+- Nav link vertical alignment fixed across all three pages (home, privacy, support)
 
 **v1.0**: Released on iOS App Store ✅
-**v1.0.1**: In progress — URL fixes, iPad crash fix, Android/Google Play support
+**v1.0.1**: Build 9 submitted to EAS cloud queue — awaiting completion (~3 hr free tier wait)
 
-**Known Issues:**
+**MacBook setup:**
+
+- `~/Projects/FlatFinder-main` — clean clone of `main`, npm installed, Xcode 16.3 ready for local builds
+- Old folders `FlatFinder` (ui-revamp-modern branch) and `FlatFinder-1` (expo-go-setup branch) can be deleted
+- For future builds use MacBook local build to skip EAS queue: `eas build --local --profile production --platform ios`
+
+**Known Issues (lower priority):**
 
 - Cancel buttons are still RED (should be gray per design patterns)
 - ProfileEditor modal doesn't show form fields on phone (just header + buttons)
-- Browser preview doesn't match phone (browser shows larger usable area than phone actually has)
-- **Compass heading is 180° off** — both the displayed degrees AND the ring are wrong
-- **App icon**: New icon created (FF_final.png) but may need verification for App Store/Play Store
+- Compass heading is 180° off — both the displayed degrees AND the ring are wrong
 
 **Archived branches (DO NOT USE):**
 
@@ -232,32 +237,31 @@ All modals should follow this structure:
 
 ## NEXT TASK - START HERE
 
-### 1. Google Play Store Release
+### 1. iOS v1.0.1 — Complete the submission
+
+EAS build 9 is currently queued. When the build finishes (Expo sends email):
+
+1. Run: `npx eas submit --platform ios`
+2. Go to App Store Connect → FlatFinder → submit for review
+
+- Privacy policy URL already updated in App Store Connect ✅
+- Build from Linux machine (`/home/ron/Projects/FlatFinder`)
+
+### 2. Google Play Store Release
 
 - Ron has a Galaxy S26 Ultra for Android testing
 - EAS config updated with Android submit profile
-- **Next steps:**
-  1. Ron creates Google Play Developer account ($25 one-time fee)
-  2. Build Android dev client: `npx eas build --profile development --platform android`
-  3. Install on S26 Ultra and test sensors, UI, leveling
-  4. Fix any Android-specific issues
-  5. Ron sets up Google Play API service account (JSON credentials)
-  6. Build production AAB: `npx eas build --profile production --platform android`
-  7. Submit: `npx eas submit --platform android`
-  8. Complete Play Store listing (screenshots, descriptions, feature graphic)
+- Ron still needs to create Google Play Developer account ($25 one-time fee)
+- **Next steps after account created:**
+  1. Build Android dev client: `npx eas build --profile development --platform android`
+  2. Install on S26 Ultra and test sensors, UI, leveling
+  3. Fix any Android-specific issues
+  4. Ron sets up Google Play API service account (JSON credentials)
+  5. Build production AAB: `npx eas build --profile production --platform android`
+  6. Submit: `npx eas submit --platform android`
+  7. Complete Play Store listing (screenshots, descriptions, feature graphic)
 
-### 2. iOS v1.0.1 Resubmission
-
-- URL fixes done (privacy, support pages)
-- iPad crash fix already in place (GestureHandlerRootView)
-- Ron needs to update App Store Connect privacy policy URL to `https://flatfinder-app.netlify.app/privacy`
-- Build and submit: `npx eas build --profile production --platform ios && npx eas submit --platform ios`
-
-### 3. Block Quantity Regression Fix
-
-Block quantities in onboarding were working in v1 but need verification. See plan file for details.
-
-### 4. Known UI Fixes (lower priority)
+### 3. Known UI Fixes (lower priority — do after both store submissions)
 
 - Cancel buttons should be gray (`variant="default"`), not red
 - ProfileEditor modal doesn't show form fields on phone
