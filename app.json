@@ -58,7 +58,8 @@
           }
         }
       ],
-      "./plugins/withFollyFix"
+      "./plugins/withFollyFix",
+      "expo-router"
     ]
   }
 }
