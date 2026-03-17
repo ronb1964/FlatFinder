@@ -10,8 +10,36 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { useDebugStore } from '../state/debugStore';
+
+// Web-native HTML range input — DebugControls is web-only so this is fine.
+// We use React.createElement to avoid TypeScript JSX type issues with HTML elements.
+function WebRangeSlider({
+  value,
+  onValueChange,
+  minimumValue,
+  maximumValue,
+  step,
+  color = '#ffffff',
+}: {
+  value: number;
+  onValueChange: (val: number) => void;
+  minimumValue: number;
+  maximumValue: number;
+  step: number;
+  color?: string;
+}) {
+  return React.createElement('input', {
+    type: 'range',
+    value: String(value),
+    min: String(minimumValue),
+    max: String(maximumValue),
+    step: String(step),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onChange: (e: any) => onValueChange(parseFloat(e.target.value)),
+    style: { width: '100%', height: 40, cursor: 'pointer', accentColor: color },
+  });
+}
 import { X, Sliders } from 'lucide-react-native';
 
 // Declare global __DEV__ for TypeScript if needed
@@ -107,8 +135,7 @@ export function DebugControls() {
                   <Text style={styles.sliderValue}>{localPitch.toFixed(1)}°</Text>
                 </View>
                 <Text style={styles.sliderHint}>Nose Up/Down</Text>
-                <Slider
-                  style={styles.slider}
+                <WebRangeSlider
                   value={localPitch}
                   onValueChange={(val) => {
                     setLocalPitch(val);
@@ -117,9 +144,7 @@ export function DebugControls() {
                   minimumValue={-15}
                   maximumValue={15}
                   step={0.5}
-                  minimumTrackTintColor="#ef4444"
-                  maximumTrackTintColor="#333"
-                  thumbTintColor="#fff"
+                  color="#ef4444"
                 />
                 <View style={styles.sliderRange}>
                   <Text style={styles.rangeText}>-15°</Text>
@@ -135,8 +160,7 @@ export function DebugControls() {
                   <Text style={styles.sliderValue}>{localRoll.toFixed(1)}°</Text>
                 </View>
                 <Text style={styles.sliderHint}>Left/Right Tilt</Text>
-                <Slider
-                  style={styles.slider}
+                <WebRangeSlider
                   value={localRoll}
                   onValueChange={(val) => {
                     setLocalRoll(val);
@@ -145,9 +169,7 @@ export function DebugControls() {
                   minimumValue={-15}
                   maximumValue={15}
                   step={0.5}
-                  minimumTrackTintColor="#3b82f6"
-                  maximumTrackTintColor="#333"
-                  thumbTintColor="#fff"
+                  color="#3b82f6"
                 />
                 <View style={styles.sliderRange}>
                   <Text style={styles.rangeText}>-15°</Text>
@@ -163,8 +185,7 @@ export function DebugControls() {
                   <Text style={styles.sliderValue}>{localHeading.toFixed(0)}°</Text>
                 </View>
                 <Text style={styles.sliderHint}>Compass Direction</Text>
-                <Slider
-                  style={styles.slider}
+                <WebRangeSlider
                   value={localHeading}
                   onValueChange={(val) => {
                     setLocalHeading(val);
@@ -173,9 +194,7 @@ export function DebugControls() {
                   minimumValue={0}
                   maximumValue={359}
                   step={1}
-                  minimumTrackTintColor="#22c55e"
-                  maximumTrackTintColor="#333"
-                  thumbTintColor="#fff"
+                  color="#22c55e"
                 />
                 <View style={styles.sliderRange}>
                   <Text style={styles.rangeText}>N 0°</Text>

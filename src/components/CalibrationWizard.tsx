@@ -886,7 +886,7 @@ export function CalibrationWizard({
                     size="sm"
                     onPress={handleGoHome}
                     icon={<Home size={16} color="#fff" />}
-                    style={[styles.fullWidthButton, { marginTop: 8 }]}
+                    style={StyleSheet.flatten([styles.fullWidthButton, { marginTop: 8 }])}
                   >
                     Go Home
                   </GlassButton>
@@ -898,7 +898,7 @@ export function CalibrationWizard({
                   variant="default"
                   size="sm"
                   onPress={() => setShowCancelConfirm(true)}
-                  style={[styles.fullWidthButton, { marginTop: 10 }]}
+                  style={StyleSheet.flatten([styles.fullWidthButton, { marginTop: 10 }])}
                 >
                   Cancel
                 </GlassButton>

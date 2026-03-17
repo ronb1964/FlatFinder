@@ -1535,7 +1535,11 @@ export default function OnboardingScreen() {
                       )
                     }
                   >
-                    {currentStep === 0 ? 'Get Started' : currentStep < STEPS.length - 1 ? 'Next' : 'Finish'}
+                    {currentStep === 0
+                      ? 'Get Started'
+                      : currentStep < STEPS.length - 1
+                        ? 'Next'
+                        : 'Finish'}
                   </GlassButton>
 
                   {currentStep > 0 && (
@@ -1895,7 +1899,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     ...Platform.select({
       web: {
-        outlineStyle: 'none',
+        // 'none' is valid on web but not in RN TextStyle types — cast to avoid TS error
+        outlineStyle: 'none' as 'solid',
       },
     }),
   },
