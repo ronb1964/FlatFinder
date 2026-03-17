@@ -22,6 +22,7 @@ import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
 import { GlassToggle } from '../../src/components/ui/GlassToggle';
 import { useTheme } from '../../src/hooks/useTheme';
+import Constants from 'expo-constants';
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -462,10 +463,10 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
-          {/* Developer Section */}
+          {/* Advanced Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
-              DEVELOPER
+              ADVANCED
             </Text>
             <GlassCard borderColor="rgba(239, 68, 68, 0.3)">
               <View style={styles.cardContent}>
@@ -474,12 +475,13 @@ export default function SettingsScreen() {
                     <RotateCcw size={20} color="#ef4444" />
                     <View style={styles.settingTextContainer}>
                       <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-                        Reset Onboarding
+                        Factory Reset
                       </Text>
                       <Text
                         style={[styles.settingDescription, { color: theme.colors.textSecondary }]}
                       >
-                        Show the onboarding tutorial again for testing
+                        Wipe all profiles, calibration data, and settings and start fresh from the
+                        beginning.
                       </Text>
                     </View>
                   </View>
@@ -508,7 +510,10 @@ export default function SettingsScreen() {
               <View style={styles.aboutContent}>
                 <Text style={styles.aboutTitle}>FlatFinder</Text>
                 <View style={styles.versionBadge}>
-                  <Text style={styles.versionText}>Version 1.0.0</Text>
+                  {/* Pull version dynamically from app.json via expo-constants */}
+                  <Text style={styles.versionText}>
+                    Version {Constants.expoConfig?.version ?? '1.0.0'}
+                  </Text>
                 </View>
                 <Text style={[styles.aboutDescription, { color: theme.colors.textSecondary }]}>
                   Professional RV and trailer leveling app with precision sensors and intelligent
