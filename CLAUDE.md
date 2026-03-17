@@ -20,6 +20,29 @@ This keeps continuity between sessions so you don't start fresh every time.
 
 ---
 
+## PRE-BUILD CHECKLIST - MANDATORY BEFORE ANY BUILD
+
+**Every single time** before running `eas build` (local or cloud) for any platform, run these two checks first. No exceptions. Do not skip. Do not ask Ron if he wants to run them — just run them automatically.
+
+```bash
+npx tsc --noEmit
+```
+
+Catches TypeScript errors. Must show 0 errors before proceeding.
+
+```bash
+npx expo export --platform ios
+```
+
+(or `--platform android` for Android builds)
+Catches bundling errors — missing modules, broken imports, bad config. This is what EAS does internally. If it fails here, it will fail in the build. Fix it now, not after a 3-hour queue wait.
+
+**If either check fails:** Stop. Fix the error. Re-run the checks. Only proceed to `eas build` when both pass cleanly.
+
+**Never tell Ron a build is ready to go without having run these checks first.**
+
+---
+
 ## RULES - FOLLOW THESE ALWAYS
 
 1. **Never offer screenshots** - Ron has the app open in the browser. He can see everything. Don't ask "Would you like me to take a screenshot?" - if he needs one, he'll ask.
@@ -215,13 +238,28 @@ All modals should follow this structure:
 - Nav link vertical alignment fixed across all three pages (home, privacy, support)
 
 **v1.0**: Released on iOS App Store ✅
-**v1.0.1**: Build 9 submitted to EAS cloud queue — awaiting completion (~3 hr free tier wait)
+**v1.0.1**: Submitted for App Store review Mar 16, 2026 — Waiting for Review ✅
 
 **MacBook setup:**
 
 - `~/Projects/FlatFinder-main` — clean clone of `main`, npm installed, Xcode 16.3 ready for local builds
-- Old folders `FlatFinder` (ui-revamp-modern branch) and `FlatFinder-1` (expo-go-setup branch) can be deleted
-- For future builds use MacBook local build to skip EAS queue: `eas build --local --profile production --platform ios`
+- Old MacBook folders (FlatFinder, FlatFinder-1) moved to trash ✅
+- For future iOS builds: use MacBook local build (`eas build --local --profile production --platform ios`) — free and fast
+- For future iOS uploads: use Apple Transporter on Mac (EAS submit is broken for this account)
+
+**EAS notes:**
+
+- Ron has paid Expo account (priority queue)
+- eas-cli updated to ^18.4.0 in package.json
+- `eas submit --platform ios` consistently fails — use Transporter instead
+- Android EAS submit may or may not work — test when needed
+
+**Android crash fixes applied (main branch):**
+
+- `@react-native-community/slider` removed — was crashing via Fabric component descriptor / invalid pointer free on Android 15
+- `expo-av` replaced with `expo-audio` — expo-av's AVManager.onHostDestroy was releasing ExoPlayer from a background thread (IllegalStateException on Android 15)
+- `GlassCard` gets solid Android background layer — BlurView doesn't create real backdrop blur on Android, so warning cards were transparent over compass
+- Warning status text hidden when warning card is active — avoids giant text between card and compass on Android
 
 **Known Issues (lower priority):**
 
@@ -237,29 +275,29 @@ All modals should follow this structure:
 
 ## NEXT TASK - START HERE
 
-### 1. iOS v1.0.1 — Complete the submission
+### 1. iOS v1.0.1 — SUBMITTED ✅
 
-EAS build 9 is currently queued. When the build finishes (Expo sends email):
+- Build 9 submitted for App Store review on Mar 16, 2026 at 7:28 PM
+- Status: Waiting for Review
+- Submission ID: e8b34f22-0a46-42b3-b64e-4bb1c0717f7e
+- **NOTE:** `eas submit` consistently fails for this account. Use **Apple Transporter** on Mac instead.
+  - Download IPA: `npx eas build:view [build-id] --json` to get artifact URL, then `curl -L -o file.ipa [url]`
+  - Send to Mac via LocalSend, open in Transporter, click Deliver
+  - eas-cli updated to ^18.4.0 in package.json (was 16.28.0)
 
-1. Run: `npx eas submit --platform ios`
-2. Go to App Store Connect → FlatFinder → submit for review
+### 2. Android Dev Build — Building on EAS ⏳
 
-- Privacy policy URL already updated in App Store Connect ✅
-- Build from Linux machine (`/home/ron/Projects/FlatFinder`)
-
-### 2. Google Play Store Release
-
-- Ron has a Galaxy S26 Ultra for Android testing
-- EAS config updated with Android submit profile
-- Ron still needs to create Google Play Developer account ($25 one-time fee)
-- **Next steps after account created:**
-  1. Build Android dev client: `npx eas build --profile development --platform android`
-  2. Install on S26 Ultra and test sensors, UI, leveling
-  3. Fix any Android-specific issues
-  4. Ron sets up Google Play API service account (JSON credentials)
-  5. Build production AAB: `npx eas build --profile production --platform android`
-  6. Submit: `npx eas submit --platform android`
-  7. Complete Play Store listing (screenshots, descriptions, feature graphic)
+- Build ID: `c8ed5015-4e8a-411c-9557-e8424b6a15d9`
+- URL: https://expo.dev/accounts/ronb1964/projects/flatfinder-rv-leveling/builds/c8ed5015-4e8a-411c-9557-e8424b6a15d9
+- This build includes ALL the Android crash fixes (slider removed, expo-av→expo-audio, GlassCard solid bg, status text hidden)
+- When email arrives: download APK, install on S26 Ultra via `adb install` or QR code
+- ADB setup: `adb pair 10.0.0.38:PORT` then `adb connect 10.0.0.38:PORT` (use wireless debugging in S26 Ultra settings)
+- Ron has Google Play Developer account already set up ✅
+- **Next steps after APK installs and tests pass:**
+  1. Fix any remaining Android-specific issues
+  2. Run pre-build checks, then build production AAB: `npx eas build --profile production --platform android`
+  3. Submit to Play Store: `npx eas submit --platform android`
+  4. Complete Play Store listing (screenshots, descriptions, feature graphic)
 
 ### 3. Known UI Fixes (lower priority — do after both store submissions)
 
