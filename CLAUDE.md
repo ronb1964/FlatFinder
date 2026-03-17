@@ -265,7 +265,6 @@ All modals should follow this structure:
 
 - Cancel buttons are still RED (should be gray per design patterns)
 - ProfileEditor modal doesn't show form fields on phone (just header + buttons)
-- Compass heading is 180° off — both the displayed degrees AND the ring are wrong
 
 **Archived branches (DO NOT USE):**
 
