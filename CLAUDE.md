@@ -284,26 +284,38 @@ All modals should follow this structure:
   - Send to Mac via LocalSend, open in Transporter, click Deliver
   - eas-cli updated to ^18.4.0 in package.json (was 16.28.0)
 
-### 2. Android Dev Build — READY TO INSTALL ✅
+### 2. Android — Submit to Play Store 🔜 (pick up here next session)
 
-- Build ID: `39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255`
-- URL: https://expo.dev/accounts/ronb1964/projects/flatfinder-rv-leveling/builds/39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255
-- Install: open URL on S26 Ultra or scan QR code from Expo dashboard
-- ADB setup if needed: `adb pair 10.0.0.38:PORT` then `adb connect 10.0.0.38:PORT`
-- This build includes ALL fixes: slider crash, expo-audio, GlassCard solid bg,
-  status text hidden, Settings ADVANCED/Factory Reset, dynamic version number
-- Ron has Google Play Developer account already set up ✅
-- **Next steps after testing passes:**
-  1. Bump version to 1.0.2 in app.json (keeps iOS and Android in sync)
-  2. Fix any remaining Android-specific issues found during testing
-  3. Run pre-build checks, then build production AAB: `npx eas build --profile production --platform android`
-  4. Submit to Play Store: `npx eas submit --platform android`
-  5. Complete Play Store listing (screenshots, descriptions, feature graphic)
+- Dev APK tested and working on S26 Ultra ✅
+- Build ID: `39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255` (dev build, not for Play Store)
+- **Production build steps:**
+  1. Run pre-build checks: `npx tsc --noEmit` + `npx expo export --platform android`
+  2. Build production AAB: `npx eas build --profile production --platform android`
+  3. Download AAB from EAS dashboard when done
+- **Play Store submission steps:**
+  1. Complete store listing in Play Console (screenshots, description, feature graphic)
+     - Privacy policy URL: `https://flatfinder-app.netlify.app/privacy` ✅
+  2. First release MUST be uploaded manually via Play Console web UI (Google requirement)
+     - Play Console → App → Release → Production → Create new release → Upload AAB
+  3. Future releases: `npx eas submit --platform android` may work after first manual upload
+- **versionCode**: currently `1` in app.json — correct for first Play Store submission ✅
+- **version**: currently `1.0.1` in app.json — fine for Play Store (first submission)
 
 ### 3. Known UI Fixes (lower priority — do after both store submissions)
 
 - Cancel buttons should be gray (`variant="default"`), not red
 - ProfileEditor modal doesn't show form fields on phone
+
+### 4. Future Features / Iteration Ideas
+
+- **Scroll affordance indicator**: On any screen where content extends below the visible
+  area, show a softly pulsing translucent downward chevron (chevron-down icon) at the
+  bottom edge of the scroll area. It should fade in when there's more content below and
+  fade out when scrolled to the bottom. Not in-your-face — subtle opacity pulse using
+  Reanimated so it draws the eye without competing with content.
+  - Use ScrollView's `onScroll` + `onContentSizeChange` to detect when content overflows
+  - Animate with `useSharedValue` + `withRepeat(withSequence(...))` for the pulse
+  - Position it absolutely at the bottom of the scroll container
 
 ---
 
