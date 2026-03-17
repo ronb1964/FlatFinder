@@ -308,14 +308,26 @@ All modals should follow this structure:
 
 ### 4. Future Features / Iteration Ideas
 
-- **Scroll affordance indicator**: On any screen where content extends below the visible
-  area, show a softly pulsing translucent downward chevron (chevron-down icon) at the
-  bottom edge of the scroll area. It should fade in when there's more content below and
-  fade out when scrolled to the bottom. Not in-your-face — subtle opacity pulse using
-  Reanimated so it draws the eye without competing with content.
-  - Use ScrollView's `onScroll` + `onContentSizeChange` to detect when content overflows
-  - Animate with `useSharedValue` + `withRepeat(withSequence(...))` for the pulse
-  - Position it absolutely at the bottom of the scroll container
+**IMPORTANT:** Every feature built here must be implemented for BOTH iOS and Android.
+Never build something for one platform without considering the other.
+
+- **Scroll affordance indicator** — mockup approved, ready to build
+  - Softly pulsing translucent chevron at bottom of any scrollable screen
+  - Bigger chevron (42px), thin stroke (1.5), soft white glow via `drop-shadow` filter
+  - Pure visual: `pointer-events: none` — cannot be tapped accidentally
+  - Breathes: fades 60% → 8% opacity over 2.4s cycle, no movement
+  - Disappears smoothly (0.6s transition) when scrolled to bottom
+  - Mockup lives at: `.mockups/scroll-chevron.html` (view via Mockups server on port 8083)
+  - Implementation: `onScroll` + `onContentSizeChange` to detect overflow,
+    Reanimated `withRepeat(withSequence(...))` for the pulse animation
+
+- **Landing website "Learn More" section** — Ron approved the existing design
+  - The flatfinder-app.netlify.app site has a "Learn More ↓" link Ron likes
+  - Keep this style/approach for any future landing page updates
+
+- **Parallel iOS/Android development** — standing rule going forward:
+  - Any UI feature or fix goes into both platforms in the same commit
+  - Test on both before considering a feature done
 
 ---
 
