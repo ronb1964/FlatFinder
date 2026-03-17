@@ -284,25 +284,26 @@ All modals should follow this structure:
   - Send to Mac via LocalSend, open in Transporter, click Deliver
   - eas-cli updated to ^18.4.0 in package.json (was 16.28.0)
 
-### 2. Android Dev Build — Building on EAS ⏳
+### 2. Android Dev Build — READY TO INSTALL ✅
 
-- Build ID: `c8ed5015-4e8a-411c-9557-e8424b6a15d9`
-- URL: https://expo.dev/accounts/ronb1964/projects/flatfinder-rv-leveling/builds/c8ed5015-4e8a-411c-9557-e8424b6a15d9
-- This build includes ALL the Android crash fixes (slider removed, expo-av→expo-audio, GlassCard solid bg, status text hidden)
-- When email arrives: download APK, install on S26 Ultra via `adb install` or QR code
-- ADB setup: `adb pair 10.0.0.38:PORT` then `adb connect 10.0.0.38:PORT` (use wireless debugging in S26 Ultra settings)
+- Build ID: `39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255`
+- URL: https://expo.dev/accounts/ronb1964/projects/flatfinder-rv-leveling/builds/39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255
+- Install: open URL on S26 Ultra or scan QR code from Expo dashboard
+- ADB setup if needed: `adb pair 10.0.0.38:PORT` then `adb connect 10.0.0.38:PORT`
+- This build includes ALL fixes: slider crash, expo-audio, GlassCard solid bg,
+  status text hidden, Settings ADVANCED/Factory Reset, dynamic version number
 - Ron has Google Play Developer account already set up ✅
-- **Next steps after APK installs and tests pass:**
-  1. Fix any remaining Android-specific issues
-  2. Run pre-build checks, then build production AAB: `npx eas build --profile production --platform android`
-  3. Submit to Play Store: `npx eas submit --platform android`
-  4. Complete Play Store listing (screenshots, descriptions, feature graphic)
+- **Next steps after testing passes:**
+  1. Bump version to 1.0.2 in app.json (keeps iOS and Android in sync)
+  2. Fix any remaining Android-specific issues found during testing
+  3. Run pre-build checks, then build production AAB: `npx eas build --profile production --platform android`
+  4. Submit to Play Store: `npx eas submit --platform android`
+  5. Complete Play Store listing (screenshots, descriptions, feature graphic)
 
 ### 3. Known UI Fixes (lower priority — do after both store submissions)
 
 - Cancel buttons should be gray (`variant="default"`), not red
 - ProfileEditor modal doesn't show form fields on phone
-- Compass heading 180° off
 
 ---
 
