@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Audio } from 'expo-av';
-import { Sound } from 'expo-av/build/Audio';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 
-// Sound assets - require() is necessary for Expo Audio assets
+// Sound assets
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const DING_SOUND = require('../../assets/sounds/ding.mp3') as number;
+const DING_SOUND = require('../../assets/sounds/ding.mp3');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const TADA_SOUND = require('../../assets/sounds/tada.mp3') as number;
+const TADA_SOUND = require('../../assets/sounds/tada.mp3');
 
 // Interval constants (in ms)
 const TADA_INTERVAL = 2500; // Fixed interval for perfect level (2.5 seconds)
@@ -24,8 +24,8 @@ interface UseLevelSoundsOptions {
 
 interface UseLevelSoundsReturn {
   // Play a single sound (for Check Level results)
-  playDing: () => Promise<void>;
-  playTada: () => Promise<void>;
+  playDing: () => void;
+  playTada: () => void;
   // Update repeating sounds based on current deviation
   updateAudioFeedback: (deviation: number, levelThreshold: number) => void;
   // Stop all repeating sounds
@@ -61,8 +61,8 @@ function calculateDingInterval(deviation: number, levelThreshold: number): numbe
 }
 
 export function useLevelSounds({ enabled, isActive }: UseLevelSoundsOptions): UseLevelSoundsReturn {
-  const dingSound = useRef<Sound | null>(null);
-  const tadaSound = useRef<Sound | null>(null);
+  const dingPlayer = useRef<AudioPlayer | null>(null);
+  const tadaPlayer = useRef<AudioPlayer | null>(null);
   const timeoutRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const currentMode = useRef<'ding' | 'tada' | null>(null);
   const currentDeviation = useRef<number>(0);
@@ -83,22 +83,24 @@ export function useLevelSounds({ enabled, isActive }: UseLevelSoundsOptions): Us
     const loadSounds = async () => {
       try {
         // Configure audio mode for mixing with other apps
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
+        // expo-audio uses interruptionMode instead of shouldDuckAndroid
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: false,
+          interruptionMode: 'duckOthers', // Equivalent to shouldDuckAndroid: true
         });
 
-        const { sound: ding } = await Audio.Sound.createAsync(DING_SOUND);
-        const { sound: tada } = await Audio.Sound.createAsync(TADA_SOUND);
+        // createAudioPlayer is synchronous — no async needed
+        const ding = createAudioPlayer(DING_SOUND);
+        const tada = createAudioPlayer(TADA_SOUND);
 
         if (mounted) {
-          dingSound.current = ding;
-          tadaSound.current = tada;
+          dingPlayer.current = ding;
+          tadaPlayer.current = tada;
         } else {
-          // Component unmounted during load, clean up
-          await ding.unloadAsync();
-          await tada.unloadAsync();
+          // Component unmounted during async setup, clean up
+          ding.remove();
+          tada.remove();
         }
       } catch (error) {
         console.warn('Failed to load level sounds:', error);
@@ -109,14 +111,14 @@ export function useLevelSounds({ enabled, isActive }: UseLevelSoundsOptions): Us
 
     return () => {
       mounted = false;
-      // Clean up sounds on unmount
-      if (dingSound.current) {
-        dingSound.current.unloadAsync();
-        dingSound.current = null;
+      // Clean up players on unmount
+      if (dingPlayer.current) {
+        dingPlayer.current.remove();
+        dingPlayer.current = null;
       }
-      if (tadaSound.current) {
-        tadaSound.current.unloadAsync();
-        tadaSound.current = null;
+      if (tadaPlayer.current) {
+        tadaPlayer.current.remove();
+        tadaPlayer.current = null;
       }
       // Clear any running timeout
       if (timeoutRef.current) {
@@ -138,22 +140,23 @@ export function useLevelSounds({ enabled, isActive }: UseLevelSoundsOptions): Us
   }, [enabled, isActive]);
 
   // Play single ding sound
-  const playDing = useCallback(async () => {
-    if (!enabledRef.current || !dingSound.current) return;
+  const playDing = useCallback(() => {
+    if (!enabledRef.current || !dingPlayer.current) return;
     try {
-      await dingSound.current.setPositionAsync(0);
-      await dingSound.current.playAsync();
+      // Seek to beginning (seconds, not milliseconds) then play
+      dingPlayer.current.seekTo(0);
+      dingPlayer.current.play();
     } catch (error) {
       console.warn('Failed to play ding:', error);
     }
   }, []);
 
   // Play single tada sound
-  const playTada = useCallback(async () => {
-    if (!enabledRef.current || !tadaSound.current) return;
+  const playTada = useCallback(() => {
+    if (!enabledRef.current || !tadaPlayer.current) return;
     try {
-      await tadaSound.current.setPositionAsync(0);
-      await tadaSound.current.playAsync();
+      tadaPlayer.current.seekTo(0);
+      tadaPlayer.current.play();
     } catch (error) {
       console.warn('Failed to play tada:', error);
     }
@@ -166,7 +169,7 @@ export function useLevelSounds({ enabled, isActive }: UseLevelSoundsOptions): Us
     }
 
     let interval: number;
-    let playSound: () => Promise<void>;
+    let playSound: () => void;
 
     if (currentMode.current === 'tada') {
       interval = TADA_INTERVAL;
