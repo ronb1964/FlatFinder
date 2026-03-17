@@ -615,16 +615,21 @@ export default function LevelScreen() {
                     </Svg>
                   </Animated.View>
                 )}
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: levelStatus.color },
-                    isSmallScreen && styles.statusTextSmall,
-                    isVerySmallScreen && styles.statusTextVerySmall,
-                  ]}
-                >
-                  {levelStatus.description}
-                </Text>
+                {/* Hide status text when a warning card is already showing —
+                    the warning conveys the same info and both together clutter the layout */}
+                {!showCaution && !showSafetyWarning && (
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: levelStatus.color },
+                      isSmallScreen && styles.statusTextSmall,
+                      isVerySmallScreen && styles.statusTextVerySmall,
+                    ]}
+                    allowFontScaling={false}
+                  >
+                    {levelStatus.description}
+                  </Text>
+                )}
               </View>
             </View>
 

@@ -106,6 +106,12 @@ export function GlassCard({
 
   return (
     <View style={[styles.container, style]}>
+      {/* Android: BlurView doesn't create real backdrop blur, so we add a solid
+          background layer to ensure card content is readable over busy graphics
+          (e.g. the warning cards over the compass). On iOS, BlurView handles this. */}
+      {Platform.OS === 'android' && (
+        <View style={[StyleSheet.absoluteFill, styles.androidBg, { backgroundColor: colors.bg }]} />
+      )}
       <BlurView intensity={intensity} tint={blurTint} style={styles.blur}>
         <LinearGradient
           colors={colors.gradient}
@@ -145,6 +151,12 @@ const styles = StyleSheet.create({
     height: 1,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+  },
+  // Android-only solid background layer. BlurView on Android doesn't create
+  // real backdrop blur, so this opaque layer prevents the content behind the
+  // card (e.g. the compass graphic) from showing through.
+  androidBg: {
+    borderRadius: 16,
   },
 });
 
