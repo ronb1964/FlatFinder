@@ -311,15 +311,29 @@ All modals should follow this structure:
 **IMPORTANT:** Every feature built here must be implemented for BOTH iOS and Android.
 Never build something for one platform without considering the other.
 
-- **Scroll affordance indicator** — mockup approved, ready to build
+- **Scroll affordance indicator** — mockup APPROVED ✅, ready to build in 1.0.2
   - Softly pulsing translucent chevron at bottom of any scrollable screen
-  - Bigger chevron (42px), thin stroke (1.5), soft white glow via `drop-shadow` filter
   - Pure visual: `pointer-events: none` — cannot be tapped accidentally
   - Breathes: fades 60% → 8% opacity over 2.4s cycle, no movement
   - Disappears smoothly (0.6s transition) when scrolled to bottom
-  - Mockup lives at: `.mockups/scroll-chevron.html` (view via Mockups server on port 8083)
+  - **EXACT approved CSS (do not deviate without Ron's approval):**
+    ```css
+    /* SVG: width=42 height=42, stroke="white", stroke-width="2.5",
+       stroke-linecap="round", viewBox="0 0 24 24"
+       path: "m6 9 6 6 6-6" */
+    filter: blur(1px) drop-shadow(0 0 7px rgba(255, 255, 255, 0.55))
+      drop-shadow(0 0 14px rgba(255, 255, 255, 0.25));
+    /* blur(1px) makes the stroke edges wispy/foggy.
+       drop-shadows add the outer glow. Together = diffuse light shape,
+       not a hard drawn line. Ron specifically approved this look. */
+    ```
+  - Mockup lives at: `.mockups/scroll-chevron.html` (start Mockups server on port 8083)
+  - React Native equivalent: use `style={{ filter: ... }}` isn't supported natively —
+    use `expo-blur` or a custom SVG with feGaussianBlur filter, or wrap in a View with
+    `shadowColor/shadowRadius` for the glow. The blur on the stroke itself requires
+    SVG's `<feGaussianBlur>` filter applied to the path element.
   - Implementation: `onScroll` + `onContentSizeChange` to detect overflow,
-    Reanimated `withRepeat(withSequence(...))` for the pulse animation
+    Reanimated `withRepeat(withSequence(...))` for the breathe animation
 
 - **Landing website "Learn More" section** — Ron approved the existing design
   - The flatfinder-app.netlify.app site has a "Learn More ↓" link Ron likes
