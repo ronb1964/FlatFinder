@@ -41,7 +41,7 @@ function ChevronSVG({ isDark }: { isDark: boolean }) {
         </Filter>
       </Defs>
       <Path
-        d="M6 9 L12 15 L18 9"
+        d="m6 9 6 6 6-6"
         stroke={stroke}
         strokeWidth={2.5}
         strokeLinecap="round"
@@ -88,12 +88,16 @@ const ScrollViewWithChevron = forwardRef<ScrollView, Props>(
           false
         );
       } else {
-        // Fade out over 0.6s, then stop breathe
-        visibilityOpacity.value = withTiming(0, { duration: 600 });
-        cancelAnimation(breatheOpacity);
-        breatheOpacity.value = 0.6; // reset for next appearance
+        // Fade out over 0.6s, then stop breathe only after fade completes
+        visibilityOpacity.value = withTiming(0, { duration: 600 }, (finished) => {
+          'worklet';
+          if (finished) {
+            cancelAnimation(breatheOpacity);
+            breatheOpacity.value = 0.6; // reset for next appearance
+          }
+        });
       }
-    }, [showChevron]);
+    }, [showChevron, breatheOpacity, visibilityOpacity]);
 
     const chevronAnimatedStyle = useAnimatedStyle(() => ({
       opacity: breatheOpacity.value * visibilityOpacity.value,
