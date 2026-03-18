@@ -1,14 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-  StyleSheet,
-  Modal,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform, StyleSheet, Modal } from 'react-native';
+import ScrollViewWithChevron from '../../src/components/ScrollViewWithChevron';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Check, HelpCircle, AlertTriangle, Caravan } from 'lucide-react-native';
 import { MotorhomeIcon, VanIcon } from '../../src/components/icons/VehicleIcons';
@@ -198,7 +190,7 @@ export default function ProfilesScreen() {
           )}
         </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollViewWithChevron style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.profileList}>
             {profiles.length === 0 ? (
               <View style={styles.emptyState}>
@@ -333,7 +325,7 @@ export default function ProfilesScreen() {
               ))
             )}
           </View>
-        </ScrollView>
+        </ScrollViewWithChevron>
       </View>
 
       {/* Vehicle Setup Wizard - for adding new profiles */}

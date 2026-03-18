@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import ScrollViewWithChevron from '../../src/components/ScrollViewWithChevron';
 import { GlassSlider } from '../../src/components/ui/GlassSlider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -73,7 +74,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollViewWithChevron style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Settings</Text>
 
@@ -530,7 +531,7 @@ export default function SettingsScreen() {
           {/* Bottom padding for scroll */}
           <View style={styles.bottomPadding} />
         </View>
-      </ScrollView>
+      </ScrollViewWithChevron>
     </SafeAreaView>
   );
 }

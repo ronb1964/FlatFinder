@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import ScrollViewWithChevron from '../src/components/ScrollViewWithChevron';
 import { Target, CheckCircle, RotateCw, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -101,7 +102,10 @@ export default function CalibrationScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollViewWithChevron
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Main Calibration Card */}
           <GlassCard variant="primary">
             <View style={styles.mainCard}>
@@ -159,7 +163,7 @@ export default function CalibrationScreen() {
               </View>
             </GlassCard>
           )}
-        </ScrollView>
+        </ScrollViewWithChevron>
 
         {/* Calibration Wizard Modal */}
         {showWizard && (
