@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, StyleSheet, Linking } from 'react-native';
 import ScrollViewWithChevron from '../../src/components/ScrollViewWithChevron';
 import { GlassSlider } from '../../src/components/ui/GlassSlider';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,10 @@ import {
   RotateCcw,
   Ruler,
   Zap,
+  Shield,
+  HelpCircle,
+  Globe,
+  ExternalLink,
 } from 'lucide-react-native';
 
 import { ThemePreference } from '../../src/state/appStore';
@@ -524,6 +528,42 @@ export default function SettingsScreen() {
                 <Text style={[styles.aboutFooter, { color: theme.colors.textMuted }]}>
                   Made with love for RV enthusiasts
                 </Text>
+
+                {/* In-app links */}
+                <View style={styles.aboutLinks}>
+                  <TouchableOpacity
+                    style={styles.aboutLinkRow}
+                    onPress={() => Linking.openURL('https://flatfinder-app.netlify.app/privacy')}
+                    accessibilityRole="link"
+                    accessibilityLabel="Privacy Policy"
+                  >
+                    <Shield size={14} color="#60a5fa" />
+                    <Text style={styles.aboutLinkText}>Privacy Policy</Text>
+                    <ExternalLink size={11} color="#60a5fa" style={styles.aboutLinkIcon} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.aboutLinkRow}
+                    onPress={() => Linking.openURL('https://flatfinder-app.netlify.app/support')}
+                    accessibilityRole="link"
+                    accessibilityLabel="Support"
+                  >
+                    <HelpCircle size={14} color="#60a5fa" />
+                    <Text style={styles.aboutLinkText}>Support</Text>
+                    <ExternalLink size={11} color="#60a5fa" style={styles.aboutLinkIcon} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.aboutLinkRow}
+                    onPress={() => Linking.openURL('https://flatfinder-app.netlify.app')}
+                    accessibilityRole="link"
+                    accessibilityLabel="Website"
+                  >
+                    <Globe size={14} color="#60a5fa" />
+                    <Text style={styles.aboutLinkText}>Website</Text>
+                    <ExternalLink size={11} color="#60a5fa" style={styles.aboutLinkIcon} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </GlassCard>
           </View>
@@ -788,6 +828,25 @@ const styles = StyleSheet.create({
   aboutFooter: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  aboutLinks: {
+    gap: 10,
+    width: '100%',
+    paddingTop: 4,
+  },
+  aboutLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  aboutLinkText: {
+    fontSize: 13,
+    color: '#60a5fa',
+    textDecorationLine: 'underline',
+  },
+  aboutLinkIcon: {
+    marginTop: 1,
   },
   bottomPadding: {
     height: 24,
