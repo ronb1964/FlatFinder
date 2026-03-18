@@ -3,13 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   TextInput,
   StyleSheet,
   Platform,
   Keyboard,
   KeyboardAvoidingView,
+  type ScrollView,
 } from 'react-native';
+import ScrollViewWithChevron from '../src/components/ScrollViewWithChevron';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
@@ -1503,7 +1504,7 @@ export default function OnboardingScreen() {
             )}
 
             {/* Content - scrollable area */}
-            <ScrollView
+            <ScrollViewWithChevron
               ref={scrollViewRef}
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
@@ -1511,7 +1512,7 @@ export default function OnboardingScreen() {
               contentContainerStyle={[styles.scrollContentContainer, { paddingBottom: 40 }]}
             >
               <View style={styles.scrollContent}>{currentStepData.component()}</View>
-            </ScrollView>
+            </ScrollViewWithChevron>
 
             {/* Navigation buttons - inside the card */}
             {!keyboardVisible && (
