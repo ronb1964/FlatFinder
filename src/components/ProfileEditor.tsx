@@ -3,13 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
+  type ScrollView,
   TextInput,
   Modal,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import ScrollViewWithChevron from './ScrollViewWithChevron';
 import { Trash2, Plus } from 'lucide-react-native';
 import { TrailerIcon, MotorhomeIcon, VanIcon } from './icons/VehicleIcons';
 import { GlassButton } from './ui/GlassButton';
@@ -239,7 +240,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
           </View>
 
           {/* Scrollable Content */}
-          <ScrollView
+          <ScrollViewWithChevron
             ref={scrollViewRef}
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
@@ -654,7 +655,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                 </View>
               </GlassCard>
             </View>
-          </ScrollView>
+          </ScrollViewWithChevron>
 
           {/* Footer */}
           <View style={[styles.footer, { borderTopColor: screenColors.modalBorder }]}>
