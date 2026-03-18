@@ -239,6 +239,7 @@ All modals should follow this structure:
 
 **v1.0**: Released on iOS App Store ✅
 **v1.0.1**: Submitted for App Store review Mar 16, 2026 — Waiting for Review ✅
+**Android v1.0.1**: Submitted to Google Play (closed testing / Alpha track) Mar 17, 2026 — In Review ✅
 
 **MacBook setup:**
 
@@ -284,22 +285,32 @@ All modals should follow this structure:
   - Send to Mac via LocalSend, open in Transporter, click Deliver
   - eas-cli updated to ^18.4.0 in package.json (was 16.28.0)
 
-### 2. Android — Submit to Play Store 🔜 (pick up here next session)
+### 2. Android — Submitted to Play Store (Closed Testing) ✅
 
-- Dev APK tested and working on S26 Ultra ✅
-- Build ID: `39b468bd-6e8b-4cbb-9d5d-b6a4eec6b255` (dev build, not for Play Store)
-- **Production build steps:**
-  1. Run pre-build checks: `npx tsc --noEmit` + `npx expo export --platform android`
-  2. Build production AAB: `npx eas build --profile production --platform android`
-  3. Download AAB from EAS dashboard when done
-- **Play Store submission steps:**
-  1. Complete store listing in Play Console (screenshots, description, feature graphic)
-     - Privacy policy URL: `https://flatfinder-app.netlify.app/privacy` ✅
-  2. First release MUST be uploaded manually via Play Console web UI (Google requirement)
-     - Play Console → App → Release → Production → Create new release → Upload AAB
-  3. Future releases: `npx eas submit --platform android` may work after first manual upload
-- **versionCode**: currently `1` in app.json — correct for first Play Store submission ✅
-- **version**: currently `1.0.1` in app.json — fine for Play Store (first submission)
+- Submitted to Google Play closed testing (Alpha track) on Mar 17, 2026 — **In Review**
+- Production AAB: Build ID `e8a135fd-c5e2-41a1-bd49-14ffd38f1949`, version 1.0.1 (versionCode 1)
+- Google typically reviews new apps in 1–3 days
+
+**After Google approves the closed test release:**
+
+1. Go to Play Console → Test and release → Closed testing → Testers tab
+2. Copy the **"Join on the web"** opt-in link
+3. Recruit **12 testers** — post in: r/betatesting, r/rving, r/rvcamping, Facebook RV groups
+   - Testers just click the link — no sideloading required
+4. Wait **14 days** after the 12th tester opts in
+5. Then apply for **production access** to release publicly
+
+**Payment method issue:**
+
+- Individual payments profile (Ron Brand) doesn't accept the RBrand Customs LLC bank account
+- Options: (a) contact Google Support to convert to Business/Organization profile, OR (b) open a personal checking account
+- Earnings from $1.99 sales are held safely by Google until payout method is resolved
+- App can be sold without a verified payout — Google just holds the money
+
+**For future Android releases (v1.0.2+):**
+
+- `npx eas submit --platform android` may work after the first manual upload
+- versionCode must be incremented in app.json for each new release
 
 ### 3. Known UI Fixes (lower priority — do after both store submissions)
 
@@ -316,7 +327,9 @@ Never build something for one platform without considering the other.
   - Pure visual: `pointer-events: none` — cannot be tapped accidentally
   - Breathes: fades 60% → 8% opacity over 2.4s cycle, no movement
   - Disappears smoothly (0.6s transition) when scrolled to bottom
-  - **EXACT approved CSS (do not deviate without Ron's approval):**
+  - **BUILT in v1.0.2** ✅ — `src/components/ScrollViewWithChevron.tsx`
+  - Applied to: Home, Settings, Profiles, Calibration, Onboarding, ProfileEditor
+  - **EXACT approved dark mode spec (do not deviate without Ron's approval):**
     ```css
     /* SVG: width=42 height=42, stroke="white", stroke-width="2.5",
        stroke-linecap="round", viewBox="0 0 24 24"
@@ -327,13 +340,16 @@ Never build something for one platform without considering the other.
        drop-shadows add the outer glow. Together = diffuse light shape,
        not a hard drawn line. Ron specifically approved this look. */
     ```
-  - Mockup lives at: `.mockups/scroll-chevron.html` (start Mockups server on port 8083)
-  - React Native equivalent: use `style={{ filter: ... }}` isn't supported natively —
-    use `expo-blur` or a custom SVG with feGaussianBlur filter, or wrap in a View with
-    `shadowColor/shadowRadius` for the glow. The blur on the stroke itself requires
-    SVG's `<feGaussianBlur>` filter applied to the path element.
-  - Implementation: `onScroll` + `onContentSizeChange` to detect overflow,
-    Reanimated `withRepeat(withSequence(...))` for the breathe animation
+  - **EXACT approved light mode spec (approved 2026-03-18):**
+    ```css
+    /* stroke="#1e3c78" (dark navy) — same SVG shape, same animation */
+    filter: blur(1px) drop-shadow(0 0 10px rgba(30, 60, 120, 0.55))
+      drop-shadow(0 0 22px rgba(30, 60, 120, 0.3)) drop-shadow(0 0 4px rgba(30, 60, 120, 0.6));
+    /* Same breathe animation (60% → 8%, 2.4s cycle) as dark mode */
+    ```
+  - React Native implementation: SVG `<feGaussianBlur>` filter (CSS filter not supported in RN)
+  - Implemented via: `onScroll` + `onContentSizeChange` + `onLayout` for overflow detection,
+    Reanimated `withRepeat(withSequence(...))` for breathe, `forwardRef` for ref passthrough
 
 - **Landing website "Learn More" section** — Ron approved the existing design
   - The flatfinder-app.netlify.app site has a "Learn More ↓" link Ron likes
