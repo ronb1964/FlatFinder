@@ -7,9 +7,9 @@ import {
   useWindowDimensions,
   Modal,
   Animated,
-  ScrollView,
   Platform,
 } from 'react-native';
+import ScrollViewWithChevron from '../../src/components/ScrollViewWithChevron';
 import Svg, {
   Path,
   Defs,
@@ -494,7 +494,7 @@ export default function LevelScreen() {
   return (
     <LinearGradient colors={screenColors.gradientColors} style={styles.gradient}>
       <SafeAreaSimulator style={styles.safeArea} showIndicators={false}>
-        <ScrollView
+        <ScrollViewWithChevron
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
@@ -1064,7 +1064,7 @@ export default function LevelScreen() {
               </View>
             </Pressable>
           </View>
-        </ScrollView>
+        </ScrollViewWithChevron>
 
         {/* Quick Calibrate Confirmation Modal */}
         <Modal
