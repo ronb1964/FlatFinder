@@ -265,7 +265,6 @@ All modals should follow this structure:
 **Known Issues (lower priority):**
 
 - Cancel buttons are still RED (should be gray per design patterns)
-- ProfileEditor modal doesn't show form fields on phone (just header + buttons)
 
 **Archived branches (DO NOT USE):**
 
@@ -315,7 +314,6 @@ All modals should follow this structure:
 ### 3. Known UI Fixes (lower priority — do after both store submissions)
 
 - Cancel buttons should be gray (`variant="default"`), not red
-- ProfileEditor modal doesn't show form fields on phone
 
 ### 4. Future Features / Iteration Ideas
 
