@@ -17,6 +17,8 @@ import {
   Plus,
   RefreshCw,
   Sun,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react-native';
 import Svg, {
   Path,
@@ -820,6 +822,79 @@ function WheelCard({ lift, blockStack, units, isGround }: WheelCardProps) {
   );
 }
 
+// ─── Tongue Jack Card ────────────────────────────────────────────────────────
+// Shown instead of WheelCard for trailers — cranking is the correct action,
+// not stacking blocks under the jack foot.
+
+type TongueJackDirection = 'up' | 'down' | 'level';
+
+interface TongueJackInfo {
+  jackAmount: number; // inches to crank
+  jackDirection: TongueJackDirection;
+}
+
+function TongueJackCard({ info, units }: { info: TongueJackInfo; units: 'imperial' | 'metric' }) {
+  const theme = useTheme();
+  const isDark = theme.mode === 'dark';
+
+  if (info.jackDirection === 'level') {
+    return (
+      <View
+        style={[
+          styles.wheelCard,
+          { backgroundColor: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.3)' },
+        ]}
+      >
+        <View style={styles.wheelCardHeader}>
+          <Text style={[styles.wheelCardTitle, { color: '#22c55e' }]}>Tongue Jack</Text>
+          <View style={styles.groundBadge}>
+            <Check size={12} color="#22c55e" />
+            <Text style={[styles.groundBadgeText, { color: '#22c55e' }]}>Level</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const isUp = info.jackDirection === 'up';
+  // Blue for "crank up" (you're adding height), amber for "crank down"
+  const colors = isUp
+    ? { bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)', text: '#3b82f6' }
+    : { bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.3)', text: '#eab308' };
+  const noteColor = isDark ? '#737373' : '#737373';
+
+  return (
+    <View style={[styles.wheelCard, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+      <View style={styles.wheelCardHeader}>
+        <Text style={[styles.wheelCardTitle, { color: colors.text }]}>Tongue Jack</Text>
+        <View style={styles.liftNeeded}>
+          <View style={styles.jackDirectionRow}>
+            {isUp ? (
+              <ArrowUp size={12} color={colors.text} />
+            ) : (
+              <ArrowDown size={12} color={colors.text} />
+            )}
+            <Text style={[styles.liftNeededLabel, { color: colors.text }]}>
+              {isUp ? 'Crank UP' : 'Crank DOWN'}
+            </Text>
+          </View>
+          <Text style={[styles.liftAmount, { color: colors.text }]}>
+            {formatMeasurement(info.jackAmount, units)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.wheelCardContent}>
+        <Text style={[styles.tongueJackNote, { color: noteColor }]}>
+          If jack travel is insufficient, add blocks under the foot.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
   const theme = useTheme();
   const actuallyDark = theme.mode === 'dark';
@@ -1089,6 +1164,23 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
     return levelingPlan.wheelLifts.filter((lift) => lift.liftInches <= 0.001);
   }, [levelingPlan]);
 
+  // For trailers, compute pitch and roll corrections independently so the tongue
+  // jack card shows a crank direction instead of a block recommendation, and so
+  // the rear wheel cards only reflect roll (not pitch bleeding in from normalization).
+  const trailerInfo = useMemo((): TongueJackInfo | null => {
+    if (!activeProfile || activeProfile.type !== 'trailer' || !levelingPlan) return null;
+
+    const hitchIn = activeProfile.hitchOffsetInches ?? 120;
+    const pitchDeg = displayReadings.pitch;
+    const pitchRad = (Math.abs(pitchDeg) * Math.PI) / 180;
+
+    const jackAmount = hitchIn * Math.tan(pitchRad);
+    const jackDirection: TongueJackDirection =
+      pitchDeg > 0.25 ? 'down' : pitchDeg < -0.25 ? 'up' : 'level';
+
+    return { jackAmount, jackDirection };
+  }, [activeProfile, displayReadings.pitch, levelingPlan]);
+
   if (!activeProfile) {
     const handleSetupProfile = () => {
       // Close the leveling assistant and navigate to profiles
@@ -1278,34 +1370,41 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
               </View>
             )}
 
-            {/* Block Instructions */}
+            {/* Leveling Instructions */}
             {levelingPlan && !isCalculating && (
               <View style={styles.instructionsSection}>
                 <Text style={[styles.sectionTitle, { color: screenColors.text }]}>
-                  Block Instructions
+                  Leveling Instructions
                 </Text>
 
-                {/* Wheels needing blocks */}
-                {activeLifts.map((lift) => (
-                  <WheelCard
-                    key={lift.location}
-                    lift={lift}
-                    blockStack={levelingPlan.blockStacks[lift.location]}
-                    units={units}
-                    isGround={false}
-                  />
-                ))}
+                {/* Wheels needing blocks (tongue jack excluded for trailers) */}
+                {activeLifts
+                  .filter((lift) => lift.location !== 'tongue')
+                  .map((lift) => (
+                    <WheelCard
+                      key={lift.location}
+                      lift={lift}
+                      blockStack={levelingPlan.blockStacks[lift.location]}
+                      units={units}
+                      isGround={false}
+                    />
+                  ))}
 
-                {/* Ground wheels */}
-                {groundWheels.map((lift) => (
-                  <WheelCard
-                    key={lift.location}
-                    lift={lift}
-                    blockStack={levelingPlan.blockStacks[lift.location]}
-                    units={units}
-                    isGround={true}
-                  />
-                ))}
+                {/* Ground wheels (tongue jack excluded for trailers) */}
+                {groundWheels
+                  .filter((lift) => lift.location !== 'tongue')
+                  .map((lift) => (
+                    <WheelCard
+                      key={lift.location}
+                      lift={lift}
+                      blockStack={levelingPlan.blockStacks[lift.location]}
+                      units={units}
+                      isGround={true}
+                    />
+                  ))}
+
+                {/* Tongue jack — trailers only, shows crank direction not blocks */}
+                {trailerInfo && <TongueJackCard info={trailerInfo} units={units} />}
               </View>
             )}
           </>
@@ -1555,7 +1654,7 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                       Additional blocks needed:
                     </Text>
                     {checkLevelPlan.wheelLifts
-                      .filter((lift) => lift.liftInches > 0.125)
+                      .filter((lift) => lift.liftInches > 0.125 && lift.location !== 'tongue')
                       .map((lift) => {
                         const stack = checkLevelPlan.blockStacks[lift.location];
                         const hasBlocks = stack && stack.blocks.length > 0;
@@ -1579,8 +1678,34 @@ export function LevelingAssistant({ onBack }: LevelingAssistantProps) {
                           </View>
                         );
                       })}
-                    {checkLevelPlan.wheelLifts.filter((lift) => lift.liftInches > 0.125).length ===
-                      0 && (
+                    {/* Tongue jack crank instruction in Check Level results */}
+                    {checkLevelReadings &&
+                      activeProfile?.type === 'trailer' &&
+                      activeProfile.hitchOffsetInches &&
+                      (() => {
+                        const pitchDeg = checkLevelReadings.pitch;
+                        const pitchRad = (Math.abs(pitchDeg) * Math.PI) / 180;
+                        const amt = activeProfile.hitchOffsetInches * Math.tan(pitchRad);
+                        if (Math.abs(pitchDeg) < 0.25) return null;
+                        const dir = pitchDeg > 0 ? 'DOWN' : 'UP';
+                        return (
+                          <View style={styles.newInstructionRow}>
+                            <Text
+                              style={[styles.newInstructionWheel, { color: screenColors.text }]}
+                            >
+                              Tongue Jack
+                            </Text>
+                            <Text
+                              style={[styles.newInstructionAmount, { color: screenColors.primary }]}
+                            >
+                              Crank {dir} {formatMeasurement(amt, units)}
+                            </Text>
+                          </View>
+                        );
+                      })()}
+                    {checkLevelPlan.wheelLifts.filter(
+                      (lift) => lift.liftInches > 0.125 && lift.location !== 'tongue'
+                    ).length === 0 && (
                       <Text
                         style={[styles.newInstructionHint, { color: screenColors.textSecondary }]}
                       >
@@ -1838,6 +1963,18 @@ const styles = StyleSheet.create({
   },
   noBlocksText: {
     fontSize: 13,
+  },
+  // Tongue jack card
+  jackDirectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    justifyContent: 'flex-end',
+  },
+  tongueJackNote: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 17,
   },
   // Loading
   loadingContainer: {

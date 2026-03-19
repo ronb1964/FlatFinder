@@ -395,7 +395,7 @@ export function ProfileEditor({ profile, onSave, onCancel, isVisible }: ProfileE
                         selectTextOnFocus={true}
                       />
                       <Text style={[styles.measurementHint, { color: screenColors.textMuted }]}>
-                        Distance from rear axle center to hitch ball
+                        Distance from rear axle center to tongue jack
                       </Text>
                     </View>
                   )}

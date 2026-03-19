@@ -885,7 +885,7 @@ export default function OnboardingScreen() {
                           : `${typical.hitch} cm`}
                       </Text>
                       <Text style={[styles.measurementHint, { color: screenColors.textSecondary }]}>
-                        Distance from rear axle center to hitch ball
+                        Distance from rear axle center to tongue jack
                       </Text>
                     </View>
                   )}
@@ -1020,7 +1020,7 @@ export default function OnboardingScreen() {
                         selectTextOnFocus={true}
                       />
                       <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
-                        Distance from rear axle center to hitch ball
+                        Distance from rear axle center to tongue jack
                       </Text>
                     </View>
                   </View>

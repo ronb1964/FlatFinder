@@ -679,7 +679,7 @@ export function VehicleSetupWizard({
                   selectTextOnFocus={true}
                 />
                 <Text style={[styles.inputHint, { color: screenColors.textSecondary }]}>
-                  Measure from rear axle center to hitch ball
+                  Measure from rear axle center to tongue jack
                 </Text>
               </View>
             )}
